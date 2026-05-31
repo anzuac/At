@@ -233,7 +233,7 @@ registerJobSkill('thief3', {
     }
   ],
 
-use: function (monster) {
+use (monster) {
   // 安全：職業線 / 轉數檢查
   if (typeof Skills_isUnlocked === "function" &&
       !Skills_isUnlocked(this)) {
@@ -241,24 +241,24 @@ use: function (monster) {
     return 0;
   }
 
-  var t   = getActiveTier(this);
-  var evo = (typeof getEvoLabel === "function") ? getEvoLabel(this) : "";
-  var skillName = t.name + evo;
+  const t   = getActiveTier(this);
+  const evo = (typeof getEvoLabel === "function") ? getEvoLabel(this) : "";
+  const skillName = t.name + evo;
 
   this.name       = skillName;
   this.mpCost     = t.mpCost;
   this.cooldown   = t.cooldown;
   this.maxTargets = t.maxTargets;
 
-  var baseAtk = Math.max(player.totalStats.atk || 1, 1);
+  const baseAtk = Math.max(player.totalStats.atk || 1, 1);
 
-  var perPct     = t.dmgBase + t.dmgPerLv * this.level;
-  var perHit     = perPct / 100;
-  var dmgPerHit  = Math.floor(baseAtk * perHit);
-  var baseDmgOne = dmgPerHit * t.hits;   // 對單一目標基礎傷害
-  var totalPct   = perPct * t.hits;
+  const perPct     = t.dmgBase + t.dmgPerLv * this.level;
+  const perHit     = perPct / 100;
+  const dmgPerHit  = Math.floor(baseAtk * perHit);
+  const baseDmgOne = dmgPerHit * t.hits;   // 對單一目標基礎傷害
+  const totalPct   = perPct * t.hits;
 
-  var totalDamagePerTarget = 0;
+  let totalDamagePerTarget = 0;
 
   // ⭐ 每次施放先重置標籤
   this.lastCastTag = "";
@@ -274,21 +274,21 @@ use: function (monster) {
   }
 
   // ===== 嘗試觸發連擊 =====
-  var chance = t.extraCastChance || 0;
-  var mpCost = this.mpCost || t.mpCost;
+  const chance = t.extraCastChance || 0;
+  const mpCost = this.mpCost || t.mpCost;
 
   if (chance > 0 && Math.random() < chance) {
     if (typeof logPrepend === "function") {
       logPrepend("《幻影連擊觸發！嘗試追加一次攻擊》");
     }
 
-    var curMpBeforeExtra = (typeof player.currentMP === "number")
+    const curMpBeforeExtra = (typeof player.currentMP === "number")
       ? player.currentMP
       : 0;
 
     if (curMpBeforeExtra >= mpCost * 2) {
       // MP 夠：再施放一次技能
-      var secondDmg = baseDmgOne;
+      const secondDmg = baseDmgOne;
       totalDamagePerTarget += secondDmg;
 
       // 額外扣第二次 MP（第一次由 spendAndCooldown 扣）
@@ -304,7 +304,7 @@ use: function (monster) {
       }
     } else {
       // MP 不足：追加普通攻擊
-      var normalDmg = baseAtk;
+      const normalDmg = baseAtk;
       totalDamagePerTarget += normalDmg;
 
       this.lastCastTag = "普攻追擊";
@@ -393,7 +393,7 @@ registerJobSkill('thief5', {
 
   currentCooldown: 0,
 
-  use: function (monster) {
+  use (monster) {
     const t = _getActiveTier(this);
     this.name     = t.name;
     this.cooldown = t.cooldown;
@@ -439,9 +439,9 @@ registerJobSkill('thief5', {
     return finalDmg;
   },
 
-  getUpgradeCost: function () { return 1; },
+  getUpgradeCost () { return 1; },
 
-  getDescription: function () {
+  getDescription () {
     const t = _getActiveTier(this);
     const L = Math.max(1, this.level | 0);
     const logic = t.logic || {};
@@ -502,7 +502,7 @@ registerJobSkill('thief5', {
 
   currentCooldown: 0,
 
-  use: function (monster) {
+  use (monster) {
     const t = _getActiveTier(this);
     this.name     = t.name;
     this.cooldown = t.cooldown;
@@ -548,9 +548,9 @@ registerJobSkill('thief5', {
     return finalDmg;
   },
 
-  getUpgradeCost: function () { return 1; },
+  getUpgradeCost () { return 1; },
 
-  getDescription: function () {
+  getDescription () {
     const t = _getActiveTier(this);
     const L = Math.max(1, this.level | 0);
     const logic = t.logic || {};
@@ -604,7 +604,7 @@ registerJobSkill('thief5', {
 
   currentCooldown: 0,
 
-  use: function (monster) {
+  use (monster) {
     const L     = Math.max(1, this.level | 0);
     const logic = this.logic || {};
     const hits  = Number(logic.hits || 1);
@@ -642,9 +642,9 @@ registerJobSkill('thief5', {
     return finalDmg;
   },
 
-  getUpgradeCost: function () { return 1; },
+  getUpgradeCost () { return 1; },
 
-  getDescription: function () {
+  getDescription () {
     const L     = Math.max(1, this.level | 0);
     const logic = this.logic || {};
     const hits  = Number(logic.hits || 1);
@@ -703,7 +703,7 @@ registerJobSkill('thief5', {
 
   currentCooldown: 0,
 
-  use: function (monster) {
+  use (monster) {
     const t = _getActiveTier(this);
     this.name     = t.name;
     this.cooldown = t.cooldown;
@@ -747,9 +747,9 @@ registerJobSkill('thief5', {
     return finalDmg;
   },
 
-  getUpgradeCost: function () { return 1; },
+  getUpgradeCost () { return 1; },
 
-  getDescription: function () {
+  getDescription () {
     const t     = _getActiveTier(this);
     const L     = Math.max(1, this.level | 0);
     const logic = t.logic || {};
@@ -807,7 +807,7 @@ registerJobSkill('thief5', {
 
   currentCooldown: 0,
 
-  use: function (monster) {
+  use (monster) {
     const L     = Math.max(1, this.level | 0);
     const logic = this.logic || {};
     const hits  = Number(logic.hits || 1);
@@ -865,9 +865,9 @@ registerJobSkill('thief5', {
     return finalDmg;
   },
 
-  getUpgradeCost: function () { return 1; },
+  getUpgradeCost () { return 1; },
 
-  getDescription: function () {
+  getDescription () {
     const L     = Math.max(1, this.level | 0);
     const logic = this.logic || {};
     const hits  = Number(logic.hits || 1);

@@ -24,15 +24,15 @@
     return;
   }
 
-  var SH   = w.SaveHub;
-  var jobs = w.jobs || {};
-  var NS   = "jobPassives";
-  var TICKET_ITEM_KEY = "被動能力券";
+  const SH   = w.SaveHub;
+  const jobs = w.jobs || {};
+  const NS   = "jobPassives";
+  const TICKET_ITEM_KEY = "被動能力券";
 
   // =======================
   // 1. 被動設定
   // =======================
-  var JOB_PASSIVE_CONFIG = {
+  const JOB_PASSIVE_CONFIG = {
     // === 二轉：職業專屬被動（上限 20） ===
 
     // 戰士 → 狂戰士線
@@ -211,9 +211,9 @@
   };
 
   // 只有二轉職業被動需要對應 jobs 表
-  var JOB_NAME_TO_KEY = {};
+  const JOB_NAME_TO_KEY = {};
   (function buildNameIndex() {
-    for (var key in JOB_PASSIVE_CONFIG) {
+    for (const key in JOB_PASSIVE_CONFIG) {
       if (!JOB_PASSIVE_CONFIG.hasOwnProperty(key)) continue;
       if (key === "goddessBlessing" ||
           key.indexOf("third_") === 0 ||
@@ -221,8 +221,8 @@
           key === "goddessBlessingUltimate") {
         continue;
       }
-      var jobDef  = jobs[key];
-      var jobName = jobDef && jobDef.name ? jobDef.name : key;
+      const jobDef  = jobs[key];
+      const jobName = jobDef && jobDef.name ? jobDef.name : key;
       JOB_PASSIVE_CONFIG[key].jobName     = jobName;
       JOB_PASSIVE_CONFIG[key].passiveName = jobName + "專屬被動";
       JOB_NAME_TO_KEY[jobName] = key;
@@ -244,14 +244,14 @@
   SH.registerNamespaces({
     jobPassives: {
       version: 1,
-      migrate: function (old) {
+      migrate (old) {
         old = old || {};
-        var pts = old.points || old;
-        var out = { points: {} };
+        const pts = old.points || old;
+        const out = { points: {} };
         if (pts && typeof pts === "object") {
-          for (var k in pts) {
+          for (const k in pts) {
             if (!pts.hasOwnProperty(k)) continue;
-            var n = pts[k] | 0;
+            const n = pts[k] | 0;
             if (n > 0) out.points[k] = n;
           }
         }
@@ -272,20 +272,20 @@
   // =======================
   function resolveJobKey(player) {
     if (!player) return null;
-    var key = (player.jobKey || player.job || "").toString().toLowerCase();
+    const key = (player.jobKey || player.job || "").toString().toLowerCase();
     return key || null;
   }
 
   // 職階：往 parent 一路往上數
   function getJobRank(jobKey) {
-    var key = (jobKey || "").toLowerCase();
+    let key = (jobKey || "").toLowerCase();
     if (!key) return 0;
-    var rank = 0;
-    var seen = {};
+    let rank = 0;
+    const seen = {};
     while (key && !seen[key]) {
       seen[key] = true;
       rank++;
-      var def = jobs[key];
+      const def = jobs[key];
       if (!def || !def.parent) break;
       key = def.parent.toLowerCase();
     }
@@ -297,9 +297,9 @@
   function isFifthAvailable(jobKey)  { return getJobRank(jobKey) >= 5; }
 
   function getPassiveKeyForJob(jobKey) {
-    var key = (jobKey || "").toLowerCase();
+    let key = (jobKey || "").toLowerCase();
     if (!key) return null;
-    var seen = {};
+    const seen = {};
     while (key && !seen[key]) {
       seen[key] = true;
       if (JOB_PASSIVE_CONFIG[key] &&
@@ -309,7 +309,7 @@
           key !== "goddessBlessingUltimate") {
         return key; // 二轉職業被動
       }
-      var def = jobs[key];
+      const def = jobs[key];
       if (!def || !def.parent) break;
       key = def.parent.toLowerCase();
     }
@@ -318,12 +318,12 @@
 
   // 盾騎士線判定：warrior_guardian2~6
   function isGuardianLine(jobKey) {
-    var key = (jobKey || "").toLowerCase();
-    var seen = {};
+    let key = (jobKey || "").toLowerCase();
+    const seen = {};
     while (key && !seen[key]) {
       seen[key] = true;
       if (key.indexOf("warrior_guardian") === 0) return true;
-      var def = jobs[key];
+      const def = jobs[key];
       if (!def || !def.parent) break;
       key = def.parent.toLowerCase();
     }
@@ -334,16 +334,16 @@
   // 4. 等級 / 券 操作
   // =======================
   function getLevel(key) {
-    var st = getState();
+    const st = getState();
     return st.points[key] || 0;
   }
 
   function setLevel(key, level) {
-    var cfg = JOB_PASSIVE_CONFIG[key];
+    const cfg = JOB_PASSIVE_CONFIG[key];
     if (!cfg) return;
-    var st  = getState();
-    var max = cfg.maxLevel || 1;
-    var lv  = level | 0;
+    const st  = getState();
+    const max = cfg.maxLevel || 1;
+    let lv  = level | 0;
     if (lv < 0) lv = 0;
     if (lv > max) lv = max;
     st.points[key] = lv;
@@ -357,16 +357,16 @@
 
   function levelUpWithTicket(key, options) {
     options = options || {};
-    var showMsg = options.showMessage !== false;
+    const showMsg = options.showMessage !== false;
 
-    var cfg = JOB_PASSIVE_CONFIG[key];
+    const cfg = JOB_PASSIVE_CONFIG[key];
     if (!cfg) {
       if (showMsg) alert("被動技能設定錯誤，找不到：" + key);
       return false;
     }
 
-    var cur = getLevel(key);
-    var max = cfg.maxLevel || 1;
+    const cur = getLevel(key);
+    const max = cfg.maxLevel || 1;
     if (cur >= max) {
       if (showMsg) alert("此被動技能已達最大等級。");
       return false;
@@ -378,7 +378,7 @@
       return false;
     }
 
-    var have = w.getItemQuantity(TICKET_ITEM_KEY) | 0;
+    const have = w.getItemQuantity(TICKET_ITEM_KEY) | 0;
     if (have <= 0) {
       if (showMsg) alert("沒有足夠的「" + TICKET_ITEM_KEY + "」。");
       return false;
@@ -393,16 +393,16 @@
   // 5. 加成計算：coreBonus → PotentialBonus
   // =======================
   function buildBonusForPassiveKey(key, coreBonus, jobKey) {
-    var cfg = JOB_PASSIVE_CONFIG[key];
+    const cfg = JOB_PASSIVE_CONFIG[key];
     if (!cfg) return null;
 
-    var level = getLevel(key);
+    const level = getLevel(key);
     if (!level) return null;
 
-    var max   = cfg.maxLevel || 1;
-    var ratio = level / max;
-    var eff   = cfg.effectsAtMax || {};
-    var src   = {};
+    const max   = cfg.maxLevel || 1;
+    const ratio = level / max;
+    const eff   = cfg.effectsAtMax || {};
+    const src   = {};
     coreBonus = coreBonus || {};
 
     // 百分比吃 coreBonus → 平坦（atk/def/hp/mp）
@@ -413,7 +413,7 @@
 
     // 全屬性 → 四維
     if (eff.allStatPct) {
-      var p = eff.allStatPct * ratio;
+      const p = eff.allStatPct * ratio;
       src.str = (coreBonus.str || 0) * p;
       src.agi = (coreBonus.agi || 0) * p;
       src.int = (coreBonus.int || 0) * p;
@@ -440,10 +440,10 @@
 
     // 特殊減傷：三轉 guardianShield
     if (key === "third_guardianShield") {
-      var isTank = isGuardianLine(jobKey);
-      var maxTank  = eff.damageReduceTankMax  || 0;
-      var maxOther = eff.damageReduceOtherMax || 0;
-      var maxVal   = isTank ? maxTank : maxOther;
+      const isTank = isGuardianLine(jobKey);
+      const maxTank  = eff.damageReduceTankMax  || 0;
+      const maxOther = eff.damageReduceOtherMax || 0;
+      const maxVal   = isTank ? maxTank : maxOther;
       if (maxVal > 0) src.damageReduce = maxVal * ratio;
     }
 
@@ -453,8 +453,8 @@
   function applyToPotentialByJobKey(jobKey, coreBonus, PotentialBonus) {
     if (!PotentialBonus || !PotentialBonus.bonusData) return;
 
-    var rank = getJobRank(jobKey);
-    var bd   = PotentialBonus.bonusData;
+    const rank = getJobRank(jobKey);
+    const bd   = PotentialBonus.bonusData;
 
     // 清舊資料
     bd.jobPassive              = {};
@@ -468,7 +468,7 @@
     bd.goddessBlessingUltimate = {};
 
     // 二轉職業被動
-    var passiveKey = getPassiveKeyForJob(jobKey);
+    const passiveKey = getPassiveKeyForJob(jobKey);
     if (passiveKey) {
       bd.jobPassive = buildBonusForPassiveKey(passiveKey, coreBonus, jobKey) || {};
     }
@@ -495,34 +495,34 @@
   }
 
   function applyForCurrentPlayer() {
-    var player = w.player || w.Player;
+    const player = w.player || w.Player;
     if (!player) return;
-    var jobKey = resolveJobKey(player) || "";
+    const jobKey = resolveJobKey(player) || "";
     applyToPotentialByJobKey(jobKey, player.coreBonus, player.PotentialBonus);
   }
 
   // =======================
   // 6. 對外 API
   // =======================
-  var JobPassives = {
+  const JobPassives = {
     CONFIG: JOB_PASSIVE_CONFIG,
     NAME_TO_KEY: JOB_NAME_TO_KEY,
 
-    resolveJobKey: resolveJobKey,
-    getPassiveKeyForJob: getPassiveKeyForJob,
-    getJobRank: getJobRank,
-    isThirdAvailable: isThirdAvailable,
-    isFourthAvailable: isFourthAvailable,
-    isFifthAvailable: isFifthAvailable,
+    resolveJobKey,
+    getPassiveKeyForJob,
+    getJobRank,
+    isThirdAvailable,
+    isFourthAvailable,
+    isFifthAvailable,
 
-    getLevel: getLevel,
-    setLevel: setLevel,
-    getTickets: getTickets,
-    levelUpWithTicket: levelUpWithTicket,
+    getLevel,
+    setLevel,
+    getTickets,
+    levelUpWithTicket,
 
-    buildBonusForPassiveKey: buildBonusForPassiveKey,
-    applyToPotentialByJobKey: applyToPotentialByJobKey,
-    applyForCurrentPlayer: applyForCurrentPlayer
+    buildBonusForPassiveKey,
+    applyToPotentialByJobKey,
+    applyForCurrentPlayer
   };
 
   w.JobPassives = JobPassives;
@@ -537,7 +537,7 @@
     function fp(x){ return Math.round(x); }
     function pp(x){ return (x * 100).toFixed(1) + "%"; }
 
-    var html = "";
+    let html = "";
 
     if (has(bonus.atk)) html += "<li>攻擊力 +" + fp(bonus.atk) + "</li>";
     if (has(bonus.def)) html += "<li>防禦力 +" + fp(bonus.def) + "</li>";
@@ -577,22 +577,22 @@
     w.SkillsHub.registerTab({
       id: "jobPassive2",
       title: "職業被動2",
-      onOpen: function () {
+      onOpen () {
         JobPassives.applyForCurrentPlayer();
       },
-      render: function (container) {
-        var player  = w.player || w.Player || {};
-        var jobKey  = resolveJobKey(player) || "";
-        var coreBon = player.coreBonus || {};
-        var tickets = JobPassives.getTickets();
-        var rank    = getJobRank(jobKey);
+      render (container) {
+        const player  = w.player || w.Player || {};
+        const jobKey  = resolveJobKey(player) || "";
+        const coreBon = player.coreBonus || {};
+        const tickets = JobPassives.getTickets();
+        const rank    = getJobRank(jobKey);
 
         container.innerHTML = "";
 
         function makeCard(btnId, title, lv, max, bonus, extraDesc) {
-          var disabled = (lv >= max) || (tickets <= 0);
+          const disabled = (lv >= max) || (tickets <= 0);
 
-          var html = '<div style="margin-bottom:8px;padding:8px;border-radius:8px;background:#020617;border:1px solid #1f2937;">';
+          let html = '<div style="margin-bottom:8px;padding:8px;border-radius:8px;background:#020617;border:1px solid #1f2937;">';
           html += '<div style="font-size:15px;font-weight:700;margin-bottom:4px;">' + title + '</div>';
           html += '<div style="margin-bottom:2px;">等級：' + lv + ' / ' + max + '</div>';
           html += '<div style="margin-bottom:4px;">持有「' + TICKET_ITEM_KEY + '」：' + tickets + ' 張</div>';
@@ -602,7 +602,7 @@
           html += '<div style="margin-bottom:4px;font-weight:600;">⭐ 目前提升：</div>';
           html += '<ul style="margin-left:18px;margin-bottom:8px;">' + describeBonus(bonus) + '</ul>';
 
-          var btnStyle =
+          const btnStyle =
             "padding:4px 8px;border-radius:6px;border:0;" +
             "cursor:" + (disabled ? "not-allowed" : "pointer") + ";" +
             "background:" + (disabled ? "#4b5563" : "#1d4ed8") + ";" +
@@ -619,7 +619,7 @@
           }
 
           html += '</div>';
-          return { html: html, disabled: disabled };
+          return { html, disabled };
         }
 
         function append(html) {
@@ -627,21 +627,21 @@
         }
 
         // === 2轉職業被動 ===
-        var passiveKey = getPassiveKeyForJob(jobKey);
+        const passiveKey = getPassiveKeyForJob(jobKey);
         if (!passiveKey) {
           append('<div style="padding:4px 0;margin-bottom:8px;">目前職業沒有二轉職業被動。</div>');
         } else {
-          var cfgJob   = JOB_PASSIVE_CONFIG[passiveKey];
-          var lvJob    = getLevel(passiveKey);
-          var maxJob   = cfgJob.maxLevel || 20;
-          var bonusJob = buildBonusForPassiveKey(passiveKey, coreBon, jobKey) || {};
-          var jobName  = cfgJob.jobName || passiveKey;
-          var nameJob  = cfgJob.passiveName || (jobName + "專屬被動");
+          const cfgJob   = JOB_PASSIVE_CONFIG[passiveKey];
+          const lvJob    = getLevel(passiveKey);
+          const maxJob   = cfgJob.maxLevel || 20;
+          const bonusJob = buildBonusForPassiveKey(passiveKey, coreBon, jobKey) || {};
+          const jobName  = cfgJob.jobName || passiveKey;
+          const nameJob  = cfgJob.passiveName || (jobName + "專屬被動");
 
-          var cardJob  = makeCard("jobPassive2Btn", nameJob, lvJob, maxJob, bonusJob);
+          const cardJob  = makeCard("jobPassive2Btn", nameJob, lvJob, maxJob, bonusJob);
           append(cardJob.html);
 
-          var btnJob = document.getElementById("jobPassive2Btn");
+          const btnJob = document.getElementById("jobPassive2Btn");
           if (btnJob) {
             btnJob.disabled = cardJob.disabled;
             btnJob.onclick = function () {
@@ -655,14 +655,14 @@
         // === 三轉共通 ===
         if (rank >= 3) {
           (function () {
-            var key   = "third_monsterDamage";
-            var cfg   = JOB_PASSIVE_CONFIG[key];
-            var lv    = getLevel(key);
-            var max   = cfg.maxLevel || 30;
-            var bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
-            var card  = makeCard("thirdMonsterBtn", "三轉：怪物傷害強化", lv, max, bonus);
+            const key   = "third_monsterDamage";
+            const cfg   = JOB_PASSIVE_CONFIG[key];
+            const lv    = getLevel(key);
+            const max   = cfg.maxLevel || 30;
+            const bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
+            const card  = makeCard("thirdMonsterBtn", "三轉：怪物傷害強化", lv, max, bonus);
             append(card.html);
-            var btn = document.getElementById("thirdMonsterBtn");
+            const btn = document.getElementById("thirdMonsterBtn");
             if (btn) {
               btn.disabled = card.disabled;
               btn.onclick = function () {
@@ -674,14 +674,14 @@
           })();
 
           (function () {
-            var key   = "third_reward";
-            var cfg   = JOB_PASSIVE_CONFIG[key];
-            var lv    = getLevel(key);
-            var max   = cfg.maxLevel || 30;
-            var bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
-            var card  = makeCard("thirdRewardBtn", "三轉：經驗與金幣加成", lv, max, bonus);
+            const key   = "third_reward";
+            const cfg   = JOB_PASSIVE_CONFIG[key];
+            const lv    = getLevel(key);
+            const max   = cfg.maxLevel || 30;
+            const bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
+            const card  = makeCard("thirdRewardBtn", "三轉：經驗與金幣加成", lv, max, bonus);
             append(card.html);
-            var btn = document.getElementById("thirdRewardBtn");
+            const btn = document.getElementById("thirdRewardBtn");
             if (btn) {
               btn.disabled = card.disabled;
               btn.onclick = function () {
@@ -693,14 +693,14 @@
           })();
 
           (function () {
-            var key   = "third_recover";
-            var cfg   = JOB_PASSIVE_CONFIG[key];
-            var lv    = getLevel(key);
-            var max   = cfg.maxLevel || 30;
-            var bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
-            var card  = makeCard("thirdRecoverBtn", "三轉：恢復力強化", lv, max, bonus);
+            const key   = "third_recover";
+            const cfg   = JOB_PASSIVE_CONFIG[key];
+            const lv    = getLevel(key);
+            const max   = cfg.maxLevel || 30;
+            const bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
+            const card  = makeCard("thirdRecoverBtn", "三轉：恢復力強化", lv, max, bonus);
             append(card.html);
-            var btn = document.getElementById("thirdRecoverBtn");
+            const btn = document.getElementById("thirdRecoverBtn");
             if (btn) {
               btn.disabled = card.disabled;
               btn.onclick = function () {
@@ -712,17 +712,17 @@
           })();
 
           (function () {
-            var key   = "third_guardianShield";
-            var cfg   = JOB_PASSIVE_CONFIG[key];
-            var lv    = getLevel(key);
-            var max   = cfg.maxLevel || 30;
-            var bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
-            var extra = isGuardianLine(jobKey)
+            const key   = "third_guardianShield";
+            const cfg   = JOB_PASSIVE_CONFIG[key];
+            const lv    = getLevel(key);
+            const max   = cfg.maxLevel || 30;
+            const bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
+            const extra = isGuardianLine(jobKey)
               ? "盾騎士路線：每級 1% 減傷，最多 30%。<br>其他職業：每級 0.5% 減傷，最多 15%。"
               : "（盾騎士路線可獲得雙倍減傷效果）";
-            var card  = makeCard("thirdGuardianBtn", "三轉：防禦專精", lv, max, bonus, extra);
+            const card  = makeCard("thirdGuardianBtn", "三轉：防禦專精", lv, max, bonus, extra);
             append(card.html);
-            var btn = document.getElementById("thirdGuardianBtn");
+            const btn = document.getElementById("thirdGuardianBtn");
             if (btn) {
               btn.disabled = card.disabled;
               btn.onclick = function () {
@@ -737,14 +737,14 @@
         // === 四轉：女神祝福 ===
         if (rank >= 4) {
           (function () {
-            var key   = "goddessBlessing";
-            var cfg   = JOB_PASSIVE_CONFIG[key];
-            var lv    = getLevel(key);
-            var max   = cfg.maxLevel || 30;
-            var bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
-            var card  = makeCard("goddessBlessingBtn", "四轉：女神祝福", lv, max, bonus);
+            const key   = "goddessBlessing";
+            const cfg   = JOB_PASSIVE_CONFIG[key];
+            const lv    = getLevel(key);
+            const max   = cfg.maxLevel || 30;
+            const bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
+            const card  = makeCard("goddessBlessingBtn", "四轉：女神祝福", lv, max, bonus);
             append(card.html);
-            var btn = document.getElementById("goddessBlessingBtn");
+            const btn = document.getElementById("goddessBlessingBtn");
             if (btn) {
               btn.disabled = card.disabled;
               btn.onclick = function () {
@@ -759,14 +759,14 @@
         // === 五轉共通 ===
         if (rank >= 5) {
           (function () {
-            var key   = "fifth_monsterDamage";
-            var cfg   = JOB_PASSIVE_CONFIG[key];
-            var lv    = getLevel(key);
-            var max   = cfg.maxLevel || 30;
-            var bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
-            var card  = makeCard("fifthMonsterBtn", "五轉：怪物傷害強化", lv, max, bonus);
+            const key   = "fifth_monsterDamage";
+            const cfg   = JOB_PASSIVE_CONFIG[key];
+            const lv    = getLevel(key);
+            const max   = cfg.maxLevel || 30;
+            const bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
+            const card  = makeCard("fifthMonsterBtn", "五轉：怪物傷害強化", lv, max, bonus);
             append(card.html);
-            var btn = document.getElementById("fifthMonsterBtn");
+            const btn = document.getElementById("fifthMonsterBtn");
             if (btn) {
               btn.disabled = card.disabled;
               btn.onclick = function () {
@@ -778,14 +778,14 @@
           })();
 
           (function () {
-            var key   = "fifth_reward";
-            var cfg   = JOB_PASSIVE_CONFIG[key];
-            var lv    = getLevel(key);
-            var max   = cfg.maxLevel || 30;
-            var bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
-            var card  = makeCard("fifthRewardBtn", "五轉：經驗與金幣加成", lv, max, bonus);
+            const key   = "fifth_reward";
+            const cfg   = JOB_PASSIVE_CONFIG[key];
+            const lv    = getLevel(key);
+            const max   = cfg.maxLevel || 30;
+            const bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
+            const card  = makeCard("fifthRewardBtn", "五轉：經驗與金幣加成", lv, max, bonus);
             append(card.html);
-            var btn = document.getElementById("fifthRewardBtn");
+            const btn = document.getElementById("fifthRewardBtn");
             if (btn) {
               btn.disabled = card.disabled;
               btn.onclick = function () {
@@ -797,15 +797,15 @@
           })();
 
           (function () {
-            var key   = "goddessBlessingUltimate";
-            var cfg   = JOB_PASSIVE_CONFIG[key];
-            var lv    = getLevel(key);
-            var max   = cfg.maxLevel || 30;
-            var bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
-            var extra = "全屬性 / 攻擊 / HP / 穿透 / 攻速 / 爆傷 皆依等級提升。";
-            var card  = makeCard("goddessUltimateBtn", "五轉：女神祝福 - 終極", lv, max, bonus, extra);
+            const key   = "goddessBlessingUltimate";
+            const cfg   = JOB_PASSIVE_CONFIG[key];
+            const lv    = getLevel(key);
+            const max   = cfg.maxLevel || 30;
+            const bonus = buildBonusForPassiveKey(key, coreBon, jobKey) || {};
+            const extra = "全屬性 / 攻擊 / HP / 穿透 / 攻速 / 爆傷 皆依等級提升。";
+            const card  = makeCard("goddessUltimateBtn", "五轉：女神祝福 - 終極", lv, max, bonus, extra);
             append(card.html);
-            var btn = document.getElementById("goddessUltimateBtn");
+            const btn = document.getElementById("goddessUltimateBtn");
             if (btn) {
               btn.disabled = card.disabled;
               btn.onclick = function () {

@@ -1,6 +1,6 @@
 // =======================
 // common_passives.js — 共同被動（以「被動能力券」取代被動點）— SaveHub 版（重製版）
-// - 優先使用 SaveHub（save_hub_es5.js）存檔，無則回退 localStorage
+// - 優先使用 SaveHub（save_hub_es2020.js）存檔，無則回退 localStorage
 // - canLevelUp/levelUp 檢查/扣除道具「被動能力券」
 // - UI 顯示「被動能力券：N」；按鈕「升級（消耗 1 張）」
 // - 新版：全部技能重製（1~4轉），攻擊/防禦/HP 百分比在本檔讀 core 後換算為平坦寫入 PotentialBonus
@@ -34,7 +34,7 @@
   // ---------- 一次性樣式 ----------
   (function injectStyle(){
     if (d.getElementById('cp-style')) return;
-    var css =
+    const css =
       ':root{--cp-bg:#0f172a;--cp-card:#111827;--cp-border:#233047;--cp-text:#e5e7eb;--cp-muted:#9ca3af;--cp-accent:#3b82f6;--cp-accent2:#2563eb;--cp-badge:#0b1220}'+
       '.cp-wrap{display:flex;flex-direction:column;gap:12px}'+
       '.cp-header{display:flex;align-items:center;justify-content:space-between;background:#0b1220;border:1px solid var(--cp-border);border-radius:12px;padding:10px 12px;color:var(--cp-text)}'+
@@ -52,15 +52,15 @@
       '.btn{background:#1f2937;border:1px solid var(--cp-border);color:#f8fafc;padding:6px 10px;border-radius:8px;cursor:pointer}'+
       '.btn.primary{background:var(--cp-accent);border-color:var(--cp-accent2)}'+
       '.btn.primary:disabled{opacity:.5;cursor:not-allowed}';
-    var el = d.createElement('style');
+    const el = d.createElement('style');
     el.id = 'cp-style'; el.textContent = css; d.head.appendChild(el);
   })();
 
   // ---------- 工具：判斷玩家目前轉職階段 ----------
   function getPlayerJobTier() {
     try {
-      var job = (w.player && w.player.job) ? String(w.player.job) : "";
-      var m = job.match(/(\d+)$/);
+      const job = (w.player && w.player.job) ? String(w.player.job) : "";
+      const m = job.match(/(\d+)$/);
       return m ? Math.max(1, parseInt(m[1], 10)) : 1;
     } catch(_) {
       return 1;
@@ -68,42 +68,42 @@
   }
 
   // ---------- 定義被動 ----------
-  var DEF = [
+  const DEF = [
     // === 一轉（上限 10） ===
     {
       id:"cp_t1_power",
       name:"武藝鍛鍊",
       maxLevel:10,
       minJobTier:1,
-      perLevel:function(lv){
+      perLevel(lv){
         return { atk: 5 * lv };
       },
-      lines:function(){ return ["每等：攻擊力 +5"]; }
+      lines(){ return ["每等：攻擊力 +5"]; }
     },
     {
       id:"cp_t1_guard",
       name:"堅守體魄",
       maxLevel:10,
       minJobTier:1,
-      perLevel:function(lv){
+      perLevel(lv){
         return {
           def: 3 * lv,
           hp:  50 * lv
         };
       },
-      lines:function(){ return ["每等：防禦力 +3，HP +50"]; }
+      lines(){ return ["每等：防禦力 +3，HP +50"]; }
     },
     {
       id:"cp_t1_swiftness",
       name:"迅捷步伐",
       maxLevel:10,
       minJobTier:1,
-      perLevel:function(lv){
+      perLevel(lv){
         return {
           attackSpeedPct: 0.01 * lv
         };
       },
-      lines:function(){ return ["每等：攻擊速度 +1%"]; }
+      lines(){ return ["每等：攻擊速度 +1%"]; }
     },
 
     // === 二轉（上限 10） ===
@@ -112,37 +112,37 @@
       name:"攻擊專精",
       maxLevel:10,
       minJobTier:2,
-      perLevel:function(lv){
+      perLevel(lv){
         return {
           atkPercent: 0.01 * lv
         };
       },
-      lines:function(){ return ["每等：攻擊力 +1%"]; }
+      lines(){ return ["每等：攻擊力 +1%"]; }
     },
     {
       id:"cp_t2_guard_aura",
       name:"守護光環",
       maxLevel:10,
       minJobTier:2,
-      perLevel:function(lv){
+      perLevel(lv){
         return {
           defPercent: 0.01 * lv,
           hpPercent:  0.01 * lv
         };
       },
-      lines:function(){ return ["每等：防禦力 +1%，HP +1%"]; }
+      lines(){ return ["每等：防禦力 +1%，HP +1%"]; }
     },
     {
       id:"cp_t2_hunter",
       name:"狩獵本能",
       maxLevel:10,
       minJobTier:2,
-      perLevel:function(lv){
+      perLevel(lv){
         return {
           normalDamage: 0.03 * lv
         };
       },
-      lines:function(){ return ["每等：一般怪物傷害 +3%"]; }
+      lines(){ return ["每等：一般怪物傷害 +3%"]; }
     },
 
     // === 三轉（上限 10） ===
@@ -151,53 +151,53 @@
       name:"財運加持",
       maxLevel:10,
       minJobTier:3,
-      perLevel:function(lv){
+      perLevel(lv){
         return {
           dropBonus: 0.02 * lv,
           goldBonus: 0.02 * lv,
           expBonus:  0.02 * lv
         };
       },
-      lines:function(){ return ["每等：掉寶 / 金幣 / 經驗值 各 +2%"]; }
+      lines(){ return ["每等：掉寶 / 金幣 / 經驗值 各 +2%"]; }
     },
     {
       id:"cp_t3_armor_pierce",
       name:"穿透秘訣",
       maxLevel:10,
       minJobTier:3,
-      perLevel:function(lv){
+      perLevel(lv){
         return {
           ignoreDefPct: 0.02 * lv
         };
       },
-      lines:function(){ return ["每等：穿透力 +2%（獨立來源）"]; }
+      lines(){ return ["每等：穿透力 +2%（獨立來源）"]; }
     },
     {
       id:"cp_t3_battle_dance",
       name:"戰鬥之舞",
       maxLevel:10,
       minJobTier:3,
-      perLevel:function(lv){
+      perLevel(lv){
         return {
           totalDamage:    0.01 * lv,
           attackSpeedPct: 0.02 * lv
         };
       },
-      lines:function(){ return ["每等：總傷害 +1%，攻擊速度 +2%"]; }
+      lines(){ return ["每等：總傷害 +1%，攻擊速度 +2%"]; }
     },
     {
       id:"cp_t3_slayer_all",
       name:"制敵專家",
       maxLevel:10,
       minJobTier:3,
-      perLevel:function(lv){
+      perLevel(lv){
         return {
           normalDamage: 0.01 * lv,
           eliteDamage:  0.01 * lv,
           bossDamage:   0.01 * lv
         };
       },
-      lines:function(){ return ["每等：一般 / 菁英 / Boss 傷害 各 +1%"]; }
+      lines(){ return ["每等：一般 / 菁英 / Boss 傷害 各 +1%"]; }
     },
 
     // === 四轉（上限 30） ===
@@ -206,69 +206,69 @@
       name:"致命覺醒",
       maxLevel:30,
       minJobTier:4,
-      perLevel:function(lv){
+      perLevel(lv){
         return {
           critRate:       0.015 * lv,
           critMultiplier: 0.01  * lv
         };
       },
-      lines:function(){ return ["每等：爆擊率 +1.5%，爆擊傷害 +1%"]; }
+      lines(){ return ["每等：爆擊率 +1.5%，爆擊傷害 +1%"]; }
     },
     {
       id:"cp_t4_boss_master",
       name:"王者制裁",
       maxLevel:30,
       minJobTier:4,
-      perLevel:function(lv){
+      perLevel(lv){
         return {
           atkPercent:   0.01 * lv,
           totalDamage:  0.01 * lv,
           bossDamage:   0.01 * lv
         };
       },
-      lines:function(){ return ["每等：攻擊力 +1%，總傷害 +1%，Boss 傷害 +1%"]; }
+      lines(){ return ["每等：攻擊力 +1%，總傷害 +1%，Boss 傷害 +1%"]; }
     },
     {
       id:"cp_t4_iron_will",
       name:"不滅鬥志",
       maxLevel:30,
       minJobTier:4,
-      perLevel:function(lv){
+      perLevel(lv){
         return {
           attackSpeedPct: 0.01  * lv,
           hpPercent:      0.015 * lv,
           defPercent:     0.02  * lv
         };
       },
-      lines:function(){ return ["每等：攻擊速度 +1%，HP +1.5%，防禦力 +2%"]; }
+      lines(){ return ["每等：攻擊速度 +1%，HP +1.5%，防禦力 +2%"]; }
     },
     {
       id:"cp_t4_fortune_god",
       name:"富饒加護",
       maxLevel:30,
       minJobTier:4,
-      perLevel:function(lv){
+      perLevel(lv){
         return {
           dropBonus: 0.02 * lv,
           expBonus:  0.02 * lv,
           goldBonus: 0.02 * lv
         };
       },
-      lines:function(){ return ["每等：掉寶 / 經驗值 / 金幣 各 +2%"]; }
+      lines(){ return ["每等：掉寶 / 經驗值 / 金幣 各 +2%"]; }
     }
   ];
 
   // ---------- 存檔：SaveHub 優先 ----------
-  var NS = "common_passives_v2";
-  var LS_KEY = "common_passives_v2_fallback";
-  var useSaveHub = !!w.SaveHub;
+  const NS = "common_passives_v2";
+  const LS_KEY = "common_passives_v2_fallback";
+  const useSaveHub = !!w.SaveHub;
 
   function fresh(){
-    var o={}; for (var i=0;i<DEF.length;i++) o[DEF[i].id]=0; return o;
+    const o={}; for (let i=0;i<DEF.length;i++) o[DEF[i].id]=0; return o;
   }
   function normalize(levels){
-    var o = levels || {};
-    var i, def, k;
+    const o = levels || {};
+    let i, def, k;
     for (i=0;i<DEF.length;i++) if (!(DEF[i].id in o)) o[DEF[i].id]=0;
     for (k in o){
       if (!o.hasOwnProperty(k)) continue;
@@ -284,10 +284,10 @@
   }
   if (useSaveHub){
     try{
-      var spec={};
+      const spec={};
       spec[NS] = {
         version:1,
-        migrate:function(old){ return normalize(old||fresh()); }
+        migrate(old){ return normalize(old||fresh()); }
       };
       w.SaveHub.registerNamespaces(spec);
     }catch(_){}
@@ -295,7 +295,7 @@
   function load(){
     try{
       if (useSaveHub) return normalize(w.SaveHub.get(NS, fresh()));
-      var raw = w.localStorage && w.localStorage.getItem(LS_KEY);
+      const raw = w.localStorage && w.localStorage.getItem(LS_KEY);
       return normalize(raw ? JSON.parse(raw)||fresh() : fresh());
     }catch(_){ return fresh(); }
   }
@@ -306,11 +306,11 @@
     }catch(_){}
   }
 
-  var levels = load();
+  const levels = load();
 
   // ---------- 聚合到 player.coreBonus / PotentialBonus ----------
   function sumBonuses(){
-    var out = {
+    const out = {
       atk:0, def:0, hp:0,
       str:0, agi:0, int:0, luk:0,
 
@@ -334,14 +334,14 @@
       _ignoreDefBySkill:{}
     };
 
-    DEF.forEach(function(p){
-      var lv  = Math.max(0, Math.min(p.maxLevel, Number(levels[p.id]||0)));
+    DEF.forEach((p) =>{
+      const lv  = Math.max(0, Math.min(p.maxLevel, Number(levels[p.id]||0)));
       if (!lv) return;
-      var add = p.perLevel(lv);
-      var k;
+      const add = p.perLevel(lv);
+      let k;
       for (k in add){
         if (!add.hasOwnProperty(k)) continue;
-        var v = add[k] || 0;
+        const v = add[k] || 0;
         if (!v) continue;
 
         if (k === 'ignoreDefPct'){
@@ -364,14 +364,14 @@
 
   function applyToPlayer(){
     if(!w.player || !w.player.coreBonus || !w.player.coreBonus.bonusData) return;
-    var bd = w.player.coreBonus.bonusData;
-    var sum = sumBonuses();
+    const bd = w.player.coreBonus.bonusData;
+    const sum = sumBonuses();
 
     // 1) 把總和掛在 common_passives（包含 atkPercent/defPercent/hpPercent）
     bd.common_passives = sum;
 
     // 2) 清掉舊的 cp_ 開頭穿防節點
-    var key;
+    let key;
     for (key in bd){
       if (!bd.hasOwnProperty(key)) continue;
       if (/^cp_/.test(key) && bd[key] && typeof bd[key].ignoreDefPct === 'number'){
@@ -383,7 +383,7 @@
     if (sum._ignoreDefBySkill){
       for (key in sum._ignoreDefBySkill){
         if (!sum._ignoreDefBySkill.hasOwnProperty(key)) continue;
-        var v = sum._ignoreDefBySkill[key];
+        const v = sum._ignoreDefBySkill[key];
         if (!v) continue;
         bd[key] = bd[key] || {};
         bd[key].ignoreDefPct = v;
@@ -393,16 +393,16 @@
     // 4) 攻擊/防禦/HP 百分比 → 讀 core 後換算平坦，寫入 PotentialBonus.common_passives
     try{
       if (w.player.PotentialBonus && w.player.PotentialBonus.bonusData){
-        var pbd = w.player.PotentialBonus.bonusData;
-        var baseAtk = 0, baseDef = 0, baseHp = 0;
+        const pbd = w.player.PotentialBonus.bonusData;
+        let baseAtk = 0, baseDef = 0, baseHp = 0;
 
         try { baseAtk = w.player.coreBonus.atk || 0; } catch(_){}
         try { baseDef = w.player.coreBonus.def || 0; } catch(_){}
         try { baseHp  = w.player.coreBonus.hp  || 0; } catch(_){}
 
-        var extraAtk = Math.floor(baseAtk * (sum.atkPercent || 0));
-        var extraDef = Math.floor(baseDef * (sum.defPercent || 0));
-        var extraHp  = Math.floor(baseHp  * (sum.hpPercent  || 0));
+        const extraAtk = Math.floor(baseAtk * (sum.atkPercent || 0));
+        const extraDef = Math.floor(baseDef * (sum.defPercent || 0));
+        const extraHp  = Math.floor(baseHp  * (sum.hpPercent  || 0));
 
         pbd.common_passives = pbd.common_passives || {};
         pbd.common_passives.atk = extraAtk;
@@ -415,7 +415,7 @@
   // 將共同被動掛在職業被動 apply 之後
   (function hookAggregate(){
     function tryHook(){
-      var ag = null;
+      let ag = null;
       try {
         if (w.JobPassivesCore && w.JobPassivesCore.JobPassivesAggregate) {
           ag = w.JobPassivesCore.JobPassivesAggregate;
@@ -434,9 +434,9 @@
       if (ag._cpHooked) return;
       ag._cpHooked = true;
 
-      var old = ag.apply.bind(ag);
+      const old = ag.apply.bind(ag);
       ag.apply = function(){
-        var r = old();
+        const r = old();
         try { applyToPlayer(); } catch(_){}
         return r;
       };
@@ -447,7 +447,7 @@
 
   // ✅ 讀檔後再套用一次共同被動（利用 GameSave__notifyApplied 鉤子）
   (function hookSaveApplied(){
-    var old = w.GameSave__notifyApplied;
+    const old = w.GameSave__notifyApplied;
     w.GameSave__notifyApplied = function(){
       if (typeof old === 'function') {
         try { old(); } catch(_){}
@@ -458,14 +458,14 @@
 
   // ---------- 升級（吃券 + 檢查轉職階段） ----------
   function canLevelUp(id){
-    var def = null;
-    var i;
+    let def = null;
+    let i;
     for (i=0;i<DEF.length;i++){ if(DEF[i].id===id){ def=DEF[i]; break; } }
     if(!def) return {ok:false, reason:'not_found'};
-    var cur = levels[id]||0;
+    const cur = levels[id]||0;
 
-    var needTier = def.minJobTier || 1;
-    var curTier  = getPlayerJobTier();
+    const needTier = def.minJobTier || 1;
+    const curTier  = getPlayerJobTier();
     if (curTier < needTier) {
       return { ok:false, reason:'job_tier', need:needTier };
     }
@@ -475,7 +475,7 @@
     return {ok:true};
   }
   function levelUp(id){
-    var res = canLevelUp(id);
+    const res = canLevelUp(id);
     if(!res.ok) return res;
     if (!consumePassiveTicket(1)) return {ok:false, reason:'no_ticket'};
     levels[id] = (levels[id]||0) + 1;
@@ -486,11 +486,11 @@
 
   // ---------- 對外 API ----------
   w.CommonPassives = {
-    list: function(){
-      var out = [];
-      for (var i=0;i<DEF.length;i++){
-        var p = DEF[i];
-        var lv = levels[p.id]||0;
+    list(){
+      const out = [];
+      for (let i=0;i<DEF.length;i++){
+        const p = DEF[i];
+        const lv = levels[p.id]||0;
         out.push({
           id:p.id,
           name:p.name,
@@ -503,21 +503,21 @@
       }
       return out;
     },
-    getLevel: function(id){ return Number(levels[id]||0); },
-    setLevel: function(id, lv){
-      var def=null, i;
+    getLevel(id){ return Number(levels[id]||0); },
+    setLevel(id, lv){
+      let def=null, i;
       for (i=0;i<DEF.length;i++){ if(DEF[i].id===id){ def=DEF[i]; break; } }
       if(!def) return;
       levels[id]=Math.max(0, Math.min(def.maxLevel, Number(lv)||0));
       save(); applyToPlayer();
     },
-    levelUp: levelUp,
+    levelUp,
     apply: applyToPlayer
   };
 
   // 初次套用：等 coreBonus + PotentialBonus 都準備好（不管有沒有存檔）
   (function waitPlayer(){
-    var p = w.player;
+    const p = w.player;
     if (p &&
         p.coreBonus && p.coreBonus.bonusData &&
         p.PotentialBonus && p.PotentialBonus.bonusData) {
@@ -530,12 +530,12 @@
 
   // ---------- UI 渲染 ----------
   function renderSummaryCard(container){
-    var sum = sumBonuses();
-    var card = d.createElement('div'); card.className = 'cp-card';
-    var title = d.createElement('div'); title.className = 'cp-name'; title.textContent = '📊 總加成概覽';
+    const sum = sumBonuses();
+    const card = d.createElement('div'); card.className = 'cp-card';
+    const title = d.createElement('div'); title.className = 'cp-name'; title.textContent = '📊 總加成概覽';
 
-    var desc = d.createElement('div'); desc.className = 'cp-desc';
-    var parts = [];
+    const desc = d.createElement('div'); desc.className = 'cp-desc';
+    const parts = [];
 
     if (sum.atk) parts.push('攻擊力 +' + sum.atk);
     if (sum.def) parts.push('防禦力 +' + sum.def);
@@ -571,30 +571,30 @@
 
   function renderInto(container){
     container.innerHTML = "";
-    var wrap = d.createElement('div'); wrap.className = 'cp-wrap';
+    const wrap = d.createElement('div'); wrap.className = 'cp-wrap';
 
-    var header = d.createElement('div'); header.className = 'cp-header';
-    var title = d.createElement('div'); title.className = 'title'; title.textContent = '🧩 共同被動';
-    var tickets = getPassiveTicketCount();
-    var points = d.createElement('div'); points.className = 'points'; points.textContent = '被動能力券：' + tickets;
+    const header = d.createElement('div'); header.className = 'cp-header';
+    const title = d.createElement('div'); title.className = 'title'; title.textContent = '🧩 共同被動';
+    const tickets = getPassiveTicketCount();
+    const points = d.createElement('div'); points.className = 'points'; points.textContent = '被動能力券：' + tickets;
     header.appendChild(title); header.appendChild(points); wrap.appendChild(header);
 
     renderSummaryCard(wrap);
 
-    var list = w.CommonPassives.list();
-    list.forEach(function(p){
-      var card = d.createElement('div'); card.className = 'cp-card';
-      var row = d.createElement('div'); row.className = 'cp-row';
-      var main = d.createElement('div'); main.className = 'cp-main';
-      var right = d.createElement('div'); right.className = 'cp-right';
+    const list = w.CommonPassives.list();
+    list.forEach((p) =>{
+      const card = d.createElement('div'); card.className = 'cp-card';
+      const row = d.createElement('div'); row.className = 'cp-row';
+      const main = d.createElement('div'); main.className = 'cp-main';
+      const right = d.createElement('div'); right.className = 'cp-right';
 
-      var name = d.createElement('div'); name.className = 'cp-name'; name.textContent = p.name;
-      var desc = d.createElement('div'); desc.className = 'cp-desc';
-      desc.innerHTML = p.lines.map(function(s){return '• '+s;}).join('<br>');
-      var badges = d.createElement('div'); badges.className = 'cp-badges';
+      const name = d.createElement('div'); name.className = 'cp-name'; name.textContent = p.name;
+      const desc = d.createElement('div'); desc.className = 'cp-desc';
+      desc.innerHTML = p.lines.map((s) =>{return '• '+s;}).join('<br>');
+      const badges = d.createElement('div'); badges.className = 'cp-badges';
 
-      var preview = [];
-      var b = p.bonuses;
+      const preview = [];
+      const b = p.bonuses;
 
       if (b.atk) preview.push('攻擊力 +' + b.atk);
       if (b.def) preview.push('防禦力 +' + b.def);
@@ -623,30 +623,30 @@
       if (b.totalDamage)  preview.push('總傷害 +'         + Math.round(b.totalDamage*100) + '%');
 
       if (!preview.length) preview.push('尚無加成');
-      var pill = d.createElement('span'); pill.className='cp-pill'; pill.textContent = preview.join('｜');
+      const pill = d.createElement('span'); pill.className='cp-pill'; pill.textContent = preview.join('｜');
       badges.appendChild(pill);
       main.appendChild(name); main.appendChild(desc); main.appendChild(badges);
 
-      var lv = d.createElement('div'); lv.className = 'cp-level';
-      var tierTxt = '';
+      const lv = d.createElement('div'); lv.className = 'cp-level';
+      let tierTxt = '';
       if (p.minJobTier && p.minJobTier > 1) {
-        var tname = (p.minJobTier===2?'二轉':p.minJobTier===3?'三轉':p.minJobTier===4?'四轉':(p.minJobTier+'轉'));
+        const tname = (p.minJobTier===2?'二轉':p.minJobTier===3?'三轉':p.minJobTier===4?'四轉':(p.minJobTier+'轉'));
         tierTxt = '（'+tname+'解鎖）';
       }
       lv.textContent = 'Lv. ' + p.level + ' / ' + p.maxLevel + ' ' + tierTxt;
 
-      var btn = d.createElement('button'); btn.className='btn primary'; btn.textContent='升級（消耗 1 張）';
-      var can = canLevelUp(p.id).ok; btn.disabled = !can;
+      const btn = d.createElement('button'); btn.className='btn primary'; btn.textContent='升級（消耗 1 張）';
+      const can = canLevelUp(p.id).ok; btn.disabled = !can;
       btn.onclick = function(){
-        var res = w.CommonPassives.levelUp(p.id);
+        const res = w.CommonPassives.levelUp(p.id);
         if (!res.ok) {
           if (res.reason==='max') {
             toast('已達上限', true);
           } else if (res.reason==='no_ticket') {
             toast('需要「被動能力券」', true);
           } else if (res.reason==='job_tier') {
-            var need = res.need || 1;
-            var tierName = (need===2?'二轉':need===3?'三轉':need===4?'四轉':(need+'轉'));
+            const need = res.need || 1;
+            const tierName = (need===2?'二轉':need===3?'三轉':need===4?'四轉':(need+'轉'));
             toast('需要 '+tierName+' 才能升級此被動', true);
           } else {
             toast('無法升級', true);
@@ -665,7 +665,7 @@
   }
 
   // 掛到 SkillsHub
-  var hub = (w.SkillsHub && typeof w.SkillsHub.registerTab === 'function' && w.SkillsHub) ||
+  const hub = (w.SkillsHub && typeof w.SkillsHub.registerTab === 'function' && w.SkillsHub) ||
             (w.skills_hub && typeof w.skills_hub.registerTab === 'function' && w.skills_hub) ||
             null;
   if (hub) {
@@ -673,9 +673,9 @@
       id:'common-passives',
       title:'共同被動',
       render:renderInto,
-      onOpen:function(){ try{ applyToPlayer(); }catch(_){ } },
-      onClose:function(){},
-      tick:function(){}
+      onOpen(){ try{ applyToPlayer(); }catch(_){ } },
+      onClose(){},
+      tick(){}
     });
   }
 })(window, document);

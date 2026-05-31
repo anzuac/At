@@ -1,5 +1,5 @@
 // =======================
-// player_stats_modal.js — 詳細資訊面板（卡片網格版, ES5）
+// player_stats_modal.js — 詳細資訊面板（卡片網格版, ES2020+）
 // 依賴：window.player、window.getIgnoreDefBreakdown（可選）
 // 提供：createStatModal() / openStatModal()
 // 修正：來源拆解不再用「殘差=技能」，改用：基礎 / 裝備核心 / 潛能 / 技能(平坦/%) + 其他(誤差)
@@ -17,7 +17,7 @@
   function pctInt(p){
     p = Number(p || 0);
     if (!isFinite(p) || p === 0) return "0%";
-    var s = p.toFixed(2);
+    let s = p.toFixed(2);
     if (s.indexOf(".") >= 0) s = s.replace(/\.00$/, "");
     return s + "%";
   }
@@ -56,14 +56,14 @@
   // 取得潛能%（由 potential_engine 的來源池 _potentialSources 匯總）
   // 規格：xxxPct 以「整數百分比」存放（10 = 10%）
   function getPotentialPct(player, pctKey){
-    var bucket = player && player._potentialSources;
+    const bucket = player && player._potentialSources;
     if (!bucket || typeof bucket !== "object") return 0;
-    var sum = 0;
-    for (var srcKey in bucket){
+    let sum = 0;
+    for (const srcKey in bucket){
       if (!bucket.hasOwnProperty(srcKey)) continue;
-      var src = bucket[srcKey];
+      const src = bucket[srcKey];
       if (!src || typeof src !== "object") continue;
-      var v = src[pctKey];
+      const v = src[pctKey];
       if (typeof v !== "number" || !isFinite(v)) continue;
       sum += v;
     }
@@ -86,7 +86,7 @@
   // 從 coreBonus.bonusData 中取特定來源（例如 collectionBook）的平坦貢獻
   function getCoreSourceFlat(coreBonus, sourceKey, statKey){
     if (!coreBonus || !coreBonus.bonusData) return 0;
-    var src = coreBonus.bonusData[sourceKey];
+    const src = coreBonus.bonusData[sourceKey];
     if (!src || typeof src !== "object") return 0;
     return n(src[statKey]);
   }
@@ -95,59 +95,59 @@
   // 預設假設：total ≈ (base + core + pot + skillFlat) * (1 + skillPct)
   // 若你的引擎有其他乘區或加區，會落在 other（誤差）顯示，避免被錯歸類為技能
   function breakFlatPlusPercent(totalVal, baseFlat, coreFlat, potFlat, skillFlat, skillPct){
-    var base = n(baseFlat);
-    var core = n(coreFlat);
-    var pot  = n(potFlat);
-    var sF   = n(skillFlat);
-    var sP   = n(skillPct);
+    const base = n(baseFlat);
+    const core = n(coreFlat);
+    const pot  = n(potFlat);
+    const sF   = n(skillFlat);
+    const sP   = n(skillPct);
 
-    var flatSum = base + core + pot + sF;
-    var expected = flatSum * (1 + sP);
+    const flatSum = base + core + pot + sF;
+    const expected = flatSum * (1 + sP);
 
-    var total = n(totalVal);
-    var other = total - expected;
+    const total = n(totalVal);
+    let other = total - expected;
 
     // 避免顯示 -0
     if (abs(other) < 1e-6) other = 0;
 
     return {
-      base: base,
-      core: core,
-      pot: pot,
+      base,
+      core,
+      pot,
       skillFlat: sF,
       skillPct: sP,
-      other: other
+      other
     };
   }
 
   // ---- Ignore DEF breakdown ----
   function buildIgnoreDefBreakdown(totalIgnoreDef){
-    var base = (typeof w.getIgnoreDefBreakdown === "function")
+    const base = (typeof w.getIgnoreDefBreakdown === "function")
       ? (w.getIgnoreDefBreakdown() || { sources:[], product:1, combined:0 })
       : { sources:[], product:1, combined: (totalIgnoreDef || 0) };
 
-    var seen = {};
-    var out = { sources:[], product:1, combined:0 };
+    const seen = {};
+    const out = { sources:[], product:1, combined:0 };
 
     function add(label, p){
       p = Number(p || 0);
       if (!p) return;
       if (seen[label]) return;
       seen[label] = true;
-      out.sources.push({ label: String(label || "來源"), p: p });
+      out.sources.push({ label: String(label || "來源"), p });
     }
 
     if (base.sources && base.sources.length){
-      for (var i=0; i<base.sources.length; i++){
-        var s = base.sources[i];
+      for (let i=0; i<base.sources.length; i++){
+        const s = base.sources[i];
         if (!s || typeof s.p !== "number") continue;
         add(s.label || ("來源" + (i+1)), s.p);
       }
     }
 
-    var product = 1;
-    for (var j=0; j<out.sources.length; j++){
-      var pz = Number(out.sources[j].p || 0);
+    let product = 1;
+    for (let j=0; j<out.sources.length; j++){
+      let pz = Number(out.sources[j].p || 0);
       if (pz < 0) pz = 0;
       if (pz > 0.999999) pz = 0.999999;
       product *= (1 - pz);
@@ -164,7 +164,7 @@
   // ---- 樣式（卡片 + 網格） ----
   function ensureStyle() {
     if (document.getElementById("statModalStyle")) return;
-    var s = document.createElement("style");
+    const s = document.createElement("style");
     s.id = "statModalStyle";
     s.textContent =
       "\n#statModal{position:fixed;inset:0;display:none;z-index:9999;justify-content:center;align-items:center;background:rgba(0,0,0,.65)}"+
@@ -235,13 +235,13 @@
     ensureStyle();
     if (document.getElementById("statModal")) return;
 
-    var modal = document.createElement("div");
+    const modal = document.createElement("div");
     modal.id = "statModal";
 
-    var content = document.createElement("div");
+    const content = document.createElement("div");
     content.id = "statModalContent";
 
-    var close = document.createElement("button");
+    const close = document.createElement("button");
     close.className = "close-btn";
     close.textContent = "✖";
     close.onclick = function(){ modal.style.display = "none"; };
@@ -252,38 +252,38 @@
   }
 
   function openStatModal() {
-    var p = w.player;
+    const p = w.player;
     if (!p) return;
 
-    var total      = p.totalStats || {};
-    var baseStats  = p.baseStats  || {};
-    var coreBonus  = p.coreBonus  || {};
-    var potAgg     = p.PotentialBonus || {};
-    var skillBonus = p.skillBonus || {};
+    const total      = p.totalStats || {};
+    const baseStats  = p.baseStats  || {};
+    const coreBonus  = p.coreBonus  || {};
+    const potAgg     = p.PotentialBonus || {};
+    const skillBonus = p.skillBonus || {};
 
     // 圖鑑（coreBonus.bonusData.collectionBook）平坦貢獻（用於拆解顯示）
-    var bookAtk = getCoreSourceFlat(coreBonus, "collectionBook", "atk");
-    var bookDef = getCoreSourceFlat(coreBonus, "collectionBook", "def");
-    var bookHp  = getCoreSourceFlat(coreBonus, "collectionBook", "hp");
-    var bookMp  = getCoreSourceFlat(coreBonus, "collectionBook", "mp");
+    const bookAtk = getCoreSourceFlat(coreBonus, "collectionBook", "atk");
+    const bookDef = getCoreSourceFlat(coreBonus, "collectionBook", "def");
+    const bookHp  = getCoreSourceFlat(coreBonus, "collectionBook", "hp");
+    const bookMp  = getCoreSourceFlat(coreBonus, "collectionBook", "mp");
 
     // 潛能%（整數百分比）— 只做顯示，不參與公式（公式以 potAgg 平坦結果為準）
-    var potAtkPct = getPotentialPctByStat(p, "atk");
-    var potDefPct = getPotentialPctByStat(p, "def");
-    var potHpPct  = getPotentialPctByStat(p, "hp");
-    var potMpPct  = getPotentialPctByStat(p, "mp");
+    const potAtkPct = getPotentialPctByStat(p, "atk");
+    const potDefPct = getPotentialPctByStat(p, "def");
+    const potHpPct  = getPotentialPctByStat(p, "hp");
+    const potMpPct  = getPotentialPctByStat(p, "mp");
 
     // 四維潛能%（自身% + 全屬%）— 僅顯示
-    var potStrPct = getPotentialPctByStat(p, "str");
-    var potAgiPct = getPotentialPctByStat(p, "agi");
-    var potIntPct = getPotentialPctByStat(p, "int");
-    var potLukPct = getPotentialPctByStat(p, "luk");
+    const potStrPct = getPotentialPctByStat(p, "str");
+    const potAgiPct = getPotentialPctByStat(p, "agi");
+    const potIntPct = getPotentialPctByStat(p, "int");
+    const potLukPct = getPotentialPctByStat(p, "luk");
 
-    var content = document.getElementById("statModalContent");
+    const content = document.getElementById("statModalContent");
     if (!content) return;
 
     // ---- 四大能力拆解：基礎 / 裝備核心 / 潛能 / 技能(flat/%) + 其他(誤差) ----
-    var atkBreak = breakFlatPlusPercent(
+    const atkBreak = breakFlatPlusPercent(
       total.atk,
       baseStats.atk,
       coreBonus.atk,
@@ -294,7 +294,7 @@
     atkBreak.coreBook = bookAtk;
     atkBreak.coreOther = n(atkBreak.core) - n(bookAtk);
     atkBreak.potPct = potAtkPct;
-    var defBreak = breakFlatPlusPercent(
+    const defBreak = breakFlatPlusPercent(
       total.def,
       baseStats.def,
       coreBonus.def,
@@ -305,7 +305,7 @@
     defBreak.coreBook = bookDef;
     defBreak.coreOther = n(defBreak.core) - n(bookDef);
     defBreak.potPct = potDefPct;
-    var hpBreak = breakFlatPlusPercent(
+    const hpBreak = breakFlatPlusPercent(
       total.hp,
       baseStats.hp,
       coreBonus.hp,
@@ -316,7 +316,7 @@
     hpBreak.coreBook = bookHp;
     hpBreak.coreOther = n(hpBreak.core) - n(bookHp);
     hpBreak.potPct = potHpPct;
-    var mpBreak = breakFlatPlusPercent(
+    const mpBreak = breakFlatPlusPercent(
       total.mp,
       baseStats.mp,
       coreBonus.mp,
@@ -329,50 +329,50 @@
     mpBreak.potPct = potMpPct;
 
     // 四維總值：優先用 totalStats（避免漏算），沒有才 fallback
-    var totalStr = (total.str != null) ? n(total.str) : (n(baseStats.str) + n(coreBonus.str) + n(potAgg.str));
-    var totalAgi = (total.agi != null) ? n(total.agi) : (n(baseStats.agi) + n(coreBonus.agi) + n(potAgg.agi));
-    var totalInt = (total.int != null) ? n(total.int) : (n(baseStats.int) + n(coreBonus.int) + n(potAgg.int));
-    var totalLuk = (total.luk != null) ? n(total.luk) : (n(baseStats.luk) + n(coreBonus.luk) + n(potAgg.luk));
+    const totalStr = (total.str != null) ? n(total.str) : (n(baseStats.str) + n(coreBonus.str) + n(potAgg.str));
+    const totalAgi = (total.agi != null) ? n(total.agi) : (n(baseStats.agi) + n(coreBonus.agi) + n(potAgg.agi));
+    const totalInt = (total.int != null) ? n(total.int) : (n(baseStats.int) + n(coreBonus.int) + n(potAgg.int));
+    const totalLuk = (total.luk != null) ? n(total.luk) : (n(baseStats.luk) + n(coreBonus.luk) + n(potAgg.luk));
 
     // Ignore DEF 統整
-    var ignoreTotal = n(total.ignoreDefPct);
-    var igMerged = buildIgnoreDefBreakdown(ignoreTotal);
-    var igRows = (igMerged.sources && igMerged.sources.length)
-      ? igMerged.sources.map(function(s){
+    const ignoreTotal = n(total.ignoreDefPct);
+    const igMerged = buildIgnoreDefBreakdown(ignoreTotal);
+    const igRows = (igMerged.sources && igMerged.sources.length)
+      ? igMerged.sources.map((s) =>{
           return '<tr><td>'+String(s.label || "來源")+'</td><td>'+pct(s.p, 2)+'</td></tr>';
         }).join("")
       : '<tr><td class="muted">（目前沒有穿透來源）</td><td></td></tr>';
-    var igFormula = (igMerged.sources && igMerged.sources.length)
+    const igFormula = (igMerged.sources && igMerged.sources.length)
       ? '1 - 連乘(1 - p) = 1 - ' + igMerged.product.toFixed(6) +
         ' = <b>' + pct(igMerged.combined, 2) + '</b>'
       : '<span class="muted">沒有可顯示的穿透來源</span>';
 
     // 傷害類
-    var totalSkillDmg  = n(total.skillDamage);
-    var totalSpellDmg  = n(total.spellDamage);
-    var totalAllDmg    = n(total.totalDamage);
-    var totalNormalDmg = n(total.normalDamage);
-    var totalEliteDmg  = n(total.eliteDamage);
-    var totalBossDmg   = n(total.bossDamage);
+    const totalSkillDmg  = n(total.skillDamage);
+    const totalSpellDmg  = n(total.spellDamage);
+    const totalAllDmg    = n(total.totalDamage);
+    const totalNormalDmg = n(total.normalDamage);
+    const totalEliteDmg  = n(total.eliteDamage);
+    const totalBossDmg   = n(total.bossDamage);
 
     // 加成類（機率 & 獎勵）
-    var critRate       = n(total.critRate);
-    var critMul        = n(total.critMultiplier);
-    var atkSpeed       = n(total.attackSpeedPct);
-    var dodge          = n(total.dodgePercent);
-    var recover        = n(total.recoverPercent);
-    var doubleHit      = n(total.doubleHitChance);
-    var comboRate      = n(total.comboRate);
-    var damageReduce   = n(total.damageReduce);
-    var magicShieldPct = n(total.magicShieldPercent);
-    var expBonus       = n(total.expBonus);
-    var dropBonus      = n(total.dropBonus);
-    var goldBonus      = n(total.goldBonus);
-    var preemptive     = n(total.preemptiveChance);
-    var preemptiveMax  = n(total.preemptivePerAttackMax);
+    const critRate       = n(total.critRate);
+    const critMul        = n(total.critMultiplier);
+    const atkSpeed       = n(total.attackSpeedPct);
+    const dodge          = n(total.dodgePercent);
+    const recover        = n(total.recoverPercent);
+    const doubleHit      = n(total.doubleHitChance);
+    const comboRate      = n(total.comboRate);
+    const damageReduce   = n(total.damageReduce);
+    const magicShieldPct = n(total.magicShieldPercent);
+    const expBonus       = n(total.expBonus);
+    const dropBonus      = n(total.dropBonus);
+    const goldBonus      = n(total.goldBonus);
+    const preemptive     = n(total.preemptiveChance);
+    const preemptiveMax  = n(total.preemptivePerAttackMax);
 
     // ---- 組裝 HTML ----
-    var html = "";
+    let html = "";
 
     // 0. 標題區
     html += '<div class="section">';
@@ -410,10 +410,10 @@
     html += '</div>';
 
     // 2. 四維（力敏智幸）
-    var strTierClass = getStatTierClass(totalStr);
-    var agiTierClass = getStatTierClass(totalAgi);
-    var intTierClass = getStatTierClass(totalInt);
-    var lukTierClass = getStatTierClass(totalLuk);
+    const strTierClass = getStatTierClass(totalStr);
+    const agiTierClass = getStatTierClass(totalAgi);
+    const intTierClass = getStatTierClass(totalInt);
+    const lukTierClass = getStatTierClass(totalLuk);
 
     html += '<div class="section">';
     html += '  <div class="section-title"><span class="chip chip-teal">基礎屬性</span><span class="muted">（力量 / 敏捷 / 智力 / 幸運）</span></div>';
@@ -443,7 +443,7 @@
 
     // 3. 來源明細（四大能力）
     function renderSourceCard(label, b){
-      var out = '';
+      let out = '';
       out += '<div class="source-card">';
       out += '  <div class="source-card-title">'+label+'</div>';
       out += '  <div class="src-line src-base">基礎：<b>'+fmt(b.base)+'</b></div>';
@@ -558,7 +558,7 @@
   w.openStatModal = openStatModal;
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", function(){
+    document.addEventListener("DOMContentLoaded", () =>{
       if (w.player) createStatModal();
     });
   } else {

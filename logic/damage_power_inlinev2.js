@@ -7,7 +7,7 @@
 (function(w) {
   "use strict";
 
-  var LS_KEY = "DMG_CARD_COLLAPSED_V1";
+  const LS_KEY = "DMG_CARD_COLLAPSED_V1";
 
   function fmt(n) { return (Number(n) || 0).toLocaleString(); }
 
@@ -36,7 +36,7 @@
   // ⭐ 讀取對一般 / 菁英 / Boss 傷害（小數）
   function readVsTypeDamage() {
     try {
-      var ts = w.player?.totalStats || {};
+      const ts = w.player?.totalStats || {};
       return {
         normal: Number(ts.normalDamage) || 0,
         elite:  Number(ts.eliteDamage)  || 0,
@@ -55,28 +55,28 @@
 
   // 讀取目前戰鬥怪物資訊（若有）
   function readMonsterInfo() {
-    var m = w.currentMonster || null;
+    const m = w.currentMonster || null;
     if (!m) return { name: "", def: 0, shield: 0, type:"normal", defPercent: 0 };
-    var name = (typeof m.name === 'string' ? m.name : '') || '';
-    var def = Math.max(0, Math.floor(Number(m.def) || 0));
-    var shield = Math.max(0, Math.floor(Number(m.shield) || 0));
+    const name = (typeof m.name === 'string' ? m.name : '') || '';
+    const def = Math.max(0, Math.floor(Number(m.def) || 0));
+    const shield = Math.max(0, Math.floor(Number(m.shield) || 0));
 
     // 判定怪物類型：normal / elite / boss（跟戰鬥端一致）
-    var type = "normal";
+    let type = "normal";
     if (m.isBoss) type = "boss";
     else if (m.isElite) type = "elite";
 
     // 防禦百分比倍率（1.0 = 100%）
-    var defPercent = Number(m.defPercent);
+    let defPercent = Number(m.defPercent);
     if (!Number.isFinite(defPercent) || defPercent <= 0) defPercent = 0;
 
-    return { name: name, def: def, shield: shield, type: type, defPercent: defPercent };
+    return { name, def, shield, type, defPercent };
   }
 
   // 注入樣式（含縮小樣式）
   function ensureStyle() {
     if (document.getElementById("dmgPowerCardStyle")) return;
-    var s = document.createElement("style");
+    const s = document.createElement("style");
     s.id = "dmgPowerCardStyle";
     s.textContent = `
       #dmgPowerCard{
@@ -112,7 +112,7 @@
   // 建立 UI 卡片
   function ensureCard() {
     ensureStyle();
-    var card = document.getElementById("dmgPowerCard");
+    let card = document.getElementById("dmgPowerCard");
     if (card) return card;
 
     card = document.createElement("div");
@@ -135,40 +135,40 @@
     document.body.appendChild(card);
 
     // 綁定縮小/展開
-    var btn = card.querySelector(".dmg-toggle");
+    const btn = card.querySelector(".dmg-toggle");
     btn.addEventListener("click", toggleCollapse);
     card.querySelector(".dmg-title").addEventListener("click", toggleCollapse);
 
     // 恢復上次狀態
-    var saved = localStorage.getItem(LS_KEY);
+    const saved = localStorage.getItem(LS_KEY);
     if (saved === "1") card.classList.add("collapsed");
 
     return card;
   }
 
   function isCollapsed() {
-    var card = document.getElementById("dmgPowerCard");
+    const card = document.getElementById("dmgPowerCard");
     return !!(card && card.classList.contains("collapsed"));
   }
 
   function toggleCollapse() {
-    var card = ensureCard();
+    const card = ensureCard();
     card.classList.toggle("collapsed");
     localStorage.setItem(LS_KEY, card.classList.contains("collapsed") ? "1" : "0");
   }
 
   function render() {
-    var atk = readAtk();
-    var td  = readTotalDamage();
-    var pct = readJitter();
-    var pen = readIgnoreDefPct();            // 穿防（小數 0~1）
-    var mon = readMonsterInfo();
-    var vs  = readVsTypeDamage();           // 對象類型傷害
+    const atk = readAtk();
+    const td  = readTotalDamage();
+    const pct = readJitter();
+    const pen = readIgnoreDefPct();            // 穿防（小數 0~1）
+    const mon = readMonsterInfo();
+    const vs  = readVsTypeDamage();           // 對象類型傷害
 
     // ⭐ 決定目前生效的「對象加傷倍率」
-    var vsMul = 1;
-    var vsPctForLabel = 0;
-    var targetLabel = "一般怪";
+    let vsMul = 1;
+    let vsPctForLabel = 0;
+    let targetLabel = "一般怪";
 
     if (mon.type === "boss") {
       vsMul += vs.boss;
@@ -193,18 +193,18 @@
 
     // 依照新戰鬥流程：
     // ATK × (1 + 總傷) × (1 + 對象加傷) → 浮動
-    var tdMul = 1 + td;
-    var totalMul = tdMul * vsMul;
+    const tdMul = 1 + td;
+    const totalMul = tdMul * vsMul;
 
-    var atkAfterMul = Math.floor(atk * totalMul);
+    const atkAfterMul = Math.floor(atk * totalMul);
 
-    var minNoDef = Math.floor(atkAfterMul * (1 - pct));
-    var maxNoDef = Math.floor(atkAfterMul * (1 + pct));
+    const minNoDef = Math.floor(atkAfterMul * (1 - pct));
+    const maxNoDef = Math.floor(atkAfterMul * (1 + pct));
 
-    var card = ensureCard();
-    var main = card.querySelector("#dmgPowerMain");
-    var sub  = card.querySelector("#dmgPowerSub");
-    var defL = card.querySelector("#dmgPowerDef");
+    const card = ensureCard();
+    const main = card.querySelector("#dmgPowerMain");
+    const sub  = card.querySelector("#dmgPowerSub");
+    const defL = card.querySelector("#dmgPowerDef");
 
     if (atk <= 0) {
       if (main) main.textContent = "ATK — → — ~ —";
@@ -216,10 +216,10 @@
     if (main) main.innerHTML = `ATK ${fmt(atk)} → <b>${fmt(minNoDef)} ~ ${fmt(maxNoDef)}</b>`;
 
     // 一些百分比文字先算好，下面會重用
-    var tdStr   = (td * 100).toFixed(1);
-    var vsStr   = (vsPctForLabel * 100).toFixed(1);
-    var penStr  = (pen * 100).toFixed(1);
-    var jitterS = (pct * 100).toFixed(1);
+    const tdStr   = (td * 100).toFixed(1);
+    const vsStr   = (vsPctForLabel * 100).toFixed(1);
+    const penStr  = (pen * 100).toFixed(1);
+    const jitterS = (pct * 100).toFixed(1);
 
     if (sub) {
       sub.textContent = `總傷 +${tdStr}% · 對${targetLabel} +${vsStr}% · 穿防 ${penStr}% · 浮動 ±${jitterS}%`;
@@ -229,11 +229,11 @@
     if (defL) {
       if (mon.def > 0 || mon.defPercent > 0 || mon.shield > 0) {
         // 防禦百分比：1.0 = 100%
-        var defPctFactor = mon.defPercent > 0 ? mon.defPercent : 0;
+        const defPctFactor = mon.defPercent > 0 ? mon.defPercent : 0;
 
-        var hasDefPct = defPctFactor > 0;
-        var remainingDefMul = 0;
-        var damageMul = 1;
+        const hasDefPct = defPctFactor > 0;
+        let remainingDefMul = 0;
+        let damageMul = 1;
 
         if (hasDefPct) {
           // 剩餘防禦 = 防禦倍數 * (1 - 穿透％)
@@ -249,19 +249,19 @@
           damageMul = 1;
         }
 
-        var minAfterPct = Math.floor(minNoDef * damageMul);
-        var maxAfterPct = Math.floor(maxNoDef * damageMul);
+        const minAfterPct = Math.floor(minNoDef * damageMul);
+        const maxAfterPct = Math.floor(maxNoDef * damageMul);
 
         // 再減平面防禦
-        var minWithDef = Math.max(minAfterPct - mon.def, 1);
-        var maxWithDef = Math.max(maxAfterPct - mon.def, 1);
+        const minWithDef = Math.max(minAfterPct - mon.def, 1);
+        const maxWithDef = Math.max(maxAfterPct - mon.def, 1);
 
-        var defPctLabel   = hasDefPct ? (defPctFactor * 100).toFixed(1) : "—";
-        var remainDefLabel = hasDefPct ? (remainingDefMul * 100).toFixed(1) : "0.0";
-        var dmgMulLabel   = (damageMul * 100).toFixed(1);
+        const defPctLabel   = hasDefPct ? (defPctFactor * 100).toFixed(1) : "—";
+        const remainDefLabel = hasDefPct ? (remainingDefMul * 100).toFixed(1) : "0.0";
+        const dmgMulLabel   = (damageMul * 100).toFixed(1);
 
-        var namePart   = mon.name ? `（${mon.name}）` : "";
-        var shieldPart = mon.shield > 0 ? ` · 護盾 ${fmt(mon.shield)}` : "";
+        const namePart   = mon.name ? `（${mon.name}）` : "";
+        const shieldPart = mon.shield > 0 ? ` · 護盾 ${fmt(mon.shield)}` : "";
 
         defL.innerHTML =
           `含怪防估：<b>${fmt(minWithDef)} ~ ${fmt(maxWithDef)}</b>` +
@@ -276,7 +276,7 @@
   }
 
   // 每秒更新一次
-  var _timer = null;
+  let _timer = null;
   function start() {
     render();
     if (_timer) clearInterval(_timer);

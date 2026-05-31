@@ -62,7 +62,7 @@ const Gate = {
     // 記錄挑戰資訊
     this._current = {
       key: bossKey,
-      ticketItem: ticketItem,
+      ticketItem,
       rewardItem: boss.rewardItem || "Boss硬幣",
       rewardAmount: Number(boss.rewardAmount) || 1
     };

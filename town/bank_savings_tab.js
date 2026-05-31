@@ -1,5 +1,5 @@
 // bank_savings_tab.js — 特殊銀行（v4.1：即時更新、VIP 動態 + 彩虹閃爍、VIP 代幣加成門檻）
-// 依賴：save_hub_es5.js、town_hub.js、player.js（gold/gem）與背包 API（getItemQuantity/addItem/removeItem）
+// 依賴：save_hub_es2020.js、town_hub.js、player.js（gold/gem）與背包 API（getItemQuantity/addItem/removeItem）
 (function (w) {
   "use strict";
 
@@ -7,50 +7,50 @@
   if (!w.SaveHub) { console.error("❌ bank_savings_tab.js: SaveHub 未載入"); return; }
 
   // ====== 常數 / 設定 ======
-  var NS = "bank:savings";
-  var TAB_ID = "bankSaving";
-  var TAB_TITLE = "特殊銀行";
+  const NS = "bank:savings";
+  const TAB_ID = "bankSaving";
+  const TAB_TITLE = "特殊銀行";
 
   // 物品鍵值（背包）
-  var KEY_STONE = "強化道具兌換券";
-  var KEY_ADV_TOKEN = "高級代幣";
-  var KEY_BANK_TOKEN = "銀行代幣";
+  const KEY_STONE = "強化道具兌換券";
+  const KEY_ADV_TOKEN = "高級代幣";
+  const KEY_BANK_TOKEN = "銀行代幣";
 
   // 等級上限
-  var MAX_LV = 20;
+  const MAX_LV = 20;
 
   // 容量（Lv1=100萬/100萬；每升級 ×2）
-  var BASE_GOLD_CAP  = 1000000;
-  var BASE_STONE_CAP = 1000000;
+  const BASE_GOLD_CAP  = 1000000;
+  const BASE_STONE_CAP = 1000000;
 
   // 代幣生產規則（每 18 小時一個「期」）
   // 基礎門檻顆數：10萬 / 200萬 / 300萬 / 400萬 / 500萬 / 600萬（最多 6 顆）
   // VIP 額外加成門檻：
   //  - 白金 VIP：金幣 ≥ 1,000 萬 → 額外 +2 顆/期
   //  - 彩虹 VIP：金幣 ≥ 1 億     → 再額外 +2 顆/期
-  var TOKEN_THRESHOLDS = [100000, 2000000, 3000000, 4000000, 5000000, 6000000];
-  var VIP_EXTRA_TOKEN_RULES = [
+  const TOKEN_THRESHOLDS = [100000, 2000000, 3000000, 4000000, 5000000, 6000000];
+  const VIP_EXTRA_TOKEN_RULES = [
     { tierMin: 2, goldGte: 10_000_000, extra: 2 },   // 白金
     { tierMin: 4, goldGte:100_000_000, extra: 2 },   // 彩虹
   ];
-  var TOKEN_PERIOD_SEC = 18 * 3600;
+  const TOKEN_PERIOD_SEC = 18 * 3600;
 
   // 利息（日利率）：金幣 0.0025%；強化道具兌換券 ×2
-  var DAILY_INTEREST_GOLD  = 0.000025;
-  var DAILY_INTEREST_STONE = 0.00001;
-  var SEC_PER_DAY = 86400;
+  const DAILY_INTEREST_GOLD  = 0.000025;
+  const DAILY_INTEREST_STONE = 0.00001;
+  const SEC_PER_DAY = 86400;
 
   // 升級消耗：成本 = 目前等級（以「銀行代幣」）
   function levelUpCost(curLv) { return Math.max(1, curLv); }
 
   // 背包 API 檢查
-  var HAS_INV = (typeof w.getItemQuantity === "function" &&
+  const HAS_INV = (typeof w.getItemQuantity === "function" &&
                  typeof w.removeItem === "function" &&
                  typeof w.addItem === "function");
 
   // ===== VIP（Lv.20 解鎖；僅金幣/鑽石贊助；沒有代幣贊助）=====
   // bonus 為「對日利率」的額外加成
-  var VIP_TIERS = [
+  const VIP_TIERS = [
     { id:0, name:'普通會員', needGold:0,            needGem:0,        bonus:0,        frame:'#334155', inner:'#111827' },
     { id:1, name:'黃金VIP', needGold:10_000_000,    needGem:10_000,   bonus:0.000005, frame:'#facc15', inner:'#1f2937' },
     { id:2, name:'白金VIP', needGold:100_000_000,   needGem:100_000,  bonus:0.000000, frame:'#e5e7eb', inner:'#1f2937' },
@@ -60,8 +60,8 @@
 
   // ====== SaveHub 狀態（_ver=4）======
   function loadState() {
-    var now = Date.now();
-    var s = w.SaveHub.get(NS, null);
+    const now = Date.now();
+    let s = w.SaveHub.get(NS, null);
     if (!s || !s._ver) {
       s = {
         _ver: 4,
@@ -100,11 +100,11 @@
     return s;
   }
   function saveState(next, replace) { w.SaveHub.set(NS, next, { replace: !!replace }); }
-  var state = loadState();
+  const state = loadState();
 
   // ====== 衍生參數（由等級決定）======
   function deriveByLevel(lv) {
-    var mul = Math.pow(2, Math.max(0, lv - 1)); // ×2 成長
+    const mul = Math.pow(2, Math.max(0, lv - 1)); // ×2 成長
     return {
       capGold:  Math.floor(BASE_GOLD_CAP  * mul),
       capStone: Math.floor(BASE_STONE_CAP * mul)
@@ -122,11 +122,11 @@
 
   // ===== VIP 相關 =====
   function vipBonusRate(){
-    var t = state.vip?.tier || 0;
-    var def = VIP_TIERS[t] || VIP_TIERS[0];
+    const t = state.vip?.tier || 0;
+    const def = VIP_TIERS[t] || VIP_TIERS[0];
     return Number(def.bonus||0);
   }
-  function vipNextTier(){ var cur = state.vip?.tier || 0; return VIP_TIERS[cur+1] || null; }
+  function vipNextTier(){ const cur = state.vip?.tier || 0; return VIP_TIERS[cur+1] || null; }
   function canUpgradeVip(nxt){
     if (!nxt) return false;
     if (!state.vip.unlocked) return false;
@@ -151,7 +151,7 @@
     refreshActive();
   }
   function upgradeVip(){
-    var nxt = vipNextTier();
+    const nxt = vipNextTier();
     if (!canUpgradeVip(nxt)) return;
     state.vip.tier = nxt.id;
     saveState(state, true);
@@ -161,14 +161,14 @@
 
   // ====== 每期可生產顆數（基礎 + VIP 額外）======
   function tokensPerPeriodByGold(goldNow) {
-    var cnt = 0;
-    for (var i=0;i<TOKEN_THRESHOLDS.length;i++){
+    let cnt = 0;
+    for (let i=0;i<TOKEN_THRESHOLDS.length;i++){
       if (goldNow >= TOKEN_THRESHOLDS[i]) cnt++;
     }
     // VIP 額外規則
-    var tier = state.vip?.tier || 0;
-    for (var j=0;j<VIP_EXTRA_TOKEN_RULES.length;j++){
-      var r = VIP_EXTRA_TOKEN_RULES[j];
+    const tier = state.vip?.tier || 0;
+    for (let j=0;j<VIP_EXTRA_TOKEN_RULES.length;j++){
+      const r = VIP_EXTRA_TOKEN_RULES[j];
       if (tier >= r.tierMin && goldNow >= r.goldGte) cnt += r.extra;
     }
     return Math.max(0, cnt);
@@ -178,32 +178,32 @@
   function settle(elapsedSec) {
     if (!(elapsedSec > 0)) return;
 
-    var d = deriveByLevel(state.lv);
+    const d = deriveByLevel(state.lv);
 
     // 代幣進度（連續）
-    var perPeriod = tokensPerPeriodByGold(state.gold); // 基礎 + VIP 額外
-    var perSec = (perPeriod > 0) ? (perPeriod / TOKEN_PERIOD_SEC) : 0; // 每秒顆數
+    const perPeriod = tokensPerPeriodByGold(state.gold); // 基礎 + VIP 額外
+    const perSec = (perPeriod > 0) ? (perPeriod / TOKEN_PERIOD_SEC) : 0; // 每秒顆數
     state.tokenProg += perSec * elapsedSec;
 
     // 利息累積（含 VIP 加成）
-    var goldRate = DAILY_INTEREST_GOLD + vipBonusRate();
-    var stoneRate = DAILY_INTEREST_STONE + vipBonusRate();
+    const goldRate = DAILY_INTEREST_GOLD + vipBonusRate();
+    const stoneRate = DAILY_INTEREST_STONE + vipBonusRate();
 
     if (state.gold > 0) {
-      var goldPerSec = state.gold * (goldRate / SEC_PER_DAY);
+      const goldPerSec = state.gold * (goldRate / SEC_PER_DAY);
       state.interestGoldBuf += goldPerSec * elapsedSec;
     }
     if (state.stone > 0) {
-      var stonePerSec = state.stone * (stoneRate / SEC_PER_DAY);
+      const stonePerSec = state.stone * (stoneRate / SEC_PER_DAY);
       state.interestStoneBuf += stonePerSec * elapsedSec;
     }
 
     // 自動再投資（整數部分）
     if (state.autoReinvestGold) {
-      var gainG = Math.floor(Math.max(0, state.interestGoldBuf || 0));
+      const gainG = Math.floor(Math.max(0, state.interestGoldBuf || 0));
       if (gainG > 0) {
-        var capLeftG = Math.max(0, d.capGold - state.gold);
-        var putG = Math.min(gainG, capLeftG);
+        const capLeftG = Math.max(0, d.capGold - state.gold);
+        const putG = Math.min(gainG, capLeftG);
         if (putG > 0) {
           state.interestGoldBuf -= putG;
           state.gold += putG;
@@ -213,10 +213,10 @@
       }
     }
     if (state.autoReinvestStone) {
-      var gainS = Math.floor(Math.max(0, state.interestStoneBuf || 0));
+      const gainS = Math.floor(Math.max(0, state.interestStoneBuf || 0));
       if (gainS > 0) {
-        var capLeftS = Math.max(0, d.capStone - state.stone);
-        var putS = Math.min(gainS, capLeftS);
+        const capLeftS = Math.max(0, d.capStone - state.stone);
+        const putS = Math.min(gainS, capLeftS);
         if (putS > 0) {
           state.interestStoneBuf -= putS;
           state.stone += putS;
@@ -238,14 +238,14 @@
   }
 
   function settleToNow() {
-    var now = Date.now();
-    var dtSec = Math.max(0, Math.floor((now - (state.lastTs || now)) / 1000));
+    const now = Date.now();
+    const dtSec = Math.max(0, Math.floor((now - (state.lastTs || now)) / 1000));
     if (dtSec > 0) settle(dtSec);
   }
 
   // ====== 即時刷新（避免整頁重繪，輸入不跳；所有動作都調用）======
   function refreshActive(){
-    var body = document.getElementById('townHubBody');
+    const body = document.getElementById('townHubBody');
     if (!body) return;
     if (String(body.getAttribute('data-tab-owner')||'') !== TAB_ID) return;
     updateDynamic(body);
@@ -255,8 +255,8 @@
   function depositGold(amount){
     settleToNow();
     amount = Math.max(1, Math.floor(Number(amount)||0));
-    var d = deriveByLevel(state.lv);
-    var can = Math.min(amount, playerGold(), Math.max(0, d.capGold - state.gold));
+    const d = deriveByLevel(state.lv);
+    const can = Math.min(amount, playerGold(), Math.max(0, d.capGold - state.gold));
     if (can <= 0) { alert("無法存入：可能超過上限或金幣不足"); return; }
     setPlayerGold(playerGold() - can);
     state.gold += can;
@@ -268,7 +268,7 @@
   function withdrawGold(amount){
     settleToNow();
     amount = Math.max(1, Math.floor(Number(amount)||0));
-    var can = Math.min(amount, state.gold);
+    const can = Math.min(amount, state.gold);
     if (can <= 0) { alert("無法領取：銀行存金不足"); return; }
     state.gold -= can;
     setPlayerGold(playerGold() + can);
@@ -280,9 +280,9 @@
     if (!HAS_INV){ alert("缺少背包介面"); return; }
     settleToNow();
     amount = Math.max(1, Math.floor(Number(amount)||0));
-    var d = deriveByLevel(state.lv);
-    var have = invQty(KEY_STONE);
-    var can = Math.min(amount, have, Math.max(0, d.capStone - state.stone));
+    const d = deriveByLevel(state.lv);
+    const have = invQty(KEY_STONE);
+    const can = Math.min(amount, have, Math.max(0, d.capStone - state.stone));
     if (can <= 0) { alert("無法存入：可能超過上限或庫存不足"); return; }
     removeItem(KEY_STONE, can);
     state.stone += can;
@@ -295,7 +295,7 @@
     if (!HAS_INV){ alert("缺少背包介面"); return; }
     settleToNow();
     amount = Math.max(1, Math.floor(Number(amount)||0));
-    var can = Math.min(amount, state.stone);
+    const can = Math.min(amount, state.stone);
     if (can <= 0) { alert("無法領取：銀行存石不足"); return; }
     state.stone -= can;
     addItem(KEY_STONE, can);
@@ -307,13 +307,13 @@
   // ====== 領取利息 / 領取代幣 ======
   function claimInterestGold(){
     settleToNow();
-    var gain = Math.floor(Math.max(0, state.interestGoldBuf || 0));
+    const gain = Math.floor(Math.max(0, state.interestGoldBuf || 0));
     if (gain <= 0) { alert("目前沒有可領取的金幣利息"); return; }
 
     if (state.autoReinvestGold) {
-      var d = deriveByLevel(state.lv);
-      var capLeft = Math.max(0, d.capGold - state.gold);
-      var put = Math.min(gain, capLeft);
+      const d = deriveByLevel(state.lv);
+      const capLeft = Math.max(0, d.capGold - state.gold);
+      const put = Math.min(gain, capLeft);
       if (put > 0) {
         state.interestGoldBuf -= put;
         state.gold += put;
@@ -338,13 +338,13 @@
   function claimInterestStone(){
     if (!HAS_INV){ alert("缺少背包介面"); return; }
     settleToNow();
-    var gain = Math.floor(Math.max(0, state.interestStoneBuf || 0));
+    const gain = Math.floor(Math.max(0, state.interestStoneBuf || 0));
     if (gain <= 0) { alert("目前沒有可領取的強化道具兌換券利息"); return; }
 
     if (state.autoReinvestStone) {
-      var d = deriveByLevel(state.lv);
-      var capLeft = Math.max(0, d.capStone - state.stone);
-      var put = Math.min(gain, capLeft);
+      const d = deriveByLevel(state.lv);
+      const capLeft = Math.max(0, d.capStone - state.stone);
+      const put = Math.min(gain, capLeft);
       if (put > 0) {
         state.interestStoneBuf -= put;
         state.stone += put;
@@ -369,7 +369,7 @@
   function claimTokens(){
     if (!HAS_INV){ alert("缺少背包介面"); return; }
     settleToNow();
-    var whole = Math.floor(state.tokenProg);
+    const whole = Math.floor(state.tokenProg);
     if (whole <= 0) { alert("尚未生成可領取的代幣"); return; }
     state.tokenProg -= whole;
     addItem(KEY_ADV_TOKEN, whole);
@@ -393,19 +393,19 @@
   function fmtNum(n){ n = Math.floor(Number(n)||0); return n.toLocaleString(); }
   function fmtTime(sec){
     sec = Math.max(0, Math.floor(sec||0));
-    var d = Math.floor(sec/86400); sec -= d*86400;
-    var h = Math.floor(sec/3600);  sec -= h*3600;
-    var m = Math.floor(sec/60);    var s = sec - m*60;
-    var hh = (h<10?"0":"")+h, mm=(m<10?"0":"")+m, ss=(s<10?"0":"")+s;
+    const d = Math.floor(sec/86400); sec -= d*86400;
+    const h = Math.floor(sec/3600);  sec -= h*3600;
+    const m = Math.floor(sec/60);    const s = sec - m*60;
+    const hh = (h<10?"0":"")+h, mm=(m<10?"0":"")+m, ss=(s<10?"0":"")+s;
     return (d>0? (d+"d "):"") + hh+":"+mm+":"+ss;
   }
 
   // —— Style（彩虹 VIP 閃爍外框）一次性注入 —— //
-  var _styleInjected = false;
+  let _styleInjected = false;
   function ensureVipStyle(){
     if (_styleInjected) return;
     _styleInjected = true;
-    var css = document.createElement('style');
+    const css = document.createElement('style');
     css.textContent =
       "@keyframes vipPulse{0%{box-shadow:0 0 0px rgba(255,255,255,0.25)}50%{box-shadow:0 0 16px rgba(255,255,255,0.55)}100%{box-shadow:0 0 0px rgba(255,255,255,0.25)}}" +
       ".vip-rainbow{border-image: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet) 1; animation: vipPulse 1.8s ease-in-out infinite;}";
@@ -414,13 +414,13 @@
 
   // —— 輸入穩定：重繪前快照焦點與值，重繪後還原 —— //
   function snapshotFocus(container){
-    var a = document.activeElement;
+    const a = document.activeElement;
     if (!a || !container.contains(a) || a.tagName!=="INPUT") return null;
     return { bind: a.getAttribute("data-bind") || null, value: a.value, selStart: a.selectionStart, selEnd: a.selectionEnd };
   }
   function restoreFocus(container, snap){
     if (!snap || !snap.bind) return;
-    var input = container.querySelector('input[data-bind="'+snap.bind+'"]');
+    const input = container.querySelector('input[data-bind="'+snap.bind+'"]');
     if (!input) return;
     input.value = snap.value;
     input.focus();
@@ -429,14 +429,14 @@
 
   // ====== UI（渲染）======
   function renderRules(root) {
-    var card = document.createElement('div');
+    const card = document.createElement('div');
     card.style.cssText = "background:#0b1220;border:1px solid #263247;border-radius:12px;padding:12px;margin-bottom:10px";
 
     // 動態計算數值
-    var goldThresholdsText = TOKEN_THRESHOLDS.map(function(v){ return (v/10000).toFixed(0) + '萬'; }).join('/'); // 將門檻轉為 "10萬/200萬..."
-    var periodHours = (TOKEN_PERIOD_SEC / 3600).toFixed(0); // 轉為小時
-    var goldRatePct = (DAILY_INTEREST_GOLD * 100).toFixed(4); // 轉為百分比
-    var stoneRatePct = (DAILY_INTEREST_STONE * 100).toFixed(4); // 轉為百分比
+    const goldThresholdsText = TOKEN_THRESHOLDS.map((v) =>{ return (v/10000).toFixed(0) + '萬'; }).join('/'); // 將門檻轉為 "10萬/200萬..."
+    const periodHours = (TOKEN_PERIOD_SEC / 3600).toFixed(0); // 轉為小時
+    const goldRatePct = (DAILY_INTEREST_GOLD * 100).toFixed(4); // 轉為百分比
+    const stoneRatePct = (DAILY_INTEREST_STONE * 100).toFixed(4); // 轉為百分比
 
     card.innerHTML =
       "<div style='font-weight:800;margin-bottom:8px;color:#93c5fd;font-size:15px'>📜 銀行營運規章</div>" +
@@ -455,12 +455,12 @@
 
 
   function renderHeader(root) {
-    var card = document.createElement('div');
+    const card = document.createElement('div');
     card.style.cssText = "background:#0b1220;border:1px solid #1f2937;border-radius:12px;padding:12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap";
 
     // 左側資訊區
-    var left = document.createElement('div');
-    var isMax = (state.lv >= MAX_LV); // 判斷是否滿級
+    const left = document.createElement('div');
+    const isMax = (state.lv >= MAX_LV); // 判斷是否滿級
 
     left.innerHTML =
       "<div style='font-weight:800;font-size:16px'>🏦 " + TAB_TITLE + "</div>" +
@@ -470,15 +470,15 @@
       "</div>";
 
     // 右側動作區
-    var right = document.createElement('div');
+    const right = document.createElement('div');
     right.style.cssText = "display:flex;gap:8px;align-items:center";
 
-    var upBtn = document.createElement('button');
+    const upBtn = document.createElement('button');
     upBtn.id = "btnLevelUp";
-    
+
     // 獲取升級所需消耗
-    var cost = levelUpCost(state.lv);
-    var hasToken = invQty(KEY_BANK_TOKEN); // 取得當前擁有的代幣數量
+    const cost = levelUpCost(state.lv);
+    const hasToken = invQty(KEY_BANK_TOKEN); // 取得當前擁有的代幣數量
 
     // 設置按鈕文字與狀態
     if (isMax) {
@@ -487,11 +487,11 @@
     } else {
       upBtn.textContent = "設施升級 (消耗 " + cost + " 枚" + KEY_BANK_TOKEN + ")";
       // 額外檢查：如果代幣不足，按鈕變灰（但不禁用，讓玩家點擊後能跳提示）
-      upBtn.disabled = false; 
+      upBtn.disabled = false;
     }
 
     // 動態按鈕樣式優化
-    var btnBg = isMax ? "#374151" : (hasToken >= cost ? "#f59e0b" : "#4b5563");
+    const btnBg = isMax ? "#374151" : (hasToken >= cost ? "#f59e0b" : "#4b5563");
     upBtn.style.cssText = "background:" + btnBg + ";color:#0b1220;border:0;padding:8px 16px;border-radius:10px;cursor:" + (isMax ? "not-allowed" : "pointer") + ";font-weight:800;transition:all 0.2s";
 
     upBtn.onclick = function() {
@@ -507,24 +507,24 @@
   function renderVIP(root) {
     ensureVipStyle();
 
-    var vip = state.vip || { unlocked: false, tier: 0 };
-    var cur = VIP_TIERS[vip.tier] || VIP_TIERS[0];
-    var next = VIP_TIERS[vip.tier + 1];
+    const vip = state.vip || { unlocked: false, tier: 0 };
+    const cur = VIP_TIERS[vip.tier] || VIP_TIERS[0];
+    const next = VIP_TIERS[vip.tier + 1];
 
-    var card = document.createElement('div');
+    const card = document.createElement('div');
     card.id = 'vipCard';
-    
+
     // 邊框邏輯優化
-    var borderCss = (cur.frame === 'RAINBOW')
+    const borderCss = (cur.frame === 'RAINBOW')
       ? 'border:3px solid; border-image-slice:1;'
       : 'border:3px solid ' + cur.frame + ';';
-    var extraClass = (cur.frame === 'RAINBOW') ? 'vip-rainbow' : '';
-    
+    const extraClass = (cur.frame === 'RAINBOW') ? 'vip-rainbow' : '';
+
     card.className = extraClass;
     card.style.cssText = 'margin-bottom:12px;border-radius:16px;padding:16px;' + borderCss + 'background:' + cur.inner + ';box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:all 0.3s';
 
     // 標題與加成顯示
-    card.innerHTML = 
+    card.innerHTML =
       "<div style='display:flex;justify-content:space-between;align-items:center'>" +
         "<div style='font-weight:800;font-size:18px' id='vipName'>🏅 " + cur.name + "</div>" +
         "<div style='font-size:12px;background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:20px;opacity:.8'>利息加成：<b id='vipBonus' style='color:#f59e0b'>+" + (cur.bonus * 100).toFixed(4) + "%</b></div>" +
@@ -532,7 +532,7 @@
 
     // 未解鎖狀態
     if (!vip.unlocked) {
-      var lockWrap = document.createElement('div');
+      const lockWrap = document.createElement('div');
       lockWrap.style.cssText = 'margin-top:10px;padding:10px;background:rgba(0,0,0,0.2);border-radius:8px;text-align:center;font-size:13px;color:#94a3b8';
       lockWrap.innerHTML = '🔒 銀行達 <b>Lv.20</b> 後解鎖贊助系統';
       card.appendChild(lockWrap);
@@ -542,7 +542,7 @@
 
     // 滿級狀態
     if (!next) {
-      var maxMsg = document.createElement('div');
+      const maxMsg = document.createElement('div');
       maxMsg.style.cssText = 'margin-top:15px;text-align:center;color:#22c55e;font-weight:800;font-size:14px;letter-spacing:1px';
       maxMsg.innerHTML = '✨ 已達成最高榮譽：' + cur.name + ' ✨';
       card.appendChild(maxMsg);
@@ -552,18 +552,18 @@
 
     // 進度條生成器（優化數字顯示）
     function barRow(idPrefix, lbl, curVal, needVal, color) {
-      var wrap = document.createElement('div');
+      const wrap = document.createElement('div');
       wrap.style.cssText = 'margin:10px 0';
-      var lab = document.createElement('div');
+      const lab = document.createElement('div');
       lab.style.cssText = 'font-size:12px;display:flex;justify-content:space-between;margin-bottom:4px';
       // 使用 fmtNum 讓數字變好讀
       lab.innerHTML = "<span>" + lbl + "贊助</span><span>" + fmtNum(curVal) + " / " + fmtNum(needVal) + "</span>";
-      
-      var outer = document.createElement('div');
+
+      const outer = document.createElement('div');
       outer.style.cssText = 'height:8px;background:rgba(0,0,0,0.3);border-radius:4px;overflow:hidden';
-      var inner = document.createElement('div');
+      const inner = document.createElement('div');
       inner.style.cssText = 'height:100%;transition:width 0.5s ease-out;background:' + color + ';width:' + Math.min(100, (curVal / needVal) * 100) + '%';
-      
+
       outer.appendChild(inner);
       wrap.appendChild(lab);
       wrap.appendChild(outer);
@@ -574,33 +574,33 @@
     card.appendChild(barRow('vipGem', '鑽石', vip.donatedGem, next.needGem, 'linear-gradient(90deg, #3b82f6, #60a5fa)'));
 
     // 贊助輸入區域優化
-    var donateRow = document.createElement('div');
+    const donateRow = document.createElement('div');
     donateRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px';
 
-    var createInputBox = function(type, label, color, action) {
-      var box = document.createElement('div');
+    const createInputBox = function(type, label, color, action) {
+      const box = document.createElement('div');
       box.style.cssText = 'display:flex;flex-direction:column;gap:5px';
-      
-      var ip = document.createElement('input');
+
+      const ip = document.createElement('input');
       ip.type = 'number';
       ip.placeholder = label;
       ip.style.cssText = 'width:100%;background:rgba(0,0,0,0.3);border:1px solid #334155;border-radius:8px;padding:6px 10px;color:#fff;font-size:13px';
-      
-      var btn = document.createElement('button');
+
+      const btn = document.createElement('button');
       btn.textContent = '贊助' + label;
       btn.style.cssText = 'background:' + color + ';color:#0b1220;border:0;padding:6px;border-radius:8px;font-weight:800;cursor:pointer;font-size:12px';
-      
+
       btn.onclick = function() {
-        var val = Math.floor(Number(ip.value) || 0);
+        const val = Math.floor(Number(ip.value) || 0);
         if (val <= 0) return;
         // 額外檢查持有量（假設有 playerGold/playerGem API）
-        var has = (type === 'gold') ? playerGold() : playerGem();
+        const has = (type === 'gold') ? playerGold() : playerGem();
         if (val > has) { alert(label + '不足！'); return; }
-        
+
         action(val);
         ip.value = '';
       };
-      
+
       box.appendChild(ip);
       box.appendChild(btn);
       return box;
@@ -611,15 +611,15 @@
     card.appendChild(donateRow);
 
     // 升級按鈕（視覺化強化）
-    var ok = canUpgradeVip(next);
-    var btnUp = document.createElement('button');
+    const ok = canUpgradeVip(next);
+    const btnUp = document.createElement('button');
     btnUp.id = 'btnVipUpgrade';
     btnUp.innerHTML = ok ? '✨ 晉升至 ' + next.name + ' ✨' : '🚀 贊助達標即可升級';
     btnUp.disabled = !ok;
-    
-    var upBtnBg = ok ? 'linear-gradient(135deg, #22c55e, #16a34a)' : '#374151';
+
+    const upBtnBg = ok ? 'linear-gradient(135deg, #22c55e, #16a34a)' : '#374151';
     btnUp.style.cssText = 'width:100%;background:' + upBtnBg + ';color:#fff;border:0;padding:10px;border-radius:10px;font-weight:800;margin-top:12px;cursor:' + (ok ? 'pointer' : 'not-allowed') + ';transition:transform 0.1s';
-    
+
     btnUp.onclick = function() { if (ok) upgradeVip(); };
     card.appendChild(btnUp);
 
@@ -628,18 +628,18 @@
 
 
   function renderBalances(root, d) {
-    var card = document.createElement('div');
+    const card = document.createElement('div');
     card.style.cssText = "background:#0b1220;border:1px solid #1f2937;border-radius:12px;padding:16px;margin-bottom:12px";
 
     // --- 1. 自動再投資區 ---
-    var autoRow = document.createElement('div');
+    const autoRow = document.createElement('div');
     autoRow.style.cssText = "display:flex;gap:12px;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #1f2937";
     autoRow.innerHTML = "<div style='font-size:13px;font-weight:700;color:#94a3b8'>🔁 自動利息再投資:</div>";
-    
+
     function createToggle(label, key) {
-      var lbl = document.createElement('label');
+      const lbl = document.createElement('label');
       lbl.style.cssText = "display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px";
-      var chk = document.createElement('input');
+      const chk = document.createElement('input');
       chk.type = "checkbox";
       chk.checked = !!state[key];
       chk.onchange = function() { state[key] = !!chk.checked; saveState(state, true); refreshActive(); };
@@ -653,32 +653,32 @@
 
     // --- 2. 貨幣列生成器 ---
     function renderCurrencySection(options) {
-      var { title, current, cap, playerHas, inputKey, color, onIn, onOut, dailyFunc } = options;
-      
-      var section = document.createElement('div');
+      const { title, current, cap, playerHas, inputKey, color, onIn, onOut, dailyFunc } = options;
+
+      const section = document.createElement('div');
       section.style.cssText = "margin-bottom:16px";
 
       // 標題與餘額
-      var head = document.createElement('div');
+      const head = document.createElement('div');
       head.style.cssText = "display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;flex-wrap:wrap";
-      head.innerHTML = 
+      head.innerHTML =
         "<div>" + title + "：<b id='bank" + inputKey + "' style='color:" + color + "'>" + fmtNum(current) + "</b> / <span style='opacity:.6'>" + fmtNum(cap) + "</span></div>" +
         "<div style='opacity:.8'>持有：" + fmtNum(playerHas) + "</div>";
-      
+
       // 操作列
-      var act = document.createElement('div');
+      const act = document.createElement('div');
       act.style.cssText = "display:flex;gap:6px;align-items:center";
-      
-      var ip = document.createElement('input');
+
+      const ip = document.createElement('input');
       ip.type = "number"; ip.placeholder = "輸入數量"; ip.setAttribute("data-bind", "in" + inputKey);
       ip.style.cssText = "flex:1;min-width:80px;padding:8px;border-radius:8px;border:1px solid #334155;background:rgba(0,0,0,0.2);color:#fff";
-      
-      var btnIn = document.createElement('button');
+
+      const btnIn = document.createElement('button');
       btnIn.textContent = "存入";
       btnIn.style.cssText = "background:#2563eb;color:#fff;border:0;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700";
       btnIn.onclick = function() { onIn(ip.value); ip.value = ''; updateEst(); };
 
-      var btnOut = document.createElement('button');
+      const btnOut = document.createElement('button');
       btnOut.textContent = "提領";
       btnOut.style.cssText = "background:#334155;color:#fff;border:0;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700";
       btnOut.onclick = function() { onOut(ip.value); ip.value = ''; updateEst(); };
@@ -688,17 +688,17 @@
       act.appendChild(btnOut);
 
       // 利息預估
-      var info = document.createElement('div');
+      const info = document.createElement('div');
       info.style.cssText = "font-size:11px;margin-top:6px;display:flex;justify-content:space-between;color:#94a3b8";
-      var curInt = dailyFunc(current);
+      const curInt = dailyFunc(current);
       info.innerHTML = "<span>日收益: " + fmtNum(curInt) + "</span><span id='est" + inputKey + "'>預估: +0 /日</span>";
 
       function updateEst() {
-        var val = Math.max(0, Math.floor(Number(ip.value) || 0));
-        var canDeposit = Math.min(val, playerHas, Math.max(0, cap - current));
-        var estDaily = dailyFunc(current + canDeposit);
-        var diff = estDaily - curInt;
-        var el = document.getElementById('est' + inputKey);
+        const val = Math.max(0, Math.floor(Number(ip.value) || 0));
+        const canDeposit = Math.min(val, playerHas, Math.max(0, cap - current));
+        const estDaily = dailyFunc(current + canDeposit);
+        const diff = estDaily - curInt;
+        const el = document.getElementById('est' + inputKey);
         if (el) {
           el.textContent = "預估: +" + fmtNum(diff) + " /日";
           el.style.color = diff > 0 ? "#22c55e" : "#94a3b8";
@@ -744,27 +744,27 @@
 
 
   function renderInterestAndTokens(root) {
-    var card = document.createElement('div');
+    const card = document.createElement('div');
     card.style.cssText = "background:#0b1220;border:1px solid #1f2937;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:inset 0 0 20px rgba(0,0,0,0.2)";
 
-    var goldRate = DAILY_INTEREST_GOLD + vipBonusRate();
-    var stoneRate = DAILY_INTEREST_STONE + vipBonusRate();
+    const goldRate = DAILY_INTEREST_GOLD + vipBonusRate();
+    const stoneRate = DAILY_INTEREST_STONE + vipBonusRate();
 
     // --- 利息領取區 ---
-    var gReady = Math.floor(Math.max(0, state.interestGoldBuf || 0));
-    var sReady = Math.floor(Math.max(0, state.interestStoneBuf || 0));
-    
-    var interestContainer = document.createElement('div');
+    const gReady = Math.floor(Math.max(0, state.interestGoldBuf || 0));
+    const sReady = Math.floor(Math.max(0, state.interestStoneBuf || 0));
+
+    const interestContainer = document.createElement('div');
     interestContainer.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #1f2937";
 
     function createInterestBox(label, amount, rate, color, action) {
-      var box = document.createElement('div');
+      const box = document.createElement('div');
       box.style.cssText = "background:rgba(255,255,255,0.03);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.05)";
-      box.innerHTML = 
+      box.innerHTML =
         "<div style='font-size:12px;opacity:.7;margin-bottom:4px'>" + label + " (日利率 " + (rate * 100).toFixed(4) + "%)</div>" +
         "<div style='font-size:18px;font-weight:800;color:#fff;margin-bottom:8px' id='interest" + (label.includes("金幣") ? "Gold" : "Stone") + "'>" + fmtNum(amount) + "</div>";
-      
-      var btn = document.createElement('button');
+
+      const btn = document.createElement('button');
       btn.textContent = "領取收益";
       btn.disabled = amount <= 0;
       btn.style.cssText = "width:100%;background:" + (amount > 0 ? color : "#374151") + ";color:" + (color==="#22c55e"?"#0b1220":"#fff") + ";border:0;padding:6px;border-radius:6px;cursor:pointer;font-weight:800;font-size:12px;transition:opacity 0.2s";
@@ -778,18 +778,18 @@
     card.appendChild(interestContainer);
 
     // --- 代幣生產區 ---
-    var perPeriod = tokensPerPeriodByGold(state.gold);
-    var whole = Math.floor(state.tokenProg);
+    const perPeriod = tokensPerPeriodByGold(state.gold);
+    const whole = Math.floor(state.tokenProg);
 
-    var tokenHead = document.createElement('div');
+    const tokenHead = document.createElement('div');
     tokenHead.style.cssText = "display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px";
-    tokenHead.innerHTML = 
+    tokenHead.innerHTML =
       "<div>" +
         "<div style='font-size:12px;color:#f59e0b;font-weight:700'>🎟️ 高級代幣生產中</div>" +
         "<div style='font-size:20px;font-weight:800'>可領取：<span id='tokenCan' style='color:#f59e0b'>" + whole + "</span> <span style='font-size:14px;opacity:.6'>/ " + perPeriod + " (每期)</span></div>" +
       "</div>";
-    
-    var btnT = document.createElement('button');
+
+    const btnT = document.createElement('button');
     btnT.textContent = "領取全部代幣";
     btnT.disabled = whole <= 0;
     btnT.style.cssText = "background:" + (whole > 0 ? "#f59e0b" : "#374151") + ";color:#0b1220;border:0;padding:8px 16px;border-radius:10px;cursor:pointer;font-weight:800;transition:transform 0.1s";
@@ -797,16 +797,16 @@
     tokenHead.appendChild(btnT);
 
     // 進度條
-    var progWrap = document.createElement('div');
+    const progWrap = document.createElement('div');
     progWrap.style.cssText = "margin-top:5px";
-    var barOuter = document.createElement('div');
+    const barOuter = document.createElement('div');
     barOuter.style.cssText = "width:100%;height:12px;background:#1f2937;border-radius:999px;overflow:hidden;box-shadow:inset 0 2px 4px rgba(0,0,0,0.5)";
-    var barInner = document.createElement('div');
+    const barInner = document.createElement('div');
     barInner.id = "tokenBar";
     barInner.style.cssText = "height:100%;width:0%;background:linear-gradient(90deg, #d97706, #f59e0b);box-shadow:0 0 10px rgba(245,158,11,0.5);transition:width .5s ease-out";
     barOuter.appendChild(barInner);
-    
-    var etaText = document.createElement('div');
+
+    const etaText = document.createElement('div');
     etaText.id = "tokenEta";
     etaText.style.cssText = "opacity:.6;font-size:11px;text-align:right;margin-top:6px;font-family:monospace";
 
@@ -818,24 +818,24 @@
     root.appendChild(card);
   }
   function renderStats(root) {
-    var s = state.stats || {};
-    var card = document.createElement('div');
+    const s = state.stats || {};
+    const card = document.createElement('div');
     card.style.cssText = "background:#0b1220;border:1px solid #1f2937;border-radius:12px;padding:16px;margin-bottom:12px";
-    
-    var title = document.createElement('div');
+
+    const title = document.createElement('div');
     title.style.cssText = "font-weight:800;margin-bottom:12px;color:#93c5fd;display:flex;align-items:center;gap:6px";
     title.innerHTML = "<span>📈</span> 銀行經營統計";
     card.appendChild(title);
 
-    var grid = document.createElement('div');
+    const grid = document.createElement('div');
     grid.style.cssText = "display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:10px";
 
     function createStatItem(label, val, id, unit = "") {
-      var item = document.createElement('div');
+      const item = document.createElement('div');
       item.style.cssText = "background:rgba(255,255,255,0.02);padding:8px 12px;border-radius:8px;border-left:3px solid #3b82f6";
-      item.innerHTML = 
+      item.innerHTML =
         "<div style='font-size:11px;opacity:.6;margin-bottom:2px'>" + label + "</div>" +
-        "<div style='font-size:14px;font-weight:700;color:#e5e7eb'><span id='" + id + "'>" + fmtNum(val) + "</span>" + 
+        "<div style='font-size:14px;font-weight:700;color:#e5e7eb'><span id='" + id + "'>" + fmtNum(val) + "</span>" +
         "<span style='font-size:11px;margin-left:2px;font-weight:400;opacity:.8'>" + unit + "</span></div>";
       return item;
     }
@@ -852,16 +852,16 @@
 
   // —— 動態小更新（避免輸入跳掉；含 VIP 進度/樣式） —— //
   function updateDynamic(container){
-    var d = deriveByLevel(state.lv);
+    const d = deriveByLevel(state.lv);
 
     // 等級/容量/餘額
-    var elLv = container.querySelector('#bankLv'); if (elLv) elLv.textContent = "Lv."+state.lv;
-    var elCapGold  = container.querySelector('#capGold');
-    var elCapStone = container.querySelector('#capStone');
-    var elBankGold = container.querySelector('#bankGold');
-    var elBankStone= container.querySelector('#bankStone');
-    var elPlayerGold = container.querySelector('#playerGold');
-    var elInvStone = container.querySelector('#invStone');
+    const elLv = container.querySelector('#bankLv'); if (elLv) elLv.textContent = "Lv."+state.lv;
+    const elCapGold  = container.querySelector('#capGold');
+    const elCapStone = container.querySelector('#capStone');
+    const elBankGold = container.querySelector('#bankGold');
+    const elBankStone= container.querySelector('#bankStone');
+    const elPlayerGold = container.querySelector('#playerGold');
+    const elInvStone = container.querySelector('#invStone');
     if (elCapGold)   elCapGold.textContent = fmtNum(d.capGold);
     if (elCapStone)  elCapStone.textContent = fmtNum(d.capStone);
     if (elBankGold)  elBankGold.textContent = fmtNum(state.gold);
@@ -870,51 +870,51 @@
     if (elInvStone)  elInvStone.textContent = fmtNum(invQty(KEY_STONE));
 
     // 利息可領（顯示值）
-    var elIG = container.querySelector('#interestGold');
-    var elIS = container.querySelector('#interestStone');
+    const elIG = container.querySelector('#interestGold');
+    const elIS = container.querySelector('#interestStone');
     if (elIG) elIG.textContent = fmtNum(Math.floor(Math.max(0, state.interestGoldBuf||0)));
     if (elIS) elIS.textContent = fmtNum(Math.floor(Math.max(0, state.interestStoneBuf||0)));
 
     // 代幣產能 / 進度
-    var perPeriod = tokensPerPeriodByGold(state.gold);
-    var perSec = (perPeriod > 0) ? (perPeriod / TOKEN_PERIOD_SEC) : 0;
-    var whole = Math.floor(state.tokenProg);
-    var frac = state.tokenProg - whole;
-    var elCan = container.querySelector('#tokenCan');
-    var elRate = container.querySelector('#tokenRate');
+    const perPeriod = tokensPerPeriodByGold(state.gold);
+    const perSec = (perPeriod > 0) ? (perPeriod / TOKEN_PERIOD_SEC) : 0;
+    const whole = Math.floor(state.tokenProg);
+    const frac = state.tokenProg - whole;
+    const elCan = container.querySelector('#tokenCan');
+    const elRate = container.querySelector('#tokenRate');
     if (elCan)  elCan.textContent = whole;
     if (elRate) elRate.textContent = perPeriod;
-    var bar = container.querySelector('#tokenBar');
-    var eta = container.querySelector('#tokenEta');
+    const bar = container.querySelector('#tokenBar');
+    const eta = container.querySelector('#tokenEta');
     if (perSec <= 0){
       if (bar) bar.style.width = "0%";
       if (eta) eta.textContent = "（條件不足：需達 10萬 金幣以上）";
     } else {
-      var pct = Math.max(0, Math.min(1, frac)) * 100;
+      const pct = Math.max(0, Math.min(1, frac)) * 100;
       if (bar) bar.style.width = pct.toFixed(2) + "%";
-      var secLeft = (1 - frac) / perSec;
+      const secLeft = (1 - frac) / perSec;
       if (eta) eta.textContent = "下一顆倒數：" + fmtTime(secLeft);
     }
 
     // 每日利息（含 VIP 加成）
-    var elGD = container.querySelector('#goldDaily');
-    var elSD = container.querySelector('#stoneDaily');
+    const elGD = container.querySelector('#goldDaily');
+    const elSD = container.querySelector('#stoneDaily');
     if (elGD) elGD.textContent = (Math.floor(state.gold * (DAILY_INTEREST_GOLD + vipBonusRate()))).toLocaleString();
     if (elSD) elSD.textContent = (Math.floor(state.stone * (DAILY_INTEREST_STONE + vipBonusRate()))).toLocaleString();
 
     // 「存入後預估」回刷
-    var gIn = container.querySelector('input[data-bind="inGold"]');
+    const gIn = container.querySelector('input[data-bind="inGold"]');
     if (gIn && document.activeElement !== gIn) { gIn.dispatchEvent(new Event('input')); }
-    var sIn = container.querySelector('input[data-bind="inStone"]');
+    const sIn = container.querySelector('input[data-bind="inStone"]');
     if (sIn && document.activeElement !== sIn) { sIn.dispatchEvent(new Event('input')); }
 
     // 累積統計
-    var st = state.stats || {};
-    var stG = container.querySelector('#stTotalGold');
-    var stS = container.querySelector('#stTotalStone');
-    var stT = container.querySelector('#stTokens');
-    var stMG= container.querySelector('#stMaxGold');
-    var stMS= container.querySelector('#stMaxStone');
+    const st = state.stats || {};
+    const stG = container.querySelector('#stTotalGold');
+    const stS = container.querySelector('#stTotalStone');
+    const stT = container.querySelector('#stTokens');
+    const stMG= container.querySelector('#stMaxGold');
+    const stMS= container.querySelector('#stMaxStone');
     if (stG) stG.textContent = fmtNum(st.totalGoldInterest||0);
     if (stS) stS.textContent = fmtNum(st.totalStoneInterest||0);
     if (stT) stT.textContent = fmtNum(st.totalTokens||0);
@@ -922,16 +922,16 @@
     if (stMS) stMS.textContent = fmtNum(st.maxStoneHeld||0);
 
     // —— VIP 區動態（名稱/加成/條/按鈕/彩虹樣式） —— //
-    var vip = state.vip || {unlocked:false,tier:0};
-    var cur = VIP_TIERS[vip.tier] || VIP_TIERS[0];
-    var next = VIP_TIERS[vip.tier+1];
+    const vip = state.vip || {unlocked:false,tier:0};
+    const cur = VIP_TIERS[vip.tier] || VIP_TIERS[0];
+    const next = VIP_TIERS[vip.tier+1];
 
-    var vipName = container.querySelector('#vipName');
-    var vipBonus = container.querySelector('#vipBonus');
-    var vipCard = container.querySelector('#vipCard');
-    var vipLock = container.querySelector('#vipLock');
-    var vipNextName = container.querySelector('#vipNextName');
-    var btnVip = container.querySelector('#btnVipUpgrade');
+    const vipName = container.querySelector('#vipName');
+    const vipBonus = container.querySelector('#vipBonus');
+    const vipCard = container.querySelector('#vipCard');
+    const vipLock = container.querySelector('#vipLock');
+    const vipNextName = container.querySelector('#vipNextName');
+    const btnVip = container.querySelector('#btnVipUpgrade');
 
     if (vipName) vipName.textContent = '🏅 ' + cur.name;
     if (vipBonus) vipBonus.textContent = '+' + ((cur.bonus*100).toFixed(4)) + '%';
@@ -963,19 +963,19 @@
       } else {
         if (vipNextName) { vipNextName.style.display=''; vipNextName.textContent='➡️ 下一階：' + next.name; }
         // 條與文字
-        var gLab = container.querySelector('#vipGoldLab');
-        var gBar = container.querySelector('#vipGoldBar');
-        var gNeed = next.needGold||0;
+        const gLab = container.querySelector('#vipGoldLab');
+        const gBar = container.querySelector('#vipGoldBar');
+        const gNeed = next.needGold||0;
         if (gLab) gLab.textContent = '金幣：' + fmtNum(state.vip.donatedGold) + ' / ' + fmtNum(gNeed);
         if (gBar)  gBar.style.width = (gNeed>0?Math.min(100,(state.vip.donatedGold/gNeed)*100):100).toFixed(2)+'%';
 
-        var mLab = container.querySelector('#vipGemLab');
-        var mBar = container.querySelector('#vipGemBar');
-        var mNeed = next.needGem||0;
+        const mLab = container.querySelector('#vipGemLab');
+        const mBar = container.querySelector('#vipGemBar');
+        const mNeed = next.needGem||0;
         if (mLab) mLab.textContent = '鑽石：' + fmtNum(state.vip.donatedGem) + ' / ' + fmtNum(mNeed);
         if (mBar)  mBar.style.width = (mNeed>0?Math.min(100,(state.vip.donatedGem/mNeed)*100):100).toFixed(2)+'%';
 
-        var ok = canUpgradeVip(next);
+        const ok = canUpgradeVip(next);
         if (btnVip){
           btnVip.disabled = !ok;
           btnVip.textContent = ok ? '升級 VIP' : '尚未達標';
@@ -987,10 +987,10 @@
   }
 
   function render(container){
-    var snap = snapshotFocus(container);
+    const snap = snapshotFocus(container);
     settleToNow();
 
-    var d = deriveByLevel(state.lv);
+    const d = deriveByLevel(state.lv);
     container.innerHTML = "";
 
     renderRules(container);
@@ -1009,8 +1009,8 @@
     settleToNow();
     if (!HAS_INV) { alert("缺少背包介面"); return; }
     if (state.lv >= MAX_LV) { alert("已達銀行等級上限 ("+MAX_LV+")"); return; }
-    var cost = levelUpCost(state.lv);
-    var have = invQty(KEY_BANK_TOKEN);
+    const cost = levelUpCost(state.lv);
+    const have = invQty(KEY_BANK_TOKEN);
     if (have < cost) { alert("需要「"+KEY_BANK_TOKEN+"」×"+cost+"，持有："+have); return; }
     removeItem(KEY_BANK_TOKEN, cost);
     state.lv++;
@@ -1024,7 +1024,7 @@
   function tick(steps){
     if (!(steps > 0)) return;
     settle(steps);
-    var body = document.getElementById('townHubBody');
+    const body = document.getElementById('townHubBody');
     if (!body) return;
     if (String(body.getAttribute('data-tab-owner')||'') === TAB_ID) {
       updateDynamic(body);
@@ -1035,8 +1035,8 @@
   w.TownHub.registerTab({
     id: TAB_ID,
     title: TAB_TITLE,
-    render: render,
-    tick: tick,
+    render,
+    tick,
     noAutoRerender: true
   });
 

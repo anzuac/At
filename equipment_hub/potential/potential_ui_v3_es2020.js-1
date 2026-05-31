@@ -1,5 +1,5 @@
 // =======================================================
-// potential_ui_v2_es5.js — 潛能 UI（直立版：收合 + 機率表彈窗 + 保底移到洗方塊區）
+// potential_ui_v2_es2020.js — 潛能 UI（直立版：收合 + 機率表彈窗 + 保底移到洗方塊區）
 // 依賴：window.PotentialCoreV2（可能晚於 UI 載入）
 //      window.player
 //      window.getItemQuantity / window.openInventoryModal（可選）
@@ -13,15 +13,15 @@
   // DOM utils
   // -----------------------------
   function el(tag, props, children) {
-    var node = d.createElement(tag);
+    const node = d.createElement(tag);
     if (props) {
-      for (var k in props) if (Object.prototype.hasOwnProperty.call(props, k)) {
+      for (const k in props) if (Object.prototype.hasOwnProperty.call(props, k)) {
         if (k === "style") {
-          var s = props.style;
+          const s = props.style;
           if (typeof s === "string") {
             node.setAttribute("style", s);
           } else {
-            for (var sk in s) if (Object.prototype.hasOwnProperty.call(s, sk)) node.style[sk] = s[sk];
+            for (const sk in s) if (Object.prototype.hasOwnProperty.call(s, sk)) node.style[sk] = s[sk];
           }
         } else if (k === "className") node.className = props[k];
         else if (k === "text") node.textContent = props[k];
@@ -29,8 +29,8 @@
       }
     }
     if (children && children.length) {
-      for (var i = 0; i < children.length; i++) {
-        var c = children[i];
+      for (let i = 0; i < children.length; i++) {
+        const c = children[i];
         if (c == null) continue;
         node.appendChild(typeof c === "string" ? d.createTextNode(c) : c);
       }
@@ -43,7 +43,7 @@
 
   function fmtSignedInt(x) {
     x = Math.floor(Number(x || 0));
-    var sign = x >= 0 ? "+" : "";
+    const sign = x >= 0 ? "+" : "";
     return sign + x.toLocaleString();
   }
   function fmtPct(x, digits) {
@@ -58,30 +58,30 @@
   w.potui2_openCombineModal = function (which) {
     // which: "main" or "add"
     which = (which === "add") ? "add" : "main";
-    var core = w.PotentialCoreV2 || w.PotentialCoreV1;
+    const core = w.PotentialCoreV2 || w.PotentialCoreV1;
     if (!core) { alert("潛能核心未載入"); return; }
     if (!core.getState || !core.drawMainCombine || !core.confirmMainCombine) { alert("潛能核心版本不支援結合方塊"); return; }
 
-    var slot = getSelectedSlot();
+    const slot = getSelectedSlot();
 
     function getQty(itemName) {
       try {
         if (typeof w.getItemQuantity === "function") return n(w.getItemQuantity(itemName));
       } catch (e) {}
-      var p = w.player || {};
+      const p = w.player || {};
       // common: player.items[itemName] or inventory map/array
       if (p.items && p.items[itemName] != null) return n(p.items[itemName]);
       if (p.inventory && p.inventory[itemName] != null) return n(p.inventory[itemName]);
       if (Array.isArray(p.inventory)) {
-        for (var i = 0; i < p.inventory.length; i++) {
-          var it = p.inventory[i];
+        for (let i = 0; i < p.inventory.length; i++) {
+          const it = p.inventory[i];
           if (!it) continue;
           if ((it.id && it.id === itemName) || (it.key && it.key === itemName) || (it.name && it.name === itemName)) return n(it.qty || it.count || it.amount || 0);
         }
       }
       if (Array.isArray(p.items)) {
-        for (var j = 0; j < p.items.length; j++) {
-          var it2 = p.items[j];
+        for (let j = 0; j < p.items.length; j++) {
+          const it2 = p.items[j];
           if (!it2) continue;
           if ((it2.id && it2.id === itemName) || (it2.key && it2.key === itemName) || (it2.name && it2.name === itemName)) return n(it2.qty || it2.count || it2.amount || 0);
         }
@@ -89,10 +89,10 @@
       return 0;
     }
 
-    var itemName = (which === "add") ? core.ITEM_ADD_COMBINE : core.ITEM_MAIN_COMBINE;
+    const itemName = (which === "add") ? core.ITEM_ADD_COMBINE : core.ITEM_MAIN_COMBINE;
 
     // build modal (inline styles to avoid CSS id mismatch)
-    var backdrop = d.createElement("div");
+    const backdrop = d.createElement("div");
     backdrop.style.position = "fixed";
     backdrop.style.left = "0";
     backdrop.style.top = "0";
@@ -101,7 +101,7 @@
     backdrop.style.background = "rgba(0,0,0,.55)";
     backdrop.style.zIndex = "99998";
 
-    var modal = d.createElement("div");
+    const modal = d.createElement("div");
     modal.style.position = "fixed";
     modal.style.left = "50%";
     modal.style.top = "50%";
@@ -115,7 +115,7 @@
     modal.style.zIndex = "99999";
     modal.style.padding = "14px";
 
-    var selectedLineIndex = null;
+    let selectedLineIndex = null;
 
     function close() {
       if (backdrop && backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
@@ -123,7 +123,7 @@
     }
 
     function renderHeader() {
-      var qty = getQty(itemName);
+      const qty = getQty(itemName);
       return el("div", { style: "display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;" }, [
         el("div", { style: "font-weight:800;font-size:16px;" , text: (which === "add") ? "附加結合方塊" : "結合方塊" }),
         el("div", { style: "display:flex;align-items:center;gap:10px;" }, [
@@ -134,43 +134,43 @@
     }
 
     function rerenderQty() {
-      var q = modal.querySelector("#potui2_combine_qty");
+      const q = modal.querySelector("#potui2_combine_qty");
       if (q) q.textContent = "剩餘：" + getQty(itemName);
     }
 
     function renderBody() {
-      var box = el("div", { }, []);
+      const box = el("div", { }, []);
 
       // chosen line display
-      var chosen = el("div", {
+      const chosen = el("div", {
         id: "potui2_combine_chosen",
         style: "margin:10px 0;padding:10px;border-radius:12px;background:rgba(255,255,255,.06);",
         text: "尚未抽選，請按「使用」"
       }, []);
 
       // 三排能力顯示（抽選後會高亮）
-      var linesBox = el("div", { id: "potui2_combine_lines", style: "margin:10px 0;" }, []);
+      const linesBox = el("div", { id: "potui2_combine_lines", style: "margin:10px 0;" }, []);
       try {
-        var st0 = core.getState && core.getState();
-        var node0 = st0 && st0.pots && st0.pots[slot] ? st0.pots[slot][(which === "add") ? "add" : "main"] : null;
+        const st0 = core.getState && core.getState();
+        const node0 = st0 && st0.pots && st0.pots[slot] ? st0.pots[slot][(which === "add") ? "add" : "main"] : null;
         renderLines3(linesBox, node0, false, 0);
       } catch (e) {}
 
       box.appendChild(chosen);
       box.appendChild(linesBox);
 
-      var btnUse = el("button", { id: "potui2_combine_use", style: "width:100%;border:0;border-radius:12px;padding:10px 12px;background:rgba(80,140,255,.22);color:#fff;font-weight:800;cursor:pointer;", text: "使用結合方塊" });
+      const btnUse = el("button", { id: "potui2_combine_use", style: "width:100%;border:0;border-radius:12px;padding:10px 12px;background:rgba(80,140,255,.22);color:#fff;font-weight:800;cursor:pointer;", text: "使用結合方塊" });
 
-      var btnRow = el("div", { style: "display:flex;gap:10px;margin-top:10px;" }, [
+      const btnRow = el("div", { style: "display:flex;gap:10px;margin-top:10px;" }, [
         el("button", { id: "potui2_combine_reroll", style: "flex:1;border:0;border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.08);color:#fff;font-weight:700;cursor:pointer;", text: "重新抽選" }),
         el("button", { id: "potui2_combine_confirm", style: "flex:1;border:0;border-radius:12px;padding:10px 12px;background:rgba(90,255,170,.18);color:#fff;font-weight:800;cursor:pointer;", text: "確定使用" })
       ]);
 
-      var ruleText = (which === "add")
+      const ruleText = (which === "add")
         ? "規則：附加結合方塊，抽 1~3 排（各 33.33%）。確定使用後，只重洗該排附加潛能；0.5% 機率同外框等級。使用/重抽各扣 1 顆，確定不扣。"
         : "規則：結合方塊，抽 1~3 排（各 33.33%）。確定使用後，只重洗該排主潛能；15% 機率同外框等級。使用/重抽各扣 1 顆，確定不扣。";
 
-      var rules = el("div", { style: "margin-top:10px;font-size:12.5px;opacity:.85;line-height:1.35;", text: ruleText });
+      const rules = el("div", { style: "margin-top:10px;font-size:12.5px;opacity:.85;line-height:1.35;", text: ruleText });
 
       box.appendChild(btnUse);
       box.appendChild(chosen);
@@ -180,7 +180,7 @@
 
       // handlers
       function doDraw() {
-        var r = (which === "add") ? core.drawAddCombine(slot) : core.drawMainCombine(slot);
+        const r = (which === "add") ? core.drawAddCombine(slot) : core.drawMainCombine(slot);
         if (!r || !r.ok) {
           alert("使用失敗：" + (r && r.reason ? r.reason : "未知"));
           rerenderQty();
@@ -189,8 +189,8 @@
         selectedLineIndex = r.lineIndex || 0;
         chosen.textContent = "抽選結果：第 " + selectedLineIndex + " 排（33.33%）";
         try {
-          var st2 = core.getState && core.getState();
-          var node2 = st2 && st2.pots && st2.pots[slot] ? st2.pots[slot][(which === "add") ? "add" : "main"] : null;
+          const st2 = core.getState && core.getState();
+          const node2 = st2 && st2.pots && st2.pots[slot] ? st2.pots[slot][(which === "add") ? "add" : "main"] : null;
           renderLines3(linesBox, node2, false, selectedLineIndex);
         } catch (e) {}
 
@@ -199,14 +199,14 @@
 
       function doConfirm() {
         if (selectedLineIndex === null || selectedLineIndex === undefined) { alert("請先使用/抽選一排"); return; }
-        var rr = (which === "add") ? core.confirmAddCombine(slot, selectedLineIndex) : core.confirmMainCombine(slot, selectedLineIndex);
+        const rr = (which === "add") ? core.confirmAddCombine(slot, selectedLineIndex) : core.confirmMainCombine(slot, selectedLineIndex);
         if (!rr || !rr.ok) { alert("確定使用失敗"); return; }
         // ✅ 不關閉視窗：更新顯示、清除本次抽選（需再次使用/重抽才可再確定）
         selectedLineIndex = null;
         chosen.textContent = "已確定使用完成。可再次按「使用」重新抽選一排。";
         try {
-          var st3 = core.getState && core.getState();
-          var node3 = st3 && st3.pots && st3.pots[slot] ? st3.pots[slot][(which === "add") ? "add" : "main"] : null;
+          const st3 = core.getState && core.getState();
+          const node3 = st3 && st3.pots && st3.pots[slot] ? st3.pots[slot][(which === "add") ? "add" : "main"] : null;
           renderLines3(linesBox, node3, false, -1);
         } catch (e) {}
         rerenderQty();
@@ -222,12 +222,12 @@
 
     // mount
     modal.innerHTML = "";
-    var header = renderHeader();
+    const header = renderHeader();
     modal.appendChild(header);
     modal.appendChild(renderBody());
 
     backdrop.onclick = function (e) { if (e.target === backdrop) close(); };
-    var cbtn = modal.querySelector("#potui2_combine_close_btn");
+    const cbtn = modal.querySelector("#potui2_combine_close_btn");
     if (cbtn) cbtn.onclick = close;
 
     d.body.appendChild(backdrop);
@@ -238,33 +238,33 @@
   // -----------------------------
   // Slots / Labels / Tabs
   // -----------------------------
-var SLOT_LABEL = {
+const SLOT_LABEL = {
   // 武器類
-  weapon: "龍魂武器",
-  subWeapon: "古代副兵",
-  subWeapon2: "核心能源",
+  weapon: "武器",
+  subWeapon: "副武器",
+  subWeapon2: "能源",
 
-  // 防具類
-  hat: "王者頭冠",
-  top: "龍鱗戰甲",
-  bottom: "戰士護腿",
-  shoes: "疾風戰靴",
-  glove: "巨力護手",
-  cape: "賢者披風",
-  badge: "榮耀徽印",
+  // 裝備類
+  hat: "帽子",
+  top: "上衣",
+  bottom: "褲裙",
+  shoes: "鞋子",
+  glove: "手套",
+  cape: "披風",
+  badge: "徽章",
 
   // 飾品類
-  eye: "命運之眼",
-  face: "古神面飾",
-  earring: "龍牙耳環",
-  necklace1: "龍之項鍊",
-  necklace2: "賢者項鍊",
-  ring1: "龍之戒指",
-  ring2: "王者戒指",
-  ring3: "深淵戒指",
-  ring4: "守護戒指"
+  eye: "眼鏡",
+  face: "臉飾",
+  earring: "耳環",
+  necklace1: "項鍊1",
+  necklace2: "項鍊2",
+  ring1: "戒指1",
+  ring2: "戒指2",
+  ring3: "戒指3",
+  ring4: "戒指4"
 };
-var TABS = [
+const TABS = [
   {
     key: "weapon",
     title: "武器類",
@@ -302,41 +302,17 @@ var TABS = [
   }
 
 
-// Tier ordering helpers (for coloring)
-var _TIER_ORDER = ["特殊", "稀有", "罕見", "傳說", "唯一", "永恆"];
-function tierIndex(t) {
-  t = String(t || "特殊");
-  for (var i = 0; i < _TIER_ORDER.length; i++) if (_TIER_ORDER[i] === t) return i;
-  return 0;
-}
-function maxTier(a, b) { return (tierIndex(a) >= tierIndex(b)) ? a : b; }
-function isEternal(t) { return String(t || "") === "永恆"; }
 
-function getSlotTierInfo(st, slot) {
-  var mt = "特殊", at = "特殊";
-  if (st && st.pots && st.pots[slot]) {
-    var node = st.pots[slot];
-    mt = node.main ? String(node.main.tier || "特殊") : "特殊";
-    at = node.add  ? String(node.add.tier  || "特殊") : "特殊";
-  }
-  var hi = maxTier(mt, at);
-  var neon = isEternal(mt) && isEternal(at);
-  return { mt: mt, at: at, hi: hi, neon: neon };
-}
-
-
-
-  
   // 渲染三排潛能（結合方塊用：可高亮指定排）
   function renderLines3(container, node, glow, selectedIndex) {
     if (!container) return;
     container.innerHTML = "";
-    var lines = (node && node.lines) ? node.lines : [];
+    const lines = (node && node.lines) ? node.lines : [];
     selectedIndex = Number(selectedIndex || 0); // 1~3
-    for (var i = 0; i < 3; i++) {
-      var L = lines[i] || null;
-      var t = lineToText(L);
-      var isSel = (selectedIndex === (i + 1));
+    for (let i = 0; i < 3; i++) {
+      const L = lines[i] || null;
+      const t = lineToText(L);
+      const isSel = (selectedIndex === (i + 1));
       container.appendChild(el("div", { className: "line " + tierClass(t.tier) + (glow ? " upgradedGlow" : "") + (isSel ? " selectedPick" : "") }, [
         el("div", { className: "l" }, [
           el("div", { className: "lineTop" }, [
@@ -354,29 +330,31 @@ function getSlotTierInfo(st, slot) {
   }
 
 // -----------------------------
-  // 升階/保底規則：以核心為準（UI 只讀取顯示）
+  // UI 規則（顯示用，不影響核心 roll）
   // -----------------------------
+  const MAIN_RULE = {
+    "特殊": { pity: 50,  upChance: 0.05 },
+    "稀有": { pity: 150, upChance: 0.03 },
+    "罕見": { pity: 300, upChance: 0.01 },
+    // 傳說 -> 唯一：0.35% + 保底 1300
+    "傳說": { pity: 1300, upChance: 0.0035 },
+    // 唯一 -> 永恆：0.01%（無保底）
+    "唯一": { pity: 0,   upChance: 0.0001 },
+    // 永恆最高階：不再升階
+    "永恆": { pity: 0,   upChance: 0 }
+  };
+
   function getRuleUI(which, tier) {
     tier = String(tier || "特殊");
-    which = (which === "add") ? "add" : "main";
-    try {
-      var core = w.PotentialCoreV2;
-      if (core && typeof core.getTierRuleTable === "function") {
-        var tbl = core.getTierRuleTable(which);
-        var r = (tbl && tbl[tier]) ? tbl[tier] : (tbl && tbl["特殊"]);
-        if (r) return { pity: n(r.pity), upChance: n(r.upChance) };
-      }
-    } catch (e) {}
-    // fallback（理論上不會用到）
-    var fb = { "特殊": { pity: 50, upChance: 0.05 } };
-    var rf = fb[tier] || fb["特殊"];
-    return { pity: n(rf.pity), upChance: n(rf.upChance) };
+    const r = MAIN_RULE[tier] || MAIN_RULE["特殊"];
+    if (which === "add") return { pity: r.pity ? (r.pity * 2) : 0, upChance: r.upChance * 0.5 };
+    return { pity: r.pity, upChance: r.upChance };
   }
 
   // -----------------------------
   // Collapsible defaults（你要的：單件預設收起）
   // -----------------------------
-  var UI_DEFAULT = {
+  const UI_DEFAULT = {
     allOpen: true,          // 全部裝備綜合：預設展開（你也可以改成 false）
     singleOpen: false       // 單件能力：預設收起
   };
@@ -387,7 +365,7 @@ function getSlotTierInfo(st, slot) {
   function injectStyle() {
   if (d.getElementById("potui-v2-style")) return;
 
-  var style = d.createElement("style");
+  const style = d.createElement("style");
   style.id = "potui-v2-style";
   style.textContent = `
 :root{
@@ -538,157 +516,6 @@ function getSlotTierInfo(st, slot) {
   border-color:rgba(37,99,235,.55);
 }
 
-.tabBtn.t_特殊,.tabBtn.t_稀有,.tabBtn.t_罕見,.tabBtn.t_傳說,.tabBtn.t_唯一,.tabBtn.t_永恆{
-  border-color: color-mix(in srgb, var(--tier) 65%, rgba(148,163,184,.25));
-  box-shadow: 0 0 0 1px rgba(255,255,255,.03) inset;
-}
-.tabBtn.active.t_特殊,.tabBtn.active.t_稀有,.tabBtn.active.t_罕見,.tabBtn.active.t_傳說,.tabBtn.active.t_唯一,.tabBtn.active.t_永恆{
-  background: color-mix(in srgb, var(--tier) 22%, rgba(148,163,184,.08));
-  border-color: var(--tier);
-  box-shadow: 0 0 0 1px var(--tier) inset, 0 0 14px color-mix(in srgb, var(--tier) 35%, transparent);
-}
-
-.slotBtn.t_特殊,.slotBtn.t_稀有,.slotBtn.t_罕見,.slotBtn.t_傳說,.slotBtn.t_唯一,.slotBtn.t_永恆{
-  border-color: color-mix(in srgb, var(--tier) 55%, rgba(148,163,184,.25));
-}
-.slotBtn.active.t_特殊,.slotBtn.active.t_稀有,.slotBtn.active.t_罕見,.slotBtn.active.t_傳說,.slotBtn.active.t_唯一,.slotBtn.active.t_永恆{
-  border-color: var(--tier);
-  box-shadow: 0 0 0 2px rgba(255,255,255,.03) inset, 0 0 0 3px color-mix(in srgb, var(--tier) 20%, transparent) inset;
-}
-
-.slotDots{display:flex; gap:6px; align-items:center;}
-.slotDot{
-  width:10px; height:10px; border-radius:999px;
-  background: var(--tier);
-  box-shadow: 0 0 0 2px rgba(255,255,255,.06) inset;
-}
-.slotMiniTier{display:flex; gap:8px; align-items:center; margin-left:auto;}
-.miniTag{
-  font-size:11px;
-  font-weight:950;
-  color:var(--p2-sub);
-  display:flex; gap:4px; align-items:center;
-}
-.miniTag .chip{
-  padding:2px 6px;
-  border-radius:999px;
-  border:1px solid rgba(148,163,184,.25);
-  background:rgba(2,6,23,.35);
-  color:var(--tier);
-  font-weight:950;
-}
-
-/* 永恆+永恆特效
-   - Slot：方案二（燈泡跑馬燈）
-   - Tab：方案一（Aurora Flow 極光流動）
-*/
-@keyframes p2hueSpin{
-  0%{ filter:hue-rotate(0deg); }
-  100%{ filter:hue-rotate(360deg); }
-}
-@keyframes p2bulbRun{
-  0%{ transform:rotate(0deg); }
-  100%{ transform:rotate(360deg); }
-}
-@keyframes p2auroraRotate{
-  0%{ transform:rotate(0deg); }
-  100%{ transform:rotate(360deg); }
-}
-@keyframes p2auroraDrift{
-  0%{ background-position:0% 50%; opacity:.65; }
-  50%{ background-position:100% 50%; opacity:.9; }
-  100%{ background-position:0% 50%; opacity:.65; }
-}
-
-/* ---------- Slot：燈泡跑馬燈 ---------- */
-.slotNeon{
-  position:relative;
-  border:2px solid transparent !important;
-  background:
-    linear-gradient(rgba(2,6,23,.45), rgba(2,6,23,.45)) padding-box,
-    /* 彩虹底 */
-    conic-gradient(from 0deg,
-      #ff004c, #ffb000, #fff000, #00ff85, #00d9ff, #6a5cff, #c800ff, #ff004c
-    ) border-box,
-    /* 燈泡段落（分段亮點），用 steps 旋轉製造跑馬燈感 */
-    conic-gradient(from 0deg,
-      rgba(255,255,255,.95) 0 2.5deg,
-      rgba(255,255,255,0) 2.5deg 7.5deg,
-      rgba(255,255,255,.55) 7.5deg 9deg,
-      rgba(255,255,255,0) 9deg 12deg
-    ) border-box !important;
-  background-size:auto, auto, auto;
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,.07) inset,
-    0 0 18px rgba(255,255,255,.07),
-    0 0 44px rgba(255,255,255,.05);
-}
-.slotNeon::after{
-  content:"";
-  position:absolute;
-  inset:-2px;
-  border-radius:inherit;
-  pointer-events:none;
-  /* 讓燈泡層在上面跑 */
-  background:
-    conic-gradient(from 0deg,
-      rgba(255,255,255,.95) 0 2.5deg,
-      rgba(255,255,255,0) 2.5deg 7.5deg,
-      rgba(255,255,255,.55) 7.5deg 9deg,
-      rgba(255,255,255,0) 9deg 12deg
-    );
-  filter:blur(.2px);
-  opacity:.9;
-  animation:p2bulbRun 1.35s steps(18) infinite, p2hueSpin 2.6s linear infinite;
-  mix-blend-mode:screen;
-}
-.slotNeon .slotDot{ box-shadow:0 0 14px rgba(255,255,255,.18), 0 0 0 2px rgba(255,255,255,.07) inset; }
-
-/* ---------- Tab：Aurora Flow ---------- */
-.tabAurora{
-  position:relative;
-  border:1px solid transparent !important;
-}
-.tabAurora::before{
-  content:"";
-  position:absolute;
-  inset:-3px;
-  border-radius:inherit;
-  pointer-events:none;
-  background:
-    conic-gradient(from 0deg,
-      rgba(255,110,196,.95),
-      rgba(120,115,245,.95),
-      rgba(34,211,238,.95),
-      rgba(74,222,128,.95),
-      rgba(250,204,21,.95),
-      rgba(255,110,196,.95)
-    );
-  filter:blur(8px);
-  opacity:.75;
-  animation:p2auroraRotate 7.8s linear infinite;
-}
-.tabAurora::after{
-  content:"";
-  position:absolute;
-  inset:-3px;
-  border-radius:inherit;
-  pointer-events:none;
-  background:
-    linear-gradient(90deg,
-      rgba(255,255,255,0) 0%,
-      rgba(255,255,255,.35) 20%,
-      rgba(255,255,255,0) 45%,
-      rgba(255,255,255,.22) 60%,
-      rgba(255,255,255,0) 100%
-    );
-  background-size:220% 100%;
-  filter:blur(6px);
-  mix-blend-mode:screen;
-  animation:p2auroraDrift 2.8s ease-in-out infinite;
-}
-
-
 .slotRow{display:grid; gap:8px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items:stretch;}
 .slotBtn{
   border:1px solid var(--p2-bd);
@@ -703,11 +530,6 @@ function getSlotTierInfo(st, slot) {
   width:100%;
 }
 .slotBtn.active{border-color:rgba(37,99,235,.65); box-shadow:0 0 0 3px rgba(37,99,235,.12) inset;}
-.slotInfo{display:flex; flex-direction:column; gap:2px; min-width:0; flex:1;}
-.slotName{font-size:12px; font-weight:950; color:var(--p2-txt); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-.slotSubline{display:flex; gap:10px; align-items:center; font-size:11px; color:var(--p2-sub); font-weight:900;}
-.slotSubline .lbl{opacity:.9;}
-.slotSubline .val{font-weight:950; color:var(--tier);}
 .slotBtn .mini{font-size:11px; color:var(--p2-sub); font-weight:900;}
 .slotBtn .stat{font-size:11px; font-weight:950;}
 
@@ -737,7 +559,7 @@ function getSlotTierInfo(st, slot) {
 .sumTitle{ font-size:12px; font-weight:950; color:var(--p2-sub); margin:4px 0 8px; letter-spacing:.2px; }
 .allFilter{ margin-bottom:8px; }
 
-.summaryGrid{ /* alias for old className */ 
+.summaryGrid{ /* alias for old className */
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:8px;
@@ -1116,7 +938,7 @@ function statLabelZH(stat) {
   if (!stat) return "";
 
   // 先統一格式（處理 BOSSDAMAGE / TOTALDAMAGE 這種）
-  var raw = stat;
+  const raw = stat;
   stat = stat.trim();
 
   // 別名表：UI彙總可能用的 key（大寫/無底線）
@@ -1124,7 +946,7 @@ function statLabelZH(stat) {
   if (stat === "TOTALDAMAGE") return "總傷害";
 
   // 也順手支援一些常見變形
-  var lower = stat.toLowerCase();
+  const lower = stat.toLowerCase();
   if (lower === "bossdamage") return "Boss傷害";
   if (lower === "totaldamage") return "總傷害";
 
@@ -1169,86 +991,60 @@ function statLabelZH(stat) {
 
 
   // line display（對齊 PotentialCoreV2 的 id/meta 結構）
-  
+
   // line display（對齊 PotentialCoreV2 的 id/meta 結構）
   // ✅ 顯示優化：以「屬性名稱 + 數值」為主（例如：力量 +9.00%）
   function lineToText(line) {
     if (!line) return { tier: "—", desc: "（空）", val: "" };
 
-    var id = String(line.id || "");
-    var tier = String(line.tier || "");
-    var v = n(line.value);
-    var meta = line.meta || {};
-    var stat = meta.stat || "";
+    const id = String(line.id || "");
+    const tier = String(line.tier || "");
+    const v = n(line.value);
+    const meta = line.meta || {};
+    const stat = meta.stat || "";
 
     function pctVal(x){ return "+" + fmtPct(x, 2); }
     function flatVal(x){ return fmtSignedInt(x); }
 
     // bundle（帽子被擊回血、飾品三抽一）
     if (meta && meta.stats) {
-      var s = meta.stats || {};
+      const s = meta.stats || {};
       // 帽子：被擊回血
       if (id === "HAT_ONHIT_HEAL" && (s.onHitHealChance != null) && (s.onHitHealHpPct != null)) {
         return {
-          tier: tier,
+          tier,
           desc: "被擊後恢復HP",
           val: (fmtPct(n(s.onHitHealChance), 1) + " 機率 / " + fmtPct(n(s.onHitHealHpPct), 1) + " HP")
         };
       }
-      // 披風：被擊回 MP（CAPE_ONHIT_MP）
-      if (id === "CAPE_ONHIT_MP" && (s.onHitHealChance != null) && (s.onHitHealMpPct != null)) {
-        return {
-          tier: tier,
-          desc: "被擊後恢復MP",
-          val: (fmtPct(n(s.onHitHealChance), 1) + " 機率 / " + fmtPct(n(s.onHitHealMpPct), 1) + " MP")
-        };
-      }
-
-      // 徽章：攻擊回 HP（BADGE_ONATTACK_HP）
-      if (id === "BADGE_ONATTACK_HP" && (s.onAttackHealChance != null) && (s.onAttackHealHpPct != null)) {
-        return {
-          tier: tier,
-          desc: "攻擊時恢復HP",
-          val: (fmtPct(n(s.onAttackHealChance), 1) + " 機率 / " + fmtPct(n(s.onAttackHealHpPct), 1) + " HP")
-        };
-      }
-
-      // 下衣：攻擊回 MP（BOTTOM_ONATTACK_MP）
-      if (id === "BOTTOM_ONATTACK_MP" && (s.onAttackHealChance != null) && (s.onAttackHealMpPct != null)) {
-        return {
-          tier: tier,
-          desc: "攻擊時恢復MP",
-          val: (fmtPct(n(s.onAttackHealChance), 1) + " 機率 / " + fmtPct(n(s.onAttackHealMpPct), 1) + " MP")
-        };
-      }
       // 飾品：經驗/金幣/掉落
       if (id === "ACC_EXP_MESO_DROP") {
-        var exp = (s.expRate != null) ? ("經驗值 " + pctVal(n(s.expRate))) : "";
-        var meso = (s.mesoRate != null) ? ("金幣 " + pctVal(n(s.mesoRate))) : "";
-        var drop = (s.dropRate != null) ? ("掉落 " + pctVal(n(s.dropRate))) : "";
-        var parts = [];
+        const exp = (s.expRate != null) ? ("經驗值 " + pctVal(n(s.expRate))) : "";
+        const meso = (s.mesoRate != null) ? ("金幣 " + pctVal(n(s.mesoRate))) : "";
+        const drop = (s.dropRate != null) ? ("掉落 " + pctVal(n(s.dropRate))) : "";
+        const parts = [];
         if (exp) parts.push(exp);
         if (meso) parts.push(meso);
         if (drop) parts.push(drop);
-        return { tier: tier, desc: "三抽一", val: parts.join(" / ") };
+        return { tier, desc: "三抽一", val: parts.join(" / ") };
       }
       // fallback：把 bundle 直接 JSON 顯示（方便除錯）
-      return { tier: tier, desc: id || "特效", val: JSON.stringify(s) };
+      return { tier, desc: id || "特效", val: JSON.stringify(s) };
     }
 
     // 主屬性（會帶 meta.stat = str/dex/int/luk）
-    if (id.indexOf("MAINSTAT_FLAT_") === 0) return { tier: tier, desc: statLabelZH(stat) || "主屬性", val: flatVal(v) };
-    if (id.indexOf("MAINSTAT_PCT_") === 0)  return { tier: tier, desc: statLabelZH(stat) || "主屬性", val: pctVal(v) };
+    if (id.indexOf("MAINSTAT_FLAT_") === 0) return { tier, desc: statLabelZH(stat) || "主屬性", val: flatVal(v) };
+    if (id.indexOf("MAINSTAT_PCT_") === 0)  return { tier, desc: statLabelZH(stat) || "主屬性", val: pctVal(v) };
 
     // 全屬性
-    if (id.indexOf("ALLSTAT_FLAT_") === 0) return { tier: tier, desc: "全屬性", val: flatVal(v) };
-    if (id.indexOf("ALLSTAT_PCT_") === 0)  return { tier: tier, desc: "全屬性", val: pctVal(v) };
+    if (id.indexOf("ALLSTAT_FLAT_") === 0) return { tier, desc: "全屬性", val: flatVal(v) };
+    if (id.indexOf("ALLSTAT_PCT_") === 0)  return { tier, desc: "全屬性", val: pctVal(v) };
 
     // 其他：統一用 meta.stat 來顯示（核心新版多數都會帶）
     if (stat) {
-      var label = statLabelZH(stat) || statLabel(stat) || stat;
+      const label = statLabelZH(stat) || statLabel(stat) || stat;
       // value < 1 視為百分比（0.30 = 30%）；>=1 視為固定值
-      var isPct = (Math.abs(v) > 0 && Math.abs(v) < 1);
+      const isPct = (Math.abs(v) > 0 && Math.abs(v) < 1);
       return { tier: tier || "—", desc: label, val: isPct ? pctVal(v) : flatVal(v) };
     }
 
@@ -1258,22 +1054,22 @@ function statLabelZH(stat) {
   // -----------------------------
   // Summary (只顯示你說會計算的 8 項)
   // -----------------------------
-  var SUMMARY_KEYS = ["str", "agi", "int", "luk", "atk", "def", "hp", "mp"];
+  const SUMMARY_KEYS = ["str", "agi", "int", "luk", "atk", "def", "hp", "mp"];
 
   function collectBonusForSlot(player, slot) {
     player = player || w.player;
-    var out = {};
-    for (var i = 0; i < SUMMARY_KEYS.length; i++) out[SUMMARY_KEYS[i]] = 0;
+    const out = {};
+    for (let i = 0; i < SUMMARY_KEYS.length; i++) out[SUMMARY_KEYS[i]] = 0;
     if (!player || !player.PotentialBonus || !player.PotentialBonus.bonusData) return out;
 
-    var bd = player.PotentialBonus.bonusData;
-    var km = "potential_" + slot + "_main";
-    var ka = "potential_" + slot + "_add";
-    var m = bd[km] || {};
-    var a = bd[ka] || {};
+    const bd = player.PotentialBonus.bonusData;
+    const km = "potential_" + slot + "_main";
+    const ka = "potential_" + slot + "_add";
+    const m = bd[km] || {};
+    const a = bd[ka] || {};
 
     function merge(obj) {
-      for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) {
+      for (const k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) {
         if (SUMMARY_KEYS.indexOf(k) >= 0) out[k] += n(obj[k]);
       }
     }
@@ -1281,39 +1077,39 @@ function statLabelZH(stat) {
     return out;
   }
 
-  
+
   function collectBonusAll(player) {
     player = player || w.player;
-    var out = {};
-    for (var i = 0; i < SUMMARY_KEYS.length; i++) out[SUMMARY_KEYS[i]] = 0;
+    const out = {};
+    for (let i = 0; i < SUMMARY_KEYS.length; i++) out[SUMMARY_KEYS[i]] = 0;
     if (!player || !player.PotentialBonus) return out;
 
     // ✅ 優先：core 修正版會提供 uiTotal（不參與加成池，避免翻倍）
     if (player.PotentialBonus.uiTotal && typeof player.PotentialBonus.uiTotal === "object") {
-      var ut = player.PotentialBonus.uiTotal;
-      for (var k1 in ut) if (Object.prototype.hasOwnProperty.call(ut, k1)) {
+      const ut = player.PotentialBonus.uiTotal;
+      for (const k1 in ut) if (Object.prototype.hasOwnProperty.call(ut, k1)) {
         if (SUMMARY_KEYS.indexOf(k1) >= 0) out[k1] += n(ut[k1]);
       }
       return out;
     }
 
-    var bd = player.PotentialBonus.bonusData || {};
+    const bd = player.PotentialBonus.bonusData || {};
 
     // 相容舊版：若還有 bd.potential_all 就讀它
-    var all = bd.potential_all;
+    const all = bd.potential_all;
     if (all && typeof all === "object") {
-      for (var k2 in all) if (Object.prototype.hasOwnProperty.call(all, k2)) {
+      for (const k2 in all) if (Object.prototype.hasOwnProperty.call(all, k2)) {
         if (SUMMARY_KEYS.indexOf(k2) >= 0) out[k2] += n(all[k2]);
       }
       return out;
     }
 
     // 最後 fallback：現場把各來源加總（排除 potential_all）
-    for (var key in bd) if (Object.prototype.hasOwnProperty.call(bd, key)) {
+    for (const key in bd) if (Object.prototype.hasOwnProperty.call(bd, key)) {
       if (key === "potential_all") continue;
-      var obj = bd[key];
+      const obj = bd[key];
       if (!obj || typeof obj !== "object") continue;
-      for (var kk in obj) if (Object.prototype.hasOwnProperty.call(obj, kk)) {
+      for (const kk in obj) if (Object.prototype.hasOwnProperty.call(obj, kk)) {
         if (SUMMARY_KEYS.indexOf(kk) >= 0) out[kk] += n(obj[kk]);
       }
     }
@@ -1327,17 +1123,17 @@ function statLabelZH(stat) {
     return !!(w.PotentialCoreV2 && typeof w.PotentialCoreV2.getState === "function");
   }
   function setRollButtonsEnabled(enabled) {
-    var a = d.getElementById("potui2_main_roll");
-    var b = d.getElementById("potui2_add_roll");
-    var c = d.getElementById("potui2_main_combine");
-    var d2 = d.getElementById("potui2_add_combine");
+    const a = d.getElementById("potui2_main_roll");
+    const b = d.getElementById("potui2_add_roll");
+    const c = d.getElementById("potui2_main_combine");
+    const d2 = d.getElementById("potui2_add_combine");
     if (a) a.disabled = !enabled;
     if (b) b.disabled = !enabled;
     if (c) c.disabled = !enabled;
     if (d2) d2.disabled = !enabled;
   }
   function showCoreWarning(show) {
-    var box = d.getElementById("potui2_core_warn");
+    const box = d.getElementById("potui2_core_warn");
     if (!box) return;
     box.style.display = show ? "block" : "none";
   }
@@ -1345,11 +1141,11 @@ function statLabelZH(stat) {
   // -----------------------------
   // Collapsible state (per modal life)
   // -----------------------------
-  var _fold = {
+  const _fold = {
     allOpen: UI_DEFAULT.allOpen,
     singleOpen: UI_DEFAULT.singleOpen
   };
-  var allSummaryMode = "all"; // all | pct | flat
+  let allSummaryMode = "all"; // all | pct | flat
 
 
   function toggleFold(key) {
@@ -1358,14 +1154,14 @@ function statLabelZH(stat) {
   }
   function applyFoldUI() {
     // all
-    var allBody = d.getElementById("potui2_all_body");
-    var allIcon = d.getElementById("potui2_all_icon");
+    const allBody = d.getElementById("potui2_all_body");
+    const allIcon = d.getElementById("potui2_all_icon");
     if (allBody) allBody.style.display = _fold.allOpen ? "block" : "none";
     if (allIcon) allIcon.textContent = _fold.allOpen ? "▴" : "▾";
 
     // single
-    var sBody = d.getElementById("potui2_single_body");
-    var sIcon = d.getElementById("potui2_single_icon");
+    const sBody = d.getElementById("potui2_single_body");
+    const sIcon = d.getElementById("potui2_single_icon");
     if (sBody) sBody.style.display = _fold.singleOpen ? "block" : "none";
     if (sIcon) sIcon.textContent = _fold.singleOpen ? "▴" : "▾";
   }
@@ -1375,21 +1171,22 @@ function statLabelZH(stat) {
   // -----------------------------
   function openProbModal() {
     closeProbModal();
-    var back = el("div", { id: "potui2_prob_backdrop" });
-    var modal = el("div", { id: "potui2_prob_modal" });
+    const back = el("div", { id: "potui2_prob_backdrop" });
+    const modal = el("div", { id: "potui2_prob_modal" });
 
-    var header = el("div", { id: "potui2_prob_header" }, [
-      el("div", { text: "機率表（升階 / 保底）" }),
+    const header = el("div", { id: "potui2_prob_header" }, [
+      el("div", { text: "機率表（升階 / 保底 / 三排規則）" }),
       el("button", { className: "p2btn danger", id: "potui2_prob_close" }, ["關閉"])
     ]);
 
-    var body = el("div", { id: "potui2_prob_body" });
+    const body = el("div", { id: "potui2_prob_body" });
 
     body.appendChild(el("div", { className: "note", style: { marginTop: "0" } }, [
+      "三排規則：每次洗一次抽三排；主潛能第2排 20% 同階、第3排 5% 同階；附加潛能第2/3排 0.5% 同階（其餘為次一階）。\n",
       "升階規則：每次洗一次有機率提升外框，並有保底（傳說起無保底）。"
     ]));
 
-    var tbl = el("table", { className: "tbl" });
+    const tbl = el("table", { className: "tbl" });
     tbl.appendChild(el("thead", null, [
       el("tr", null, [
         el("th", null, ["階級"]),
@@ -1398,14 +1195,14 @@ function statLabelZH(stat) {
       ])
     ]));
 
-    var tbody = el("tbody");
-    var tiers = ["特殊", "稀有", "罕見", "傳說", "唯一", "永恆"];
-    for (var i = 0; i < tiers.length; i++) {
+    const tbody = el("tbody");
+    const tiers = ["特殊", "稀有", "罕見", "傳說", "唯一", "永恆"];
+    for (let i = 0; i < tiers.length; i++) {
       (function (t) {
-        var rMain = getRuleUI("main", t);
-        var rAdd  = getRuleUI("add", t);
-        var mainTxt = (t === "永恆") ? "—" : (fmtPct(rMain.upChance, 3) + " / " + (rMain.pity ? (rMain.pity + "顆") : "無保底"));
-        var addTxt  = (t === "永恆") ? "—" : (fmtPct(rAdd.upChance, 3) + " / " + (rAdd.pity ? (rAdd.pity + "顆") : "無保底"));
+        const rMain = getRuleUI("main", t);
+        const rAdd  = getRuleUI("add", t);
+        const mainTxt = (t === "永恆") ? "—" : (fmtPct(rMain.upChance, 3) + " / " + (rMain.pity ? (rMain.pity + "顆") : "無保底"));
+        const addTxt  = (t === "永恆") ? "—" : (fmtPct(rAdd.upChance, 3) + " / " + (rAdd.pity ? (rAdd.pity + "顆") : "無保底"));
         tbody.appendChild(el("tr", null, [
           el("td", null, [el("span", { className: "rowTag", text: t })]),
           el("td", null, [mainTxt]),
@@ -1431,8 +1228,8 @@ function statLabelZH(stat) {
   }
 
   function closeProbModal() {
-    var b = d.getElementById("potui2_prob_backdrop");
-    var m = d.getElementById("potui2_prob_modal");
+    const b = d.getElementById("potui2_prob_backdrop");
+    const m = d.getElementById("potui2_prob_modal");
     if (b) b.remove();
     if (m) m.remove();
   }
@@ -1444,10 +1241,10 @@ function statLabelZH(stat) {
   injectStyle();
   if (d.getElementById("potui2_modal")) return;
 
-  var backdrop = el("div", { id: "potui2_backdrop" });
-  var modal = el("div", { id: "potui2_modal" });
+  const backdrop = el("div", { id: "potui2_backdrop" });
+  const modal = el("div", { id: "potui2_modal" });
 
-  var header = el("div", { id: "potui2_header" }, [
+  const header = el("div", { id: "potui2_header" }, [
     el("div", { className: "title" }, [
       el("div", { text: "潛能面板" }),
       el("small", { text: "左側總覽｜右側操作（主/附潛能）" })
@@ -1459,16 +1256,16 @@ function statLabelZH(stat) {
     ])
   ]);
 
-  var body = el("div", { id: "potui2_body" });
+  const body = el("div", { id: "potui2_body" });
 
-  var sidebar = el("div", { className: "p2sidebar" });
-  var main = el("div", { className: "p2main" });
+  const sidebar = el("div", { className: "p2sidebar" });
+  const main = el("div", { className: "p2main" });
 
   // Core warning
   sidebar.appendChild(el("div", { className: "warnBox", id: "potui2_core_warn", style: { display: "none" } }, [
     "潛能核心 PotentialCoreV2 尚未載入（或載入順序在 UI 後面）。\n",
     "→ 目前只顯示 UI 外殼；等核心就緒後會自動補上詞條與功能。\n",
-    "（請確認 script 順序：先 potential_core_v2_es5.js，再 potential_ui...）"
+    "（請確認 script 順序：先 potential_core_v2_es2020.js，再 potential_ui...）"
   ]));
 
   // 1) All summary (collapsible)
@@ -1528,26 +1325,26 @@ function statLabelZH(stat) {
   // Events
   backdrop.onclick = function (e) { if (e.target === backdrop) close(); };
 
-  var _btnClose = modal.querySelector("#potui2_close");
+  const _btnClose = modal.querySelector("#potui2_close");
   if (_btnClose) _btnClose.onclick = close;
 
-  var _btnInv = modal.querySelector("#potui2_inv");
+  const _btnInv = modal.querySelector("#potui2_inv");
   if (_btnInv) _btnInv.onclick = function () {
     if (typeof w.openInventoryModal === "function") w.openInventoryModal();
   };
 
-  var _btnProb = modal.querySelector("#potui2_prob_btn");
+  const _btnProb = modal.querySelector("#potui2_prob_btn");
   if (_btnProb) _btnProb.onclick = openProbModal;
 
-  var _btnAllFold = modal.querySelector("#potui2_all_fold");
+  const _btnAllFold = modal.querySelector("#potui2_all_fold");
   if (_btnAllFold) _btnAllFold.onclick = function () { toggleFold("allOpen"); };
 
 // All summary filter buttons
 function setAllSummaryMode(mode){
   allSummaryMode = mode || "all";
-  var bAll = modal.querySelector("#potui2_all_f_all");
-  var bPct = modal.querySelector("#potui2_all_f_pct");
-  var bFlat = modal.querySelector("#potui2_all_f_flat");
+  const bAll = modal.querySelector("#potui2_all_f_all");
+  const bPct = modal.querySelector("#potui2_all_f_pct");
+  const bFlat = modal.querySelector("#potui2_all_f_flat");
   function setActive(btn, on){
     if (!btn) return;
     btn.className = on ? "tabBtn active" : "tabBtn";
@@ -1557,15 +1354,15 @@ function setAllSummaryMode(mode){
   setActive(bFlat, allSummaryMode === "flat");
   refreshAllSummary();
 }
-var _bAll = modal.querySelector("#potui2_all_f_all");
-var _bPct = modal.querySelector("#potui2_all_f_pct");
-var _bFlat = modal.querySelector("#potui2_all_f_flat");
+const _bAll = modal.querySelector("#potui2_all_f_all");
+const _bPct = modal.querySelector("#potui2_all_f_pct");
+const _bFlat = modal.querySelector("#potui2_all_f_flat");
 if (_bAll) _bAll.onclick = function(){ setAllSummaryMode("all"); };
 if (_bPct) _bPct.onclick = function(){ setAllSummaryMode("pct"); };
 if (_bFlat) _bFlat.onclick = function(){ setAllSummaryMode("flat"); };
 
 
-  var _btnSingleFold = modal.querySelector("#potui2_single_fold");
+  const _btnSingleFold = modal.querySelector("#potui2_single_fold");
   if (_btnSingleFold) _btnSingleFold.onclick = function () { toggleFold("singleOpen"); };
 d.body.appendChild(backdrop);
   d.body.appendChild(modal);
@@ -1578,7 +1375,7 @@ d.body.appendChild(backdrop);
 
   function potentialPanel(title, which) {
     // which: main/add
-    var card = el("div", { className: "card" }, [
+    const card = el("div", { className: "card" }, [
       el("h3", null, [
         el("span", { text: title }),
         el("span", { className: "sub", id: "potui2_" + which + "_count", text: "" })
@@ -1610,7 +1407,7 @@ d.body.appendChild(backdrop);
     ]);
 
     card.querySelector("#potui2_" + which + "_roll").onclick = function () { doRoll(which); };
-    var cbtn = card.querySelector("#potui2_" + which + "_combine");
+    const cbtn = card.querySelector("#potui2_" + which + "_combine");
     if (cbtn) cbtn.onclick = function () { if (w.potui2_openCombineModal) { w.potui2_openCombineModal(which); } else { alert("結合方塊UI未載入"); } };
     return card;
   }
@@ -1618,71 +1415,42 @@ d.body.appendChild(backdrop);
   // -----------------------------
   // Tabs
   // -----------------------------
-  var _activeTabKey = "weapon";
+  let _activeTabKey = "weapon";
 
-  
-function buildTabs() {
-  var tabs = d.getElementById("potui2_tabs");
-  if (!tabs) return;
-  tabs.innerHTML = "";
+  function buildTabs() {
+    const tabs = d.getElementById("potui2_tabs");
+    if (!tabs) return;
+    tabs.innerHTML = "";
 
-  for (var i = 0; i < TABS.length; i++) {
-    (function (tab) {
-      var b = el("button", { className: "tabBtn", "data-tab": tab.key }, [tab.title]);
-      b.onclick = function () {
-        _activeTabKey = tab.key;
-        renderSlotsRow();
-        highlightTabs();
-      };
-      tabs.appendChild(b);
-    })(TABS[i]);
-  }
-  highlightTabs();
-  renderSlotsRow();
-}
-
-function highlightTabs() {
-  var st = coreReady() ? (safe(function () { return w.PotentialCoreV2.getState(); }, null) || {}) : null;
-
-  var btns = d.querySelectorAll("#potui2_tabs .tabBtn");
-  for (var i = 0; i < btns.length; i++) {
-    var k = btns[i].getAttribute("data-tab");
-    var tab = null;
-    for (var t = 0; t < TABS.length; t++) if (TABS[t].key === k) tab = TABS[t];
-    if (!tab) continue;
-
-    // compute tab highlight color by highest tier among its slots
-    var hi = "特殊";
-    // neon (rainbow) only when ALL slots in this tab are double-eternal
-    var neonAll = tab.slots && tab.slots.length ? true : false;
-    if (st && st.pots) {
-      for (var s = 0; s < tab.slots.length; s++) {
-        var info = getSlotTierInfo(st, tab.slots[s]);
-        hi = maxTier(hi, info.hi);
-        if (!info.neon) neonAll = false;
-      }
-    } else {
-      neonAll = false;
+    for (let i = 0; i < TABS.length; i++) {
+      (function (tab) {
+        const b = el("button", { className: "tabBtn", "data-tab": tab.key }, [tab.title]);
+        b.onclick = function () {
+          _activeTabKey = tab.key;
+          renderSlotsRow();
+          highlightTabs();
+        };
+        tabs.appendChild(b);
+      })(TABS[i]);
     }
-    var neon = neonAll;
-
-    // reset tier classes
-    btns[i].classList.remove("t_特殊","t_稀有","t_罕見","t_傳說","t_唯一","t_永恆","tabAurora");
-
-    btns[i].classList.add(tierClass(hi));
-    if (neon) btns[i].classList.add("tabAurora");
-
-    if (k === _activeTabKey) btns[i].classList.add("active");
-    else btns[i].classList.remove("active");
+    highlightTabs();
+    renderSlotsRow();
   }
-}
 
+  function highlightTabs() {
+    const btns = d.querySelectorAll("#potui2_tabs .tabBtn");
+    for (let i = 0; i < btns.length; i++) {
+      const k = btns[i].getAttribute("data-tab");
+      if (k === _activeTabKey) btns[i].classList.add("active");
+      else btns[i].classList.remove("active");
+    }
+  }
 
   function getSelectedSlotFallback() { return "weapon"; }
 
   function getSelectedSlot() {
     if (!coreReady()) return getSelectedSlotFallback();
-    var st = safe(function () { return w.PotentialCoreV2.getState(); }, null) || {};
+    const st = safe(() => { return w.PotentialCoreV2.getState(); }, null) || {};
     return (st.ui && st.ui.selectedSlot) ? st.ui.selectedSlot : "weapon";
   }
 
@@ -1692,72 +1460,63 @@ function highlightTabs() {
     refresh();
   }
 
-  
-function renderSlotsRow() {
-  var wrap = d.getElementById("potui2_slots");
-  if (!wrap) return;
-  wrap.innerHTML = "";
+  function renderSlotsRow() {
+    const wrap = d.getElementById("potui2_slots");
+    if (!wrap) return;
+    wrap.innerHTML = "";
 
-  var tab = null;
-  for (var i = 0; i < TABS.length; i++) if (TABS[i].key === _activeTabKey) tab = TABS[i];
-  if (!tab) tab = TABS[0];
+    let tab = null;
+    for (let i = 0; i < TABS.length; i++) if (TABS[i].key === _activeTabKey) tab = TABS[i];
+    if (!tab) tab = TABS[0];
 
-  var selected = getSelectedSlot();
-  var st = coreReady() ? (safe(function () { return w.PotentialCoreV2.getState(); }, null) || {}) : null;
+    const selected = getSelectedSlot();
+    const st = coreReady() ? (safe(() => { return w.PotentialCoreV2.getState(); }, null) || {}) : null;
 
-  for (var s = 0; s < tab.slots.length; s++) {
-    (function (slot) {
-      var info = getSlotTierInfo(st, slot);
+    for (let s = 0; s < tab.slots.length; s++) {
+      (function (slot) {
+        let mt = "—", at = "—";
+        if (st && st.pots && st.pots[slot]) {
+          const node = st.pots[slot];
+          mt = node.main ? String(node.main.tier || "特殊") : "特殊";
+          at = node.add  ? String(node.add.tier  || "特殊") : "特殊";
+        }
+        const b = el("button", { className: "slotBtn", "data-slot": slot }, [
+          el("span", { className: "dot " + tierClass(mt === "—" ? "特殊" : mt) }),
+          el("span", { text: (SLOT_LABEL[slot] || slot) }),
+          el("span", { className: "mini", text: "主:" + mt + " / 附:" + at })
+        ]);
 
-      // 主色 = 主/附最高階；若主+附皆永恆 => neon（彩虹外框）
-      var b = el("button", { className: "slotBtn " + tierClass(info.hi) + (info.neon ? " slotNeon" : ""), "data-slot": slot }, [
-        // 左側小圓點：主/附
-        el("span", { className: "slotDots" }, [
-          el("span", { className: "slotDot " + tierClass(info.mt) }),
-          el("span", { className: "slotDot " + tierClass(info.at) })
-        ]),
-        // 右側資訊：名稱 + 主/附階級（橫向、縮小字體）
-        el("span", { className: "slotInfo" }, [
-          el("span", { className: "slotName", text: (SLOT_LABEL[slot] || slot) }),
-          el("span", { className: "slotSubline" }, [
-            el("span", { className: "lbl", text: "主：" }),
-            el("span", { className: "val " + tierClass(info.mt), text: info.mt }),
-            el("span", { className: "lbl", text: "副：" }),
-            el("span", { className: "val " + tierClass(info.at), text: info.at })
-          ])
-        ])
-      ]);
+        b.onclick = function () { if (coreReady()) setSelectedSlot(slot); };
 
-      b.onclick = function () { if (coreReady()) setSelectedSlot(slot); };
-
-      if (slot === selected) b.classList.add("active");
-      wrap.appendChild(b);
-    })(tab.slots[s]);
+        if (slot === selected) b.classList.add("active");
+        wrap.appendChild(b);
+      })(tab.slots[s]);
+    }
   }
-}
 
 
+  // -----------------------------
   // Roll Modal（洗方塊：前後選擇 / 再洗一次 / 跳框提示）
   // -----------------------------
   function openRollModal(which) {
-    var attemptClose = function () {};
+    let attemptClose = function () {};
 
     if (!coreReady()) {
       alert("潛能核心 PotentialCoreV2 尚未載入，無法洗潛能。");
       return;
     }
-    safe(function () { w.PotentialCoreV2.ensureLinesExist(); }, null);
+    safe(() => { w.PotentialCoreV2.ensureLinesExist(); }, null);
 
     closeRollModal();
 
-    var slot = getSelectedSlot();
-    var slotName = SLOT_LABEL[slot] || slot;
+    const slot = getSelectedSlot();
+    const slotName = SLOT_LABEL[slot] || slot;
 
-    var back = el("div", { id: "potui2_roll_backdrop" });
-    var modal = el("div", { id: "potui2_roll_modal" });
+    const back = el("div", { id: "potui2_roll_backdrop" });
+    const modal = el("div", { id: "potui2_roll_modal" });
 
-    var titleTxt = (which === "add") ? "洗附加潛能" : "洗主潛能";
-    var header = el("div", { id: "potui2_roll_header" }, [
+    const titleTxt = (which === "add") ? "洗附加潛能" : "洗主潛能";
+    const header = el("div", { id: "potui2_roll_header" }, [
       el("div", { className: "title" }, [
         el("div", { text: titleTxt }),
         el("small", { text: "部位：" + slotName + "｜可選擇原潛能/新潛能結果" })
@@ -1768,23 +1527,23 @@ function renderSlotsRow() {
       ])
     ]);
 
-    var body = el("div", { id: "potui2_roll_body" });
+    const body = el("div", { id: "potui2_roll_body" });
 
     // state holders (in closure)
-    var lastUpgraded = false;     // 上一次洗是否跳框
-    var committedNode = null;    // 舊潛能（已套用在裝備上，整個彈窗期間不變）
-    var previewNode = null;       // 新潛能（僅預覽，直到按「保留後」才會套用）
-    var hasPreview = false;       // 是否已有預覽結果
-    var hasRolledOnce = false;
-    var flashyData = null;        // 閃炫候選資料
-    var flashySel = null;         // 閃炫選擇狀態
+    let lastUpgraded = false;     // 上一次洗是否跳框
+    let committedNode = null;    // 舊潛能（已套用在裝備上，整個彈窗期間不變）
+    let previewNode = null;       // 新潛能（僅預覽，直到按「保留後」才會套用）
+    let hasPreview = false;       // 是否已有預覽結果
+    let hasRolledOnce = false;
+    let flashyData = null;        // 閃炫候選資料
+    let flashySel = null;         // 閃炫選擇狀態
     // 本次彈窗是否已經洗過（洗一次只出現第一次）
 
     function getCubeOptions() {
-      var opt = { upChanceMult: 1, itemName: null, label: "", kind: "normal" };
-      var PC = w.PotentialCoreV2 || w.PotentialCoreV1 || {};
-      var sel = d.getElementById("potui2_roll_cubeSel");
-      var v = sel ? String(sel.value || "normal") : "normal";
+      const opt = { upChanceMult: 1, itemName: null, label: "", kind: "normal" };
+      const PC = w.PotentialCoreV2 || w.PotentialCoreV1 || {};
+      const sel = d.getElementById("potui2_roll_cubeSel");
+      const v = sel ? String(sel.value || "normal") : "normal";
 
       if (which === "add") {
         if (v === "flashy") { opt.upChanceMult = 1; opt.itemName = (PC.ITEM_ADD_FLASHY || "附加潛能閃炫方塊"); opt.label = "附加潛能閃炫方塊"; opt.kind = "flashy"; }
@@ -1805,7 +1564,7 @@ function renderSlotsRow() {
     // - 無原潛能/新潛能；必須選完並套用後才能再洗
     // - 強制關閉：採用預設（主：前三排；附：c1[0] + c23[0,1]）
     // -----------------------------
-    
+
 
   // -----------------------------
   // Combine Cube Modal（結合方塊/附加結合方塊）
@@ -1814,19 +1573,19 @@ function renderSlotsRow() {
   // - 確定使用：不扣，僅重洗抽中的那一排（主：15%同框；附：0.5%同框）
   // -----------------------------
   function openCombineModal(which) {
-    var core = w.PotentialCoreV2 || w.PotentialCoreV1;
+    const core = w.PotentialCoreV2 || w.PotentialCoreV1;
     if (!core) { alert("潛能核心未載入"); return; }
     if (!core.getState) { alert("潛能核心版本不支援結合方塊"); return; }
 
-    var slot = core.getSelectedSlot ? core.getSelectedSlot() : (core.getState().selectedSlot || "weapon");
-    var st = core.getState ? core.getState() : null;
-    var itemId = (which === "add") ? (core.ITEM_ADD_COMBINE || "ADD_COMBINE_CUBE") : (core.ITEM_MAIN_COMBINE || "MAIN_COMBINE_CUBE");
+    const slot = core.getSelectedSlot ? core.getSelectedSlot() : (core.getState().selectedSlot || "weapon");
+    const st = core.getState ? core.getState() : null;
+    const itemId = (which === "add") ? (core.ITEM_ADD_COMBINE || "ADD_COMBINE_CUBE") : (core.ITEM_MAIN_COMBINE || "MAIN_COMBINE_CUBE");
 
     function getQty() {
       try {
         if (typeof w.getItemQuantity === "function") return (w.getItemQuantity(itemId) || 0);
       } catch (e) {}
-      var p = w.player || {};
+      const p = w.player || {};
       // common shapes: inventory{ id:qty }, items{ id:qty }, bag{ id:qty }
       if (p.inventory && typeof p.inventory[itemId] === "number") return p.inventory[itemId];
       if (p.items && typeof p.items[itemId] === "number") return p.items[itemId];
@@ -1834,16 +1593,16 @@ function renderSlotsRow() {
       return 0;
     }
 
-    var backdrop = d.createElement("div");
+    const backdrop = d.createElement("div");
     backdrop.id = "potui2_backdrop";
 
-    var modal = d.createElement("div");
+    const modal = d.createElement("div");
     modal.id = "potui2_modal";
     modal.dataset.p2modal = "combine";
 
-    var selectedLineIndex = null;
-    var draw = null; // { ok, lineIndex, lineText, chanceSameFrame }
-    var usedOnce = false;
+    const selectedLineIndex = null;
+    let draw = null; // { ok, lineIndex, lineText, chanceSameFrame }
+    let usedOnce = false;
 
     function close() {
       try { d.body.removeChild(backdrop); } catch (e) {}
@@ -1851,12 +1610,12 @@ function renderSlotsRow() {
     }
 
     function render() {
-      var qty = getQty();
-      var title = (which === "add") ? "附加結合方塊" : "結合方塊";
+      const qty = getQty();
+      const title = (which === "add") ? "附加結合方塊" : "結合方塊";
       modal.innerHTML = "";
 
       // header
-      var header = el("div", { className: "p2mHead" }, [
+      const header = el("div", { className: "p2mHead" }, [
         el("div", { className: "p2mTitle" }, [
           el("span", { text: title }),
           el("span", { className: "sub", id: "potui2_combine_qty", text: "剩餘：" + qty })
@@ -1865,13 +1624,13 @@ function renderSlotsRow() {
       ]);
 
       // body
-      var body = el("div", { className: "p2mBody" }, []);
+      const body = el("div", { className: "p2mBody" }, []);
 
-      var btnUse = el("button", { className: "p2btn primary", id: "potui2_combine_use", disabled: qty <= 0 }, [
+      const btnUse = el("button", { className: "p2btn primary", id: "potui2_combine_use", disabled: qty <= 0 }, [
         usedOnce ? "再次使用（扣 1）" : "使用（扣 1）"
       ]);
 
-      var hint = el("div", { className: "note", style: { marginTop: "10px" } }, [
+      const hint = el("div", { className: "note", style: { marginTop: "10px" } }, [
         "抽排機率：第1/2/3排各 33.33%（合計100%）。"
       ]);
 
@@ -1883,7 +1642,7 @@ function renderSlotsRow() {
       body.appendChild(hint);
 
       // result area
-      var resultBox = el("div", { className: "p2card", style: { marginTop: "12px" } }, []);
+      const resultBox = el("div", { className: "p2card", style: { marginTop: "12px" } }, []);
       if (!draw) {
         resultBox.appendChild(el("div", { className: "sub", text: "尚未抽選。" }));
       } else {
@@ -1895,14 +1654,14 @@ function renderSlotsRow() {
       }
       body.appendChild(resultBox);
 
-      var btnRow = el("div", { className: "btnRow", style: { marginTop: "12px" } }, [
+      const btnRow = el("div", { className: "btnRow", style: { marginTop: "12px" } }, [
         el("button", { className: "p2btn", id: "potui2_combine_reroll", disabled: !draw || qty <= 0 }, ["重新抽選（扣 1）"]),
         el("button", { className: "p2btn primary", id: "potui2_combine_confirm", disabled: !draw }, ["確定使用（不扣）"])
       ]);
       body.appendChild(btnRow);
 
       // rules
-      var rules = [];
+      const rules = [];
       if (which === "add") {
         rules.push("附加結合方塊：確定使用後，抽中的那一排「附加潛能」會重新抽選。");
         rules.push("同外框等級機率：0.5%（其餘為次一階）。");
@@ -1917,16 +1676,16 @@ function renderSlotsRow() {
       modal.appendChild(body);
 
       // handlers
-      var cbtn = modal.querySelector("#potui2_combine_close");
+      const cbtn = modal.querySelector("#potui2_combine_close");
       if (cbtn) cbtn.onclick = close;
       backdrop.onclick = function (e) { if (e.target === backdrop) close(); };
 
-      var useBtn = modal.querySelector("#potui2_combine_use");
-      var rerollBtn = modal.querySelector("#potui2_combine_reroll");
-      var confirmBtn = modal.querySelector("#potui2_combine_confirm");
+      const useBtn = modal.querySelector("#potui2_combine_use");
+      const rerollBtn = modal.querySelector("#potui2_combine_reroll");
+      const confirmBtn = modal.querySelector("#potui2_combine_confirm");
 
       function doDraw() {
-        var res = (which === "add") ? core.drawAddCombine(slot) : core.drawMainCombine(slot);
+        const res = (which === "add") ? core.drawAddCombine(slot) : core.drawMainCombine(slot);
         if (!res || !res.ok) { alert((res && res.message) || "使用結合方塊失敗"); return; }
         usedOnce = true;
         draw = res;
@@ -1934,7 +1693,7 @@ function renderSlotsRow() {
       }
       function doConfirm() {
         if (!draw) return;
-        var res = (which === "add") ? core.confirmAddCombine(slot, draw.lineIndex) : core.confirmMainCombine(slot, draw.lineIndex);
+        const res = (which === "add") ? core.confirmAddCombine(slot, draw.lineIndex) : core.confirmMainCombine(slot, draw.lineIndex);
         if (!res || !res.ok) { alert((res && res.message) || "確定使用失敗"); return; }
         close();
         refresh();
@@ -1951,25 +1710,25 @@ function renderSlotsRow() {
   }
 
 function openFlashyModal(slot, which, opt) {
-      var core = w.PotentialCoreV2 || w.PotentialCoreV1;
+      const core = w.PotentialCoreV2 || w.PotentialCoreV1;
       if (!core) { alert("潛能核心未載入"); return; }
 
-      var back = d.createElement("div");
+      const back = d.createElement("div");
       back.id = "potui2_flashy_backdrop";
 
-      var modal = d.createElement("div");
+      const modal = d.createElement("div");
       modal.id = "potui2_flashy_modal";
       // prevent bubbling to backdrop on mobile
       modal.onclick = function(e){ if (e && e.stopPropagation) e.stopPropagation(); };
 
-      var header = d.createElement("div");
+      const header = d.createElement("div");
       header.className = "potui2_flashy_header";
 
-      var hTitle = d.createElement("div");
+      const hTitle = d.createElement("div");
       hTitle.className = "potui2_flashy_title";
       hTitle.textContent = (which === "add") ? "附加閃炫方塊" : "閃炫方塊";
 
-      var btnX = d.createElement("button");
+      const btnX = d.createElement("button");
       btnX.className = "potui2_flashy_close";
       btnX.type = "button";
       btnX.textContent = "✕";
@@ -1977,28 +1736,28 @@ function openFlashyModal(slot, which, opt) {
       header.appendChild(hTitle);
       header.appendChild(btnX);
 
-      var body = d.createElement("div");
+      const body = d.createElement("div");
       body.className = "potui2_flashy_body";
 
-      var hint = d.createElement("div");
+      const hint = d.createElement("div");
       hint.className = "potui2_flashy_hint";
       hint.textContent = (which === "add")
         ? "第1排：2選1（同等級 100%）；第2/3排：3選2（次等級 100%）。"
         : "一次抽 6 排，請選擇 3 排保留。";
 
-      var panel = d.createElement("div");
+      const panel = d.createElement("div");
       panel.className = (which === "add") ? "potui2_flashy_grid" : "potui2_flashy_panel";
 
-      var actions = d.createElement("div");
+      const actions = d.createElement("div");
       actions.className = "potui2_flashy_actions";
 
-      var btnRe = d.createElement("button");
+      const btnRe = d.createElement("button");
       btnRe.className = "potui2_flashy_btn";
       btnRe.type = "button";
       btnRe.textContent = "再使用一次";
       btnRe.disabled = true; // 必須先確定套用後才能再洗
 
-      var btnOk = d.createElement("button");
+      const btnOk = d.createElement("button");
       btnOk.className = "potui2_flashy_btn pri";
       btnOk.type = "button";
       btnOk.textContent = "確定";
@@ -2018,19 +1777,19 @@ function openFlashyModal(slot, which, opt) {
       d.body.appendChild(modal);
 
       // state
-      var lastRoll = null;
-      var chosenMain = [];     // idx list 0..5
-      var chosenAdd1 = 0;      // 0..1
-      var chosenAdd23 = [];    // idx list 0..2
-      var appliedOnce = false;
-      var openedAt = Date.now(); 
+      let lastRoll = null;
+      let chosenMain = [];     // idx list 0..5
+      let chosenAdd1 = 0;      // 0..1
+      let chosenAdd23 = [];    // idx list 0..2
+      let appliedOnce = false;
+      const openedAt = Date.now();
 
-      var committedBefore = null;
+      let committedBefore = null;
       function dc(o){ try { return JSON.parse(JSON.stringify(o)); } catch(_){ return o; } }
       function snapBefore(){
         if (committedBefore) return committedBefore;
         try {
-          var st0 = (typeof core.getState === "function") ? core.getState() : null;
+          const st0 = (typeof core.getState === "function") ? core.getState() : null;
           committedBefore = dc(st0 && st0.pots && st0.pots[slot] ? st0.pots[slot][which] : null);
         } catch(_){ committedBefore = null; }
         return committedBefore;
@@ -2048,10 +1807,10 @@ function openFlashyModal(slot, which, opt) {
 
       function lineParts(line) {
         try {
-          var o = lineToText(line);
+          const o = lineToText(line);
           if (typeof o === "string") return { tier: String(line && line.tier || ""), text: o };
           if (o && typeof o === "object") {
-            var txt = String(o.desc || "");
+            let txt = String(o.desc || "");
             if (o.val) txt += " " + String(o.val);
             return { tier: String(o.tier || (line && line.tier) || ""), text: txt };
           }
@@ -2060,23 +1819,23 @@ function openFlashyModal(slot, which, opt) {
       }
 
       function makeLineRow(idx, line, isSelected) {
-        var parts = lineParts(line);
+        const parts = lineParts(line);
 
-        var row = d.createElement("div");
+        const row = d.createElement("div");
         row.className = "potui2_flashy_line" + (isSelected ? " sel" : "");
 
-        var left = d.createElement("div");
+        const left = d.createElement("div");
         left.className = "potui2_flashy_left";
 
-        var badge = d.createElement("span");
+        const badge = d.createElement("span");
         badge.className = "potui2_flashy_badge " + (typeof tierColorClass === "function" ? tierColorClass(parts.tier) : "");
         badge.textContent = tierAbbr(parts.tier);
 
-        var num = d.createElement("span");
+        const num = d.createElement("span");
         num.className = "potui2_flashy_idx";
         num.textContent = String(idx + 1);
 
-        var txt = d.createElement("span");
+        const txt = d.createElement("span");
         txt.className = "potui2_flashy_txt";
         txt.textContent = parts.text;
 
@@ -2084,7 +1843,7 @@ function openFlashyModal(slot, which, opt) {
         left.appendChild(num);
         left.appendChild(txt);
 
-        var check = d.createElement("span");
+        const check = d.createElement("span");
         check.className = "potui2_flashy_check";
         check.textContent = isSelected ? "✓" : "";
 
@@ -2095,10 +1854,10 @@ function openFlashyModal(slot, which, opt) {
 
       function renderAppliedLines(lines) {
         panel.innerHTML = "";
-        var box = d.createElement("div");
+        const box = d.createElement("div");
         box.className = "potui2_flashy_box";
-        for (var i = 0; i < lines.length; i++) {
-          var r = makeLineRow(i, lines[i], true);
+        for (let i = 0; i < lines.length; i++) {
+          const r = makeLineRow(i, lines[i], true);
           r.className = "potui2_flashy_line applied";
           box.appendChild(r);
         }
@@ -2111,16 +1870,16 @@ function openFlashyModal(slot, which, opt) {
         chosenMain = [];
         btnOk.disabled = false;
 
-        var box = d.createElement("div");
+        const box = d.createElement("div");
         box.className = "potui2_flashy_box";
 
-        for (var i = 0; i < cands.length; i++) {
+        for (let i = 0; i < cands.length; i++) {
           (function (idx) {
-            var row = makeLineRow(idx, cands[idx], (chosenMain.indexOf(idx) >= 0));
+            const row = makeLineRow(idx, cands[idx], (chosenMain.indexOf(idx) >= 0));
 
             row.onclick = function () {
               if (appliedOnce) return;
-              var k = chosenMain.indexOf(idx);
+              const k = chosenMain.indexOf(idx);
               if (k >= 0) {
                 chosenMain.splice(k, 1);
                 row.classList.remove("sel");
@@ -2148,23 +1907,23 @@ function openFlashyModal(slot, which, opt) {
         btnOk.disabled = false;
 
         // box1: 2選1
-        var box1 = d.createElement("div");
+        const box1 = d.createElement("div");
         box1.className = "potui2_flashy_box";
-        var t1 = d.createElement("h4");
+        const t1 = d.createElement("h4");
         t1.textContent = "第1排（2選1）";
         box1.appendChild(t1);
 
-        for (var i = 0; i < c1.length; i++) {
+        for (let i = 0; i < c1.length; i++) {
           (function (idx) {
-            var row = makeLineRow(idx, c1[idx], false);
+            const row = makeLineRow(idx, c1[idx], false);
 
             row.onclick = function () {
               if (appliedOnce) return;
               chosenAdd1 = idx;
-              var rows = box1.querySelectorAll(".potui2_flashy_line");
-              for (var j = 0; j < rows.length; j++) {
+              const rows = box1.querySelectorAll(".potui2_flashy_line");
+              for (let j = 0; j < rows.length; j++) {
                 rows[j].classList.remove("sel");
-                var ck = rows[j].querySelector(".potui2_flashy_check"); if (ck) ck.textContent = "";
+                const ck = rows[j].querySelector(".potui2_flashy_check"); if (ck) ck.textContent = "";
               }
               row.classList.add("sel");
               row.querySelector(".potui2_flashy_check").textContent = "✓";
@@ -2175,19 +1934,19 @@ function openFlashyModal(slot, which, opt) {
         }
 
         // box2: 3選2
-        var box2 = d.createElement("div");
+        const box2 = d.createElement("div");
         box2.className = "potui2_flashy_box";
-        var t2 = d.createElement("h4");
+        const t2 = d.createElement("h4");
         t2.textContent = "第2/3排（三選二）";
         box2.appendChild(t2);
 
-        for (var k = 0; k < c23.length; k++) {
+        for (let k = 0; k < c23.length; k++) {
           (function (idx) {
-            var row = makeLineRow(idx, c23[idx], (chosenAdd23.indexOf(idx) >= 0));
+            const row = makeLineRow(idx, c23[idx], (chosenAdd23.indexOf(idx) >= 0));
 
             row.onclick = function () {
               if (appliedOnce) return;
-              var p = chosenAdd23.indexOf(idx);
+              const p = chosenAdd23.indexOf(idx);
               if (p >= 0) {
                 chosenAdd23.splice(p, 1);
                 row.classList.remove("sel");
@@ -2211,12 +1970,12 @@ function openFlashyModal(slot, which, opt) {
       function doRollFlashy() {
         // 重要：閃炫只在「確定」時才套用。
         // 這裡先快照目前已套用的潛能，避免 core.roll* 先把預設前三排寫進去造成 UI/結果不一致。
-        var beforeNow = dc(snapBefore());
+        const beforeNow = dc(snapBefore());
         appliedOnce = false;
         btnRe.disabled = true;
         btnOk.disabled = true;
 
-        var r = (which === "add")
+        const r = (which === "add")
           ? core.rollAddFlashy(slot, opt)
           : core.rollMainFlashy(slot, opt);
 
@@ -2226,7 +1985,7 @@ function openFlashyModal(slot, which, opt) {
           return;
         }
 
-        lastRoll = r; 
+        lastRoll = r;
 
         // 立刻還原畫面/狀態為「洗之前」的版本，直到使用者按下確定
         try { core.setSlotPotential(slot, which, beforeNow || snapBefore()); } catch (_) {}
@@ -2242,23 +2001,23 @@ function openFlashyModal(slot, which, opt) {
       function applySelection() {
         if (!lastRoll || !lastRoll.ok) return;
 
-        var st = lastRoll.state;
+        const st = lastRoll.state;
         if (!st || !st.pots || !st.pots[slot]) return;
 
-        var node = st.pots[slot][which];
+        const node = st.pots[slot][which];
         if (!node) return;
 
         if (which === "add") {
           // 自動補齊（沒選滿也可以確定）
           if (chosenAdd1 == null) chosenAdd1 = 0;
           while (chosenAdd23.length < 2) {
-            var cand = chosenAdd23.length; // 0,1
+            const cand = chosenAdd23.length; // 0,1
             if (chosenAdd23.indexOf(cand) < 0) chosenAdd23.push(cand);
             else break;
           }
           // 若還是不足（候選不足），直接擋下
           if (chosenAdd23.length !== 2) return;
-          chosenAdd23.sort(function (a, b) { return a - b; });
+          chosenAdd23.sort((a, b) => { return a - b; });
           node.lines = [
             lastRoll.candidates.c1[chosenAdd1],
             lastRoll.candidates.c23[chosenAdd23[0]],
@@ -2267,12 +2026,12 @@ function openFlashyModal(slot, which, opt) {
         } else {
           // 自動補齊（沒選滿也可以確定）
           while (chosenMain.length < 3) {
-            var next = chosenMain.length;
+            const next = chosenMain.length;
             if (chosenMain.indexOf(next) < 0) chosenMain.push(next);
             else break;
           }
           if (chosenMain.length !== 3) return;
-          chosenMain.sort(function (a, b) { return a - b; });
+          chosenMain.sort((a, b) => { return a - b; });
           node.lines = [
             lastRoll.candidates[chosenMain[0]],
             lastRoll.candidates[chosenMain[1]],
@@ -2319,14 +2078,14 @@ function openFlashyModal(slot, which, opt) {
 
 
         function hidePicker() {
-      var box = d.getElementById("potui2_roll_picker");
+      const box = d.getElementById("potui2_roll_picker");
       if (box) { box.style.display = "none"; box.innerHTML = ""; }
       flashyData = null;
       flashySel = null;
     }
 
     function showPickerMain(candidates) {
-      var box = d.getElementById("potui2_roll_picker");
+      const box = d.getElementById("potui2_roll_picker");
       if (!box) return;
       box.style.display = "";
       box.innerHTML = "";
@@ -2337,8 +2096,8 @@ function openFlashyModal(slot, which, opt) {
 
       function applySelection() {
         if (!previewNode) return;
-        var chosen = [];
-        for (var i3 = 0; i3 < flashyData.length; i3++) if (flashySel.picks[i3]) chosen.push(flashyData[i3]);
+        const chosen = [];
+        for (let i3 = 0; i3 < flashyData.length; i3++) if (flashySel.picks[i3]) chosen.push(flashyData[i3]);
         if (chosen.length === 3) {
           previewNode.lines = [ chosen[0], chosen[1], chosen[2] ];
           renderLines(d.getElementById("potui2_roll_after_lines"), previewNode, lastUpgraded);
@@ -2365,14 +2124,14 @@ function openFlashyModal(slot, which, opt) {
       function render() {
         box.innerHTML = "";
         box.appendChild(el("div", { className: "pickerTitle", text: "閃炫：一次抽 6 排，選擇要保留的 3 排" }));
-        var list = el("div", { className: "pickerList" });
-        for (var i = 0; i < flashyData.length; i++) {
+        const list = el("div", { className: "pickerList" });
+        for (let i = 0; i < flashyData.length; i++) {
           (function(ii){
-            var chk = el("input", { type: "checkbox" });
+            const chk = el("input", { type: "checkbox" });
             chk.checked = !!flashySel.picks[ii];
             chk.onchange = function(){
-              var cur = 0;
-              for (var k in flashySel.picks) if (flashySel.picks[k]) cur++;
+              let cur = 0;
+              for (const k in flashySel.picks) if (flashySel.picks[k]) cur++;
               if (chk.checked) {
                 if (cur >= 3) { chk.checked = false; return; }
                 flashySel.picks[ii] = true;
@@ -2382,7 +2141,7 @@ function openFlashyModal(slot, which, opt) {
               applySelection();
               render();
             };
-            var lineTxt = (flashyData[ii] && flashyData[ii].text) ? flashyData[ii].text : String(flashyData[ii]||"");
+            const lineTxt = (flashyData[ii] && flashyData[ii].text) ? flashyData[ii].text : String(flashyData[ii]||"");
             list.appendChild(el("label", { className: "pickerRow" }, [
               chk,
               el("span", { className: "pickerIdx", text: "第" + (ii+1) + "排：" }),
@@ -2392,8 +2151,8 @@ function openFlashyModal(slot, which, opt) {
         }
         box.appendChild(list);
 
-        var picked = [];
-        for (var i2 = 0; i2 < flashyData.length; i2++) if (flashySel.picks[i2]) picked.push(i2+1);
+        const picked = [];
+        for (let i2 = 0; i2 < flashyData.length; i2++) if (flashySel.picks[i2]) picked.push(i2+1);
         box.appendChild(el("div", { className: "pickerHint", text: "已選：" + picked.join("、") + "（需 3 排）" }));
       }
 
@@ -2402,7 +2161,7 @@ function openFlashyModal(slot, which, opt) {
     }
 
     function showPickerAdd(cand) {
-      var box = d.getElementById("potui2_roll_picker");
+      const box = d.getElementById("potui2_roll_picker");
       if (!box) return;
       box.style.display = "";
       box.innerHTML = "";
@@ -2413,9 +2172,9 @@ function openFlashyModal(slot, which, opt) {
 
       function applySelection() {
         if (!previewNode) return;
-        var l1 = flashyData.c1[flashySel.c1] || flashyData.c1[0];
-        var chosen23 = [];
-        for (var i = 0; i < 3; i++) if (flashySel.c23[i]) chosen23.push(flashyData.c23[i]);
+        const l1 = flashyData.c1[flashySel.c1] || flashyData.c1[0];
+        const chosen23 = [];
+        for (let i = 0; i < 3; i++) if (flashySel.c23[i]) chosen23.push(flashyData.c23[i]);
         if (chosen23.length === 2) {
           previewNode.lines = [ l1, chosen23[0], chosen23[1] ];
           renderLines(d.getElementById("potui2_roll_after_lines"), previewNode, lastUpgraded);
@@ -2436,25 +2195,25 @@ function openFlashyModal(slot, which, opt) {
         box.innerHTML = "";
         box.appendChild(el("div", { className: "pickerTitle", text: "閃炫：第1排 2選1（同等級100%）；第2/3排 三選二（次等級100%）" }));
 
-        var g1 = el("div", { className: "pickerGroup" }, [ el("div", { className: "pickerSub", text: "第1排（2選1）" }) ]);
-        for (var i1=0;i1<flashyData.c1.length;i1++){
+        const g1 = el("div", { className: "pickerGroup" }, [ el("div", { className: "pickerSub", text: "第1排（2選1）" }) ]);
+        for (let i1=0;i1<flashyData.c1.length;i1++){
           (function(ii){
-            var r = el("input", { type:"radio", name:"potui2_c1" });
+            const r = el("input", { type:"radio", name:"potui2_c1" });
             r.checked = (flashySel.c1 === ii);
             r.onchange = function(){ flashySel.c1 = ii; applySelection(); };
-            var t = flashyData.c1[ii] && flashyData.c1[ii].text ? flashyData.c1[ii].text : String(flashyData.c1[ii]||"");
+            const t = flashyData.c1[ii] && flashyData.c1[ii].text ? flashyData.c1[ii].text : String(flashyData.c1[ii]||"");
             g1.appendChild(el("label", { className: "pickerRow" }, [ r, el("span", { className:"pickerLine", text: t }) ]));
           })(i1);
         }
         box.appendChild(g1);
 
-        var g2 = el("div", { className: "pickerGroup" }, [ el("div", { className: "pickerSub", text: "第2/3排（三選二）" }) ]);
-        for (var i2=0;i2<flashyData.c23.length;i2++){
+        const g2 = el("div", { className: "pickerGroup" }, [ el("div", { className: "pickerSub", text: "第2/3排（三選二）" }) ]);
+        for (let i2=0;i2<flashyData.c23.length;i2++){
           (function(ii){
-            var chk = el("input", { type:"checkbox" });
+            const chk = el("input", { type:"checkbox" });
             chk.checked = !!flashySel.c23[ii];
             chk.onchange = function(){
-              var cur=0; for (var k=0;k<3;k++) if (flashySel.c23[k]) cur++;
+              let cur=0; for (let k=0;k<3;k++) if (flashySel.c23[k]) cur++;
               if (chk.checked){
                 if (cur >= 2) { chk.checked=false; return; }
                 flashySel.c23[ii]=true;
@@ -2464,13 +2223,13 @@ function openFlashyModal(slot, which, opt) {
               applySelection();
               render();
             };
-            var t2 = flashyData.c23[ii] && flashyData.c23[ii].text ? flashyData.c23[ii].text : String(flashyData.c23[ii]||"");
+            const t2 = flashyData.c23[ii] && flashyData.c23[ii].text ? flashyData.c23[ii].text : String(flashyData.c23[ii]||"");
             g2.appendChild(el("label", { className: "pickerRow" }, [ chk, el("span", { className:"pickerLine", text: t2 }) ]));
           })(i2);
         }
         box.appendChild(g2);
 
-        var picked=[]; for (var j=0;j<3;j++) if (flashySel.c23[j]) picked.push(j+1);
+        const picked=[]; for (let j=0;j<3;j++) if (flashySel.c23[j]) picked.push(j+1);
         box.appendChild(el("div", { className: "pickerHint", text: "第2/3排已選：" + picked.join("、") + "（需 2 個）" }));
       }
 
@@ -2479,19 +2238,19 @@ function openFlashyModal(slot, which, opt) {
     }
 
 function readNodeFromState(st) {
-      st = st || safe(function () { return w.PotentialCoreV2.getState(); }, null) || {};
-      var pots = (st && st.pots) ? st.pots : {};
-      var node = (pots && pots[slot] && pots[slot][which]) ? pots[slot][which] : null;
-      return safe(function(){ return JSON.parse(JSON.stringify(node || {})); }, {});
+      st = st || safe(() => { return w.PotentialCoreV2.getState(); }, null) || {};
+      const pots = (st && st.pots) ? st.pots : {};
+      const node = (pots && pots[slot] && pots[slot][which]) ? pots[slot][which] : null;
+      return safe(() =>{ return JSON.parse(JSON.stringify(node || {})); }, {});
     }
 
     function renderLines(container, node, glow) {
       if (!container) return;
       container.innerHTML = "";
-      var lines = (node && node.lines) ? node.lines : [];
-      for (var i = 0; i < 3; i++) {
-        var L = lines[i] || null;
-        var t = lineToText(L);
+      const lines = (node && node.lines) ? node.lines : [];
+      for (let i = 0; i < 3; i++) {
+        const L = lines[i] || null;
+        const t = lineToText(L);
         container.appendChild(el("div", { className: "line " + tierClass(t.tier) + (glow ? " upgradedGlow" : "") }, [
           el("div", { className: "l" }, [
             el("div", { className: "lineTop" }, [
@@ -2508,35 +2267,37 @@ function readNodeFromState(st) {
     }
 
     function updateCounts() {
-      var opt = getCubeOptions();
-      var q = safe(function () { return (typeof w.getItemQuantity === "function") ? n(w.getItemQuantity(opt.itemName)) : 0; }, 0);
-      var c = d.getElementById("potui2_roll_count");
+      const opt = getCubeOptions();
+      const q = safe(() => { return (typeof w.getItemQuantity === "function") ? n(w.getItemQuantity(opt.itemName)) : 0; }, 0);
+      const c = d.getElementById("potui2_roll_count");
       if (c) c.textContent = opt.itemName + "：× " + q.toLocaleString();
     }
 
-    // ---- Pity helpers (UI side; read from core) ----
-function getPityNeedUI(which, tier) {
-  tier = String(tier || "特殊");
-  which = (which === "add") ? "add" : "main";
-  try {
-    var core = w.PotentialCoreV2;
-    if (core && typeof core.getTierRuleTable === "function") {
-      var tbl = core.getTierRuleTable(which);
-      var r = (tbl && tbl[tier]) ? tbl[tier] : (tbl && tbl["特殊"]);
-      if (r) return n(r.pity);
+    // ---- Pity helpers (UI side; keep Flashy untouched) ----
+    const MAIN_TIER_RULE_UI = {
+      "特殊": { upChance: 0.05,    pity: 50 },
+      "稀有": { upChance: 0.03,    pity: 150 },
+      "罕見": { upChance: 0.01,    pity: 300 },
+      "傳說": { upChance: 0.0035,  pity: 1300 },
+      "唯一": { upChance: 0.0001,  pity: 0 },
+      "永恆": { upChance: 0,       pity: 0 }
+    };
+    function getPityNeedUI(which, tier) {
+      tier = String(tier || "特殊");
+      const r = MAIN_TIER_RULE_UI[tier] || MAIN_TIER_RULE_UI["特殊"];
+      let need = n(r.pity);
+      if (which === "add" && need > 0) need = need * 2; // 附加保底=兩倍
+      return need;
     }
-  } catch (e) {}
-  return 0;
-}
     function updateRollPityUI(node) {
-      var elP = d.getElementById("potui2_roll_pity");
+      const elP = d.getElementById("potui2_roll_pity");
       if (!elP) return;
       if (!node) { elP.textContent = "保底進度：—"; return; }
-      var tier = String(node.tier || "特殊");
-      var pity = Math.max(0, Math.floor(n(node.pity)));
-      var need = getPityNeedUI(which, tier);
+      const tier = String(node.tier || "特殊");
+      const pity = Math.max(0, Math.floor(n(node.pity)));
+      const need = getPityNeedUI(which, tier);
       if (!need) { elP.textContent = "保底進度：無保底"; return; }
-      var remain = Math.max(0, need - (pity + 1));
+      const remain = Math.max(0, need - (pity + 1));
       elP.textContent = "保底進度：" + pity + "/" + need + "（剩 " + remain + "）";
     }
 
@@ -2545,13 +2306,13 @@ function getPityNeedUI(which, tier) {
       body.innerHTML = "";
 
       // top bar
-      var cubeSel = el("select", { id: "potui2_roll_cubeSel", className: "p2select" }, [
+      const cubeSel = el("select", { id: "potui2_roll_cubeSel", className: "p2select" }, [
         el("option", { value: "normal", text: "普通方塊" }),
         el("option", { value: "advanced", text: "高級方塊（跳框×2）" }),
         el("option", { value: "flashy", text: "閃炫方塊" })
       ]);
 
-      var top = el("div", { className: "rollTop" }, [
+      const top = el("div", { className: "rollTop" }, [
         el("span", { className: "pill" }, [
           el("span", { text: "模式：" }),
           cubeSel
@@ -2561,9 +2322,9 @@ function getPityNeedUI(which, tier) {
       body.appendChild(top);
 
       // compare grid
-      var grid = el("div", { className: "rollGrid" });
+      const grid = el("div", { className: "rollGrid" });
 
-      var beforeBox = el("div", { className: "rollBox", id: "potui2_roll_before_box" }, [
+      const beforeBox = el("div", { className: "rollBox", id: "potui2_roll_before_box" }, [
         el("h4", null, [
           el("span", { text: "洗之前" }),
           el("span", { className: "mini", id: "potui2_roll_before_tier", text: "" })
@@ -2571,7 +2332,7 @@ function getPityNeedUI(which, tier) {
         el("div", { className: "lines", id: "potui2_roll_before_lines" })
       ]);
 
-      var afterBox = el("div", { className: "rollBox", id: "potui2_roll_after_box" }, [
+      const afterBox = el("div", { className: "rollBox", id: "potui2_roll_after_box" }, [
         el("h4", null, [
           el("span", { text: "洗之後" }),
           el("span", { className: "mini", id: "potui2_roll_after_tier", text: "" })
@@ -2585,10 +2346,10 @@ function getPityNeedUI(which, tier) {
       body.appendChild(grid);
 
       // actions
-      var btnRoll = el("button", { className: "p2btn pri grow", id: "potui2_roll_do" }, ["洗一次"]);
-      var btnKeepBefore = el("button", { className: "p2btn", id: "potui2_roll_keep_before" }, ["原潛能"]);
-      var btnKeepAfter = el("button", { className: "p2btn", id: "potui2_roll_keep_after" }, ["新潛能"]);
-      var btnReroll = el("button", { className: "p2btn ghost", id: "potui2_roll_reroll" }, ["再洗一次"]);
+      const btnRoll = el("button", { className: "p2btn pri grow", id: "potui2_roll_do" }, ["洗一次"]);
+      const btnKeepBefore = el("button", { className: "p2btn", id: "potui2_roll_keep_before" }, ["原潛能"]);
+      const btnKeepAfter = el("button", { className: "p2btn", id: "potui2_roll_keep_after" }, ["新潛能"]);
+      const btnReroll = el("button", { className: "p2btn ghost", id: "potui2_roll_reroll" }, ["再洗一次"]);
       // 先隱藏「再洗一次」，第一次洗完後才顯示
       btnReroll.style.display = "none";
 
@@ -2631,23 +2392,23 @@ function getPityNeedUI(which, tier) {
           btnReroll.style.display = "";
         }
       }
-      
+
       // ---- Flashy picker helpers ----
-      var flashyData = null; // stores latest candidates for flashy modes
+      let flashyData = null; // stores latest candidates for flashy modes
 
       function hidePicker() {
-        var picker = d.getElementById("potui2_roll_picker");
-        var beforeBox = d.getElementById("potui2_roll_before_box");
-        var afterBox = d.getElementById("potui2_roll_after_box");
+        const picker = d.getElementById("potui2_roll_picker");
+        const beforeBox = d.getElementById("potui2_roll_before_box");
+        const afterBox = d.getElementById("potui2_roll_after_box");
         if (picker) { picker.innerHTML = ""; picker.style.display = "none"; }
         if (beforeBox) beforeBox.style.display = "";
         if (afterBox) afterBox.style.display = "";
       }
 
       function renderFlashyPicker() {
-        var picker = d.getElementById("potui2_roll_picker");
-        var beforeBox = d.getElementById("potui2_roll_before_box");
-        var afterLinesEl = d.getElementById("potui2_roll_after_lines");
+        const picker = d.getElementById("potui2_roll_picker");
+        const beforeBox = d.getElementById("potui2_roll_before_box");
+        const afterLinesEl = d.getElementById("potui2_roll_after_lines");
         if (!picker || !flashyData || !previewNode) return;
 
         // 閃炫模式：不顯示左右對照，改為「候選 -> 選擇 -> 預覽」
@@ -2655,8 +2416,8 @@ function getPityNeedUI(which, tier) {
         if (beforeBox) beforeBox.style.display = "none";
 
         // after box title
-        var afterBoxEl = d.getElementById("potui2_roll_after_box");
-        var h4 = afterBoxEl ? afterBoxEl.querySelector("h4") : null;
+        const afterBoxEl = d.getElementById("potui2_roll_after_box");
+        const h4 = afterBoxEl ? afterBoxEl.querySelector("h4") : null;
         if (h4) {
           h4.innerHTML = "";
           h4.appendChild(el("span", { text: (which === "add") ? "閃炫抽選（附加）" : "閃炫抽選（主潛能）" }));
@@ -2670,42 +2431,42 @@ function getPityNeedUI(which, tier) {
         picker.appendChild(el("div", { className: "flashySection" }, [
           el("div", { className: "flashyTitle", text: "目前裝備（不會變動，直到你按「保留後」）" })
         ]));
-        var curBox = el("div", { className: "flashyCur" });
+        const curBox = el("div", { className: "flashyCur" });
         renderLines(curBox, committedNode, false);
         picker.appendChild(curBox);
 
         // 候選
         if (which === "add") {
-          var c1 = flashyData.c1 || [];
-          var c23 = flashyData.c23 || [];
-          var sel1 = 0;
-          var sel23 = { 0: true, 1: true, 2: false }; // default 0,1
+          const c1 = flashyData.c1 || [];
+          const c23 = flashyData.c23 || [];
+          let sel1 = 0;
+          let sel23 = { 0: true, 1: true, 2: false }; // default 0,1
 
           // init selections based on previewNode.lines if possible
           try {
             if (previewNode.lines && previewNode.lines.length === 3) {
               // line1
-              for (var i1 = 0; i1 < c1.length; i1++) if (sameLine(c1[i1], previewNode.lines[0])) sel1 = i1;
+              for (let i1 = 0; i1 < c1.length; i1++) if (sameLine(c1[i1], previewNode.lines[0])) sel1 = i1;
               // line2/3
               sel23 = { 0: false, 1: false, 2: false };
-              for (var j = 0; j < c23.length; j++) {
+              for (let j = 0; j < c23.length; j++) {
                 if (sameLine(c23[j], previewNode.lines[1]) || sameLine(c23[j], previewNode.lines[2])) sel23[j] = true;
               }
               // ensure exactly 2
-              var cnt = 0; for (var k=0;k<3;k++) if (sel23[k]) cnt++;
+              let cnt = 0; for (let k=0;k<3;k++) if (sel23[k]) cnt++;
               if (cnt !== 2) { sel23 = {0:true,1:true,2:false}; }
             }
           } catch(_){}
 
           picker.appendChild(el("div", { className: "flashyTitle", text: "第1排：2選1（同等級 100%）" }));
-          var row1 = el("div", { className: "flashyChoices" });
-          for (var a = 0; a < c1.length; a++) (function(ix){
-            var opt = el("label", { className: "flashyOpt" }, [
+          const row1 = el("div", { className: "flashyChoices" });
+          for (let a = 0; a < c1.length; a++) (function(ix){
+            const opt = el("label", { className: "flashyOpt" }, [
               el("input", { type: "radio", name: "flashy_add_1", value: String(ix) }, []),
               el("span", { className: "flashyOptBody" }, [])
             ]);
             opt.querySelector("input").checked = (ix === sel1);
-            var body = opt.querySelector(".flashyOptBody");
+            const body = opt.querySelector(".flashyOptBody");
             renderSingleLine(body, c1[ix]);
             opt.querySelector("input").onchange = function(){
               sel1 = ix;
@@ -2717,40 +2478,40 @@ function getPityNeedUI(which, tier) {
           picker.appendChild(row1);
 
           picker.appendChild(el("div", { className: "flashyTitle", text: "第2/3排：三選二（次等級 100%）" }));
-          var row23 = el("div", { className: "flashyChoices" });
+          const row23 = el("div", { className: "flashyChoices" });
           function pickC23(){
-            var arr=[]; for (var z=0; z<3; z++) if (sel23[z]) arr.push(c23[z]);
+            let arr=[]; for (let z=0; z<3; z++) if (sel23[z]) arr.push(c23[z]);
             if (arr.length<2) { arr=[c23[0],c23[1]]; sel23={0:true,1:true,2:false}; }
             return arr.slice(0,2);
           }
           function enforceTwo(keepIx){
-            var cnt=0; for (var z=0; z<3; z++) if (sel23[z]) cnt++;
+            let cnt=0; for (let z=0; z<3; z++) if (sel23[z]) cnt++;
             if (cnt>2) {
               // uncheck others except keepIx
-              for (var z2=0; z2<3; z2++) if (z2!==keepIx && sel23[z2]) { sel23[z2]=false; break; }
+              for (let z2=0; z2<3; z2++) if (z2!==keepIx && sel23[z2]) { sel23[z2]=false; break; }
             }
             if (cnt<2) {
-              for (var z3=0; z3<3; z3++) if (!sel23[z3]) { sel23[z3]=true; cnt++; if (cnt===2) break; }
+              for (let z3=0; z3<3; z3++) if (!sel23[z3]) { sel23[z3]=true; cnt++; if (cnt===2) break; }
             }
           }
-          for (var b = 0; b < c23.length; b++) (function(ix){
-            var opt = el("label", { className: "flashyOpt" }, [
+          for (let b = 0; b < c23.length; b++) (function(ix){
+            const opt = el("label", { className: "flashyOpt" }, [
               el("input", { type: "checkbox", value: String(ix) }, []),
               el("span", { className: "flashyOptBody" }, [])
             ]);
             opt.querySelector("input").checked = !!sel23[ix];
-            var body = opt.querySelector(".flashyOptBody");
+            const body = opt.querySelector(".flashyOptBody");
             renderSingleLine(body, c23[ix]);
             opt.querySelector("input").onchange = function(){
               sel23[ix] = !!this.checked;
               enforceTwo(ix);
               // sync checkbox states
-              var ins = row23.querySelectorAll("input[type=checkbox]");
-              for (var q=0;q<ins.length;q++){
-                var v = parseInt(ins[q].value,10);
+              const ins = row23.querySelectorAll("input[type=checkbox]");
+              for (let q=0;q<ins.length;q++){
+                const v = parseInt(ins[q].value,10);
                 ins[q].checked = !!sel23[v];
               }
-              var p = pickC23();
+              const p = pickC23();
               previewNode.lines = [ c1[sel1], p[0], p[1] ];
               renderLines(afterLinesEl, previewNode, lastUpgraded);
             };
@@ -2759,30 +2520,30 @@ function getPityNeedUI(which, tier) {
           picker.appendChild(row23);
 
           // initial set
-          var p0 = pickC23();
+          const p0 = pickC23();
           previewNode.lines = [ c1[sel1], p0[0], p0[1] ];
           renderLines(afterLinesEl, previewNode, lastUpgraded);
 
         } else {
           // main flashy: 6 choose 3
-          var cands = flashyData.candidates || flashyData || [];
-          var picked = {0:true,1:true,2:true,3:false,4:false,5:false};
+          const cands = flashyData.candidates || flashyData || [];
+          let picked = {0:true,1:true,2:true,3:false,4:false,5:false};
 
           // try infer from previewNode
           try {
             picked = {0:false,1:false,2:false,3:false,4:false,5:false};
-            for (var i=0;i<cands.length;i++){
+            for (let i=0;i<cands.length;i++){
               if (previewNode.lines && (sameLine(cands[i], previewNode.lines[0]) || sameLine(cands[i], previewNode.lines[1]) || sameLine(cands[i], previewNode.lines[2]))) picked[i]=true;
             }
-            var cc=0; for (var j=0;j<6;j++) if (picked[j]) cc++;
+            let cc=0; for (let j=0;j<6;j++) if (picked[j]) cc++;
             if (cc!==3) picked={0:true,1:true,2:true,3:false,4:false,5:false};
           } catch(_){ picked={0:true,1:true,2:true,3:false,4:false,5:false}; }
 
           picker.appendChild(el("div", { className: "flashyTitle", text: "一次抽選 6 排，選擇 3 排套用（僅預覽）" }));
-          var row = el("div", { className: "flashyChoices" });
+          const row = el("div", { className: "flashyChoices" });
 
           function pickedArr(){
-            var arr=[]; for (var i=0;i<6;i++) if (picked[i]) arr.push(cands[i]);
+            let arr=[]; for (let i=0;i<6;i++) if (picked[i]) arr.push(cands[i]);
             if (arr.length!==3) {
               // force exactly 3: keep first three checked
               picked={0:true,1:true,2:true,3:false,4:false,5:false};
@@ -2791,33 +2552,33 @@ function getPityNeedUI(which, tier) {
             return arr;
           }
           function enforceThree(keepIx){
-            var cnt=0; for (var i=0;i<6;i++) if (picked[i]) cnt++;
+            let cnt=0; for (let i=0;i<6;i++) if (picked[i]) cnt++;
             if (cnt>3) {
-              for (var j=0;j<6;j++) if (j!==keepIx && picked[j]) { picked[j]=false; break; }
+              for (let j=0;j<6;j++) if (j!==keepIx && picked[j]) { picked[j]=false; break; }
             }
             if (cnt<3) {
-              for (var k=0;k<6;k++) if (!picked[k]) { picked[k]=true; cnt++; if (cnt===3) break; }
+              for (let k=0;k<6;k++) if (!picked[k]) { picked[k]=true; cnt++; if (cnt===3) break; }
             }
           }
 
-          for (var i=0;i<cands.length;i++) (function(ix){
-            var opt = el("label", { className: "flashyOpt" }, [
+          for (let i=0;i<cands.length;i++) (function(ix){
+            const opt = el("label", { className: "flashyOpt" }, [
               el("input", { type: "checkbox", value: String(ix) }, []),
               el("span", { className: "flashyOptBody" }, [])
             ]);
             opt.querySelector("input").checked = !!picked[ix];
-            var body = opt.querySelector(".flashyOptBody");
+            const body = opt.querySelector(".flashyOptBody");
             renderSingleLine(body, cands[ix]);
             opt.querySelector("input").onchange = function(){
               picked[ix] = !!this.checked;
               enforceThree(ix);
               // sync all
-              var ins = row.querySelectorAll("input[type=checkbox]");
-              for (var q=0;q<ins.length;q++){
-                var v = parseInt(ins[q].value,10);
+              const ins = row.querySelectorAll("input[type=checkbox]");
+              for (let q=0;q<ins.length;q++){
+                const v = parseInt(ins[q].value,10);
                 ins[q].checked = !!picked[v];
               }
-              var arr = pickedArr();
+              const arr = pickedArr();
               previewNode.lines = [arr[0],arr[1],arr[2]];
               renderLines(afterLinesEl, previewNode, lastUpgraded);
             };
@@ -2826,7 +2587,7 @@ function getPityNeedUI(which, tier) {
 
           picker.appendChild(row);
 
-          var arr0 = pickedArr();
+          const arr0 = pickedArr();
           previewNode.lines = [arr0[0],arr0[1],arr0[2]];
           renderLines(afterLinesEl, previewNode, lastUpgraded);
         }
@@ -2844,7 +2605,7 @@ function getPityNeedUI(which, tier) {
         if (!container) return;
         container.innerHTML = "";
         // reuse existing line renderer via renderLines by crafting a node
-        var tmp = { tier: "", lines: [line] };
+        const tmp = { tier: "", lines: [line] };
         renderLines(container, tmp, false, true);
       }
 syncBtns();
@@ -2852,7 +2613,7 @@ syncBtns();
       cubeSel.onchange = function(){ hidePicker(); updateCounts(); };
 
       btnRoll.onclick = function () {
-        var opt = getCubeOptions();
+        const opt = getCubeOptions();
         // 閃炫：使用獨立 UI（不共用前/後保留）
         if (opt && opt.kind === "flashy") {
           closeRollModal();
@@ -2865,11 +2626,11 @@ syncBtns();
         // snapshot committed (current) once
         if (!committedNode) committedNode = readNodeFromState();
         // do roll
-        var baseNode = hasPreview ? previewNode : committedNode;
+        const baseNode = hasPreview ? previewNode : committedNode;
         // 讓「再洗一次」沿用上一次的預覽結果作為基底（但不改動已套用的舊潛能）
         try { w.PotentialCoreV2.setSlotPotential(slot, which, baseNode); } catch (_) {}
 
-        var res;
+        let res;
         if (which === "add") {
           if (opt && opt.kind === "flashy") res = w.PotentialCoreV2.rollAddFlashy(slot, opt);
           else res = w.PotentialCoreV2.rollAdd(slot, opt);
@@ -2893,13 +2654,13 @@ if (!res || !res.ok) {
 
         // 保底：每洗一次 +1（與套用哪個結果無關）
         try {
-          var needP = getPityNeedUI(which, String(committedNode.tier || "特殊"));
-          var curP = Math.max(0, Math.floor(n(committedNode.pity)));
+          const needP = getPityNeedUI(which, String(committedNode.tier || "特殊"));
+          const curP = Math.max(0, Math.floor(n(committedNode.pity)));
           if (lastUpgraded) {
             // 若跳框，保底重置（維持核心邏輯直覺）
             committedNode.pity = 0;
           } else {
-            var nextP = curP + 1;
+            let nextP = curP + 1;
             if (needP > 0) nextP = Math.min(nextP, needP - 1);
             committedNode.pity = nextP;
           }
@@ -2911,16 +2672,16 @@ if (!res || !res.ok) {
         try { updateRollPityUI(committedNode); } catch (_) {}
 
         // show upgraded style
-        var afterBoxEl = d.getElementById("potui2_roll_after_box");
+        const afterBoxEl = d.getElementById("potui2_roll_after_box");
         if (afterBoxEl) afterBoxEl.className = "rollBox" + (lastUpgraded ? " upgraded" : "");
-        var tierAfter = String(previewNode.tier || "特殊");
+        const tierAfter = String(previewNode.tier || "特殊");
         setText("potui2_roll_after_tier", "外框：" + tierAfter);
         setText("potui2_roll_before_tier", "外框：" + String(committedNode.tier || "特殊"));
 
-        var badge = lastUpgraded ? el("span", { className: "badgeUp" }, ["跳框！"]) : null;
-        var h4 = afterBoxEl ? afterBoxEl.querySelector("h4") : null;
+        const badge = lastUpgraded ? el("span", { className: "badgeUp" }, ["跳框！"]) : null;
+        const h4 = afterBoxEl ? afterBoxEl.querySelector("h4") : null;
         if (h4) {
-          var mini = h4.querySelector(".mini");
+          const mini = h4.querySelector(".mini");
           h4.innerHTML = "";
           h4.appendChild(el("span", { text: "洗之後" }));
           if (badge) h4.appendChild(badge);
@@ -3009,8 +2770,8 @@ if (!res || !res.ok) {
   }
 
   function closeRollModal() {
-    var b = d.getElementById("potui2_roll_backdrop");
-    var m = d.getElementById("potui2_roll_modal");
+    const b = d.getElementById("potui2_roll_backdrop");
+    const m = d.getElementById("potui2_roll_modal");
     if (b) b.remove();
     if (m) m.remove();
   }
@@ -3027,13 +2788,13 @@ if (!res || !res.ok) {
   // Refresh
   // -----------------------------
   function refresh() {
-    var ready = coreReady();
+    const ready = coreReady();
     showCoreWarning(!ready);
     setRollButtonsEnabled(ready);
 
-    var slot = getSelectedSlot();
-    var slotName = SLOT_LABEL[slot] || slot;
-    var selEl = d.getElementById("potui2_selected_name");
+    const slot = getSelectedSlot();
+    const slotName = SLOT_LABEL[slot] || slot;
+    const selEl = d.getElementById("potui2_selected_name");
     if (selEl) selEl.textContent = "目前選中：" + slotName;
 
     // 核心未載入：仍渲染佔位
@@ -3048,20 +2809,20 @@ if (!res || !res.ok) {
     }
 
     // 核心就緒
-    var st = safe(function () { return w.PotentialCoreV2.ensureLinesExist(); }, null)
-      || safe(function () { return w.PotentialCoreV2.getState(); }, null)
+    const st = safe(() => { return w.PotentialCoreV2.ensureLinesExist(); }, null)
+      || safe(() => { return w.PotentialCoreV2.getState(); }, null)
       || {};
 
     // 聚合
-    safe(function () { w.PotentialCoreV2.applySelectedToPlayer(w.player, slot); }, null);
-    safe(function () { w.PotentialCoreV2.applyAllToPlayer(w.player); }, null);
+    safe(() => { w.PotentialCoreV2.applySelectedToPlayer(w.player, slot); }, null);
+    safe(() => { w.PotentialCoreV2.applyAllToPlayer(w.player); }, null);
 
     // auto tab (依照 TABS 定義，不再硬編 slot 類別)
     (function(){
-      var found = null;
-      for (var i = 0; i < TABS.length; i++) {
-        var arr = TABS[i].slots || [];
-        for (var j = 0; j < arr.length; j++) {
+      let found = null;
+      for (let i = 0; i < TABS.length; i++) {
+        const arr = TABS[i].slots || [];
+        for (let j = 0; j < arr.length; j++) {
           if (arr[j] === slot) { found = TABS[i].key; break; }
         }
         if (found) break;
@@ -3083,10 +2844,10 @@ if (!res || !res.ok) {
   function renderAllSummaryPlaceholder() {
     setText("potui2_all_hint", "All slots（主+附）");
     setText("potui2_all_brief", "");
-    var grid = d.getElementById("potui2_all_grid");
+    const grid = d.getElementById("potui2_all_grid");
     if (!grid) return;
     grid.innerHTML = "";
-    for (var i = 0; i < SUMMARY_KEYS.length; i++) {
+    for (let i = 0; i < SUMMARY_KEYS.length; i++) {
       grid.appendChild(el("div", { className: "sumItem" }, [
         el("span", { className: "k", text: statLabel(SUMMARY_KEYS[i]) }),
         el("span", { className: "v", text: "—" })
@@ -3097,10 +2858,10 @@ if (!res || !res.ok) {
   function renderSingleSummaryPlaceholder(slot) {
     setText("potui2_single_hint", (SLOT_LABEL[slot] || slot) + "（主+附）");
     setText("potui2_single_brief", "");
-    var grid = d.getElementById("potui2_single_grid");
+    const grid = d.getElementById("potui2_single_grid");
     if (!grid) return;
     grid.innerHTML = "";
-    for (var i = 0; i < SUMMARY_KEYS.length; i++) {
+    for (let i = 0; i < SUMMARY_KEYS.length; i++) {
       grid.appendChild(el("div", { className: "sumItem" }, [
         el("span", { className: "k", text: statLabel(SUMMARY_KEYS[i]) }),
         el("span", { className: "v", text: "—" })
@@ -3108,15 +2869,15 @@ if (!res || !res.ok) {
     }
   }
 
-  
+
 function refreshAllSummary() {
     setText("potui2_all_hint", "All Slots (Main + Add)");
 
-    var st = safe(function () { return w.PotentialCoreV2.getState(); }, null) || {};
-    var pots = (st && st.pots) ? st.pots : {};
+    const st = safe(() => { return w.PotentialCoreV2.getState(); }, null) || {};
+    const pots = (st && st.pots) ? st.pots : {};
 
-    var pctSum = {}, pctN = {};
-    var flatSum = {}, flatN = {};
+    const pctSum = {}, pctN = {};
+    const flatSum = {}, flatN = {};
 
     function addPct(stat, v) {
       if (!stat) return;
@@ -3147,10 +2908,10 @@ function refreshAllSummary() {
     }
     function consumeLine(L){
       if (!L) return;
-      var id = String(L.id || "");
-      var v = n(L.value);
-      var meta = L.meta || {};
-      var stat = statFromLine(id, meta);
+      const id = String(L.id || "");
+      const v = n(L.value);
+      const meta = L.meta || {};
+      let stat = statFromLine(id, meta);
 
       if (!stat) {
         if (id.indexOf("ATK_") === 0) stat = "atk";
@@ -3168,48 +2929,48 @@ function refreshAllSummary() {
       else addFlat(stat, v);
     }
 
-    for (var slot in pots) {
+    for (const slot in pots) {
       if (!pots.hasOwnProperty(slot)) continue;
-      var p = pots[slot] || {};
-      var mainLines = p.main && p.main.lines ? p.main.lines : [];
-      var addLines  = p.add  && p.add.lines  ? p.add.lines  : [];
-      for (var i = 0; i < mainLines.length; i++) consumeLine(mainLines[i]);
-      for (var j = 0; j < addLines.length; j++) consumeLine(addLines[j]);
+      const p = pots[slot] || {};
+      const mainLines = p.main && p.main.lines ? p.main.lines : [];
+      const addLines  = p.add  && p.add.lines  ? p.add.lines  : [];
+      for (let i = 0; i < mainLines.length; i++) consumeLine(mainLines[i]);
+      for (let j = 0; j < addLines.length; j++) consumeLine(addLines[j]);
     }
 
-    var pctOrder = ["bossDamage","eliteDamage","normalDamage","totalDamage","ignoreDef","critRate","critDamage","atk","str","agi","int","luk","hp","mp","def"];
-    var flatOrder = ["atk","str","agi","int","luk","hp","mp","def"];
+    const pctOrder = ["bossDamage","eliteDamage","normalDamage","totalDamage","ignoreDef","critRate","critDamage","atk","str","agi","int","luk","hp","mp","def"];
+    const flatOrder = ["atk","str","agi","int","luk","hp","mp","def"];
 
     function uniqKeys(map){
-      var out = [];
-      for (var k in map) if (map.hasOwnProperty(k)) out.push(k);
+      const out = [];
+      for (const k in map) if (map.hasOwnProperty(k)) out.push(k);
       return out;
     }
     function sortKeys(keys, order){
-      keys.sort(function(a,b){
-        var ia = order.indexOf(a); if (ia < 0) ia = 999;
-        var ib = order.indexOf(b); if (ib < 0) ib = 999;
+      keys.sort((a,b) =>{
+        let ia = order.indexOf(a); if (ia < 0) ia = 999;
+        let ib = order.indexOf(b); if (ib < 0) ib = 999;
         if (ia !== ib) return ia - ib;
         return a < b ? -1 : 1;
       });
       return keys;
     }
 
-    var gridPct = d.getElementById("potui2_all_grid_pct");
-    var gridFlat = d.getElementById("potui2_all_grid_flat");
-    var secPct = d.getElementById("potui2_all_sec_pct");
-    var secFlat = d.getElementById("potui2_all_sec_flat");
-    var legacyGrid = d.getElementById("potui2_all_grid");
+    const gridPct = d.getElementById("potui2_all_grid_pct");
+    const gridFlat = d.getElementById("potui2_all_grid_flat");
+    const secPct = d.getElementById("potui2_all_sec_pct");
+    const secFlat = d.getElementById("potui2_all_sec_flat");
+    const legacyGrid = d.getElementById("potui2_all_grid");
 
     if (legacyGrid && (!gridPct || !gridFlat)) {
       legacyGrid.innerHTML = "";
-      var keys = sortKeys(uniqKeys(pctSum).concat(uniqKeys(flatSum)), pctOrder);
-      var seen = {}, merged = [];
-      for (var ii=0; ii<keys.length; ii++){ if(!seen[keys[ii]]){ seen[keys[ii]]=1; merged.push(keys[ii]); } }
-      for (var kk=0; kk<merged.length; kk++){
-        var key = merged[kk];
-        var hasPct = (pctN[key] || 0) > 0;
-        var vText = hasPct ? ("+" + fmtPct(pctSum[key], 2) + " (x" + pctN[key] + ")")
+      const keys = sortKeys(uniqKeys(pctSum).concat(uniqKeys(flatSum)), pctOrder);
+      const seen = {}, merged = [];
+      for (let ii=0; ii<keys.length; ii++){ if(!seen[keys[ii]]){ seen[keys[ii]]=1; merged.push(keys[ii]); } }
+      for (let kk=0; kk<merged.length; kk++){
+        const key = merged[kk];
+        const hasPct = (pctN[key] || 0) > 0;
+        const vText = hasPct ? ("+" + fmtPct(pctSum[key], 2) + " (x" + pctN[key] + ")")
                            : fmtSignedInt(flatSum[key] || 0) + ((flatN[key]||0)>1 ? (" (x" + flatN[key] + ")") : "");
         legacyGrid.appendChild(el("div", { className: "sumItem" }, [
           el("span", { className: "k", text: statLabelZH(key) || statLabel(key) || key }),
@@ -3221,19 +2982,19 @@ function refreshAllSummary() {
 
     if (!gridPct || !gridFlat) return;
 
-    var showPct = (allSummaryMode !== "flat");
-    var showFlat = (allSummaryMode !== "pct");
+    const showPct = (allSummaryMode !== "flat");
+    const showFlat = (allSummaryMode !== "pct");
     if (secPct) secPct.style.display = showPct ? "" : "none";
     if (secFlat) secFlat.style.display = showFlat ? "" : "none";
 
     gridPct.innerHTML = "";
     if (showPct) {
-      var pctKeys = sortKeys(uniqKeys(pctSum), pctOrder);
-      for (var ppi=0; ppi<pctKeys.length; ppi++){
-        var s = pctKeys[ppi];
+      const pctKeys = sortKeys(uniqKeys(pctSum), pctOrder);
+      for (let ppi=0; ppi<pctKeys.length; ppi++){
+        const s = pctKeys[ppi];
         if ((pctN[s]||0) <= 0) continue;
-        var label = statLabelZH(s) || statLabel(s) || s;
-        var vText = "+" + fmtPct(pctSum[s], 2) + " (x" + pctN[s] + ")";
+        const label = statLabelZH(s) || statLabel(s) || s;
+        const vText = "+" + fmtPct(pctSum[s], 2) + " (x" + pctN[s] + ")";
         gridPct.appendChild(el("div", { className: "sumItem" }, [
           el("span", { className: "k", text: label }),
           el("span", { className: "v", text: vText })
@@ -3249,13 +3010,13 @@ function refreshAllSummary() {
 
     gridFlat.innerHTML = "";
     if (showFlat) {
-      var flatKeys = sortKeys(uniqKeys(flatSum), flatOrder);
-      for (var ffi=0; ffi<flatKeys.length; ffi++){
-        var s2 = flatKeys[ffi];
-        var vv = flatSum[s2] || 0;
+      const flatKeys = sortKeys(uniqKeys(flatSum), flatOrder);
+      for (let ffi=0; ffi<flatKeys.length; ffi++){
+        const s2 = flatKeys[ffi];
+        const vv = flatSum[s2] || 0;
         if (vv === 0) continue;
-        var label2 = statLabelZH(s2) || statLabel(s2) || s2;
-        var vText2 = fmtSignedInt(vv) + ((flatN[s2]||0)>1 ? (" (x" + flatN[s2] + ")") : "");
+        const label2 = statLabelZH(s2) || statLabel(s2) || s2;
+        const vText2 = fmtSignedInt(vv) + ((flatN[s2]||0)>1 ? (" (x" + flatN[s2] + ")") : "");
         gridFlat.appendChild(el("div", { className: "sumItem" }, [
           el("span", { className: "k", text: label2 }),
           el("span", { className: "v", text: vText2 })
@@ -3272,14 +3033,14 @@ function refreshAllSummary() {
 
   function refreshSingleSummary(slot) {
     setText("potui2_single_hint", (SLOT_LABEL[slot] || slot) + "（主+附）");
-    var sel = collectBonusForSlot(w.player, slot);
+    const sel = collectBonusForSlot(w.player, slot);
     setText("potui2_single_brief", "（ATK " + fmtSignedInt(sel.atk) + " / HP " + fmtSignedInt(sel.hp) + "）");
 
-    var grid = d.getElementById("potui2_single_grid");
+    const grid = d.getElementById("potui2_single_grid");
     if (!grid) return;
     grid.innerHTML = "";
-    for (var i = 0; i < SUMMARY_KEYS.length; i++) {
-      var k = SUMMARY_KEYS[i];
+    for (let i = 0; i < SUMMARY_KEYS.length; i++) {
+      const k = SUMMARY_KEYS[i];
       grid.appendChild(el("div", { className: "sumItem" }, [
         el("span", { className: "k", text: statLabel(k) }),
         el("span", { className: "v", text: fmtSignedInt(sel[k]) })
@@ -3288,12 +3049,12 @@ function refreshAllSummary() {
   }
 
   function refreshPanel(which, st, slot) {
-    var node = (st && st.pots && st.pots[slot] && st.pots[slot][which]) ? st.pots[slot][which] : { tier: "特殊", pity: 0, lines: [] };
-    var tier = String(node.tier || "特殊");
+    const node = (st && st.pots && st.pots[slot] && st.pots[slot][which]) ? st.pots[slot][which] : { tier: "特殊", pity: 0, lines: [] };
+    const tier = String(node.tier || "特殊");
 
     // frame
-    var frame = d.getElementById("potui2_" + which + "_frame");
-    var tierEl = d.getElementById("potui2_" + which + "_tier");
+    const frame = d.getElementById("potui2_" + which + "_frame");
+    const tierEl = d.getElementById("potui2_" + which + "_tier");
     if (frame) frame.className = "frameBadge " + tierClass(tier);
     if (tierEl) tierEl.textContent = tierAbbr(tier);
 
@@ -3301,13 +3062,13 @@ function refreshAllSummary() {
     refreshPityInPanel(which, tier, node.pity);
 
     // lines
-    var wrap = d.getElementById("potui2_" + which + "_lines");
+    const wrap = d.getElementById("potui2_" + which + "_lines");
     if (wrap) {
       wrap.innerHTML = "";
-      var lines = Array.isArray(node.lines) ? node.lines : [];
-      for (var i = 0; i < 3; i++) {
-        var L = lines[i] || null;
-        var t = lineToText(L);        wrap.appendChild(el("div", { className: "line " + tierClass(t.tier) }, [
+      const lines = Array.isArray(node.lines) ? node.lines : [];
+      for (let i = 0; i < 3; i++) {
+        const L = lines[i] || null;
+        const t = lineToText(L);        wrap.appendChild(el("div", { className: "line " + tierClass(t.tier) }, [
           el("div", { className: "l" }, [
             el("div", { className: "lineTop" }, [
               el("span", { className: "tierPill " + tierClass(t.tier) }, [
@@ -3323,18 +3084,18 @@ function refreshAllSummary() {
     }
 
     // cube count
-    var cnt = d.getElementById("potui2_" + which + "_count");
+    const cnt = d.getElementById("potui2_" + which + "_count");
     if (cnt) {
-      var itemName = (which === "add") ? (w.PotentialCoreV2.ITEM_ADD || "附加方塊") : (w.PotentialCoreV2.ITEM_MAIN || "潛能方塊");
-      var q = safe(function () { return (typeof w.getItemQuantity === "function") ? n(w.getItemQuantity(itemName)) : 0; }, 0);
+      const itemName = (which === "add") ? (w.PotentialCoreV2.ITEM_ADD || "附加方塊") : (w.PotentialCoreV2.ITEM_MAIN || "潛能方塊");
+      const q = safe(() => { return (typeof w.getItemQuantity === "function") ? n(w.getItemQuantity(itemName)) : 0; }, 0);
       cnt.textContent = itemName + "：× " + q.toLocaleString();
     }
   }
 
   function refreshPityInPanel(which, tier, pityVal) {
-    var pity = Math.max(0, Math.floor(n(pityVal)));
-    var rule = getRuleUI(which, tier);
-    var need = Math.max(0, Math.floor(n(rule.pity)));
+    const pity = Math.max(0, Math.floor(n(pityVal)));
+    const rule = getRuleUI(which, tier);
+    const need = Math.max(0, Math.floor(n(rule.pity)));
 
     if (need <= 0) {
       setText("potui2_" + which + "_pity_text", "無保底");
@@ -3344,8 +3105,8 @@ function refreshAllSummary() {
       return;
     }
 
-    var remain = Math.max(0, need - (pity + 1)); // 核心判定是 pity+1>=need
-    var pct = clamp((pity / need) * 100, 0, 100);
+    const remain = Math.max(0, need - (pity + 1)); // 核心判定是 pity+1>=need
+    const pct = clamp((pity / need) * 100, 0, 100);
 
     setText("potui2_" + which + "_pity_text", pity + "/" + need + "（剩 " + remain + "）");
     setWidth("potui2_" + which + "_pity_fill", pct.toFixed(1) + "%");
@@ -3354,8 +3115,8 @@ function refreshAllSummary() {
   }
 
   function renderPanelPlaceholder(which) {
-    var frame = d.getElementById("potui2_" + which + "_frame");
-    var tierEl = d.getElementById("potui2_" + which + "_tier");
+    const frame = d.getElementById("potui2_" + which + "_frame");
+    const tierEl = d.getElementById("potui2_" + which + "_tier");
     if (frame) frame.className = "frameBadge " + tierClass("特殊");
     if (tierEl) tierEl.textContent = "—";
 
@@ -3364,10 +3125,10 @@ function refreshAllSummary() {
     setText("potui2_" + which + "_pity_sub", "—");
     setText("potui2_" + which + "_chance", "—");
 
-    var wrap = d.getElementById("potui2_" + which + "_lines");
+    const wrap = d.getElementById("potui2_" + which + "_lines");
     if (wrap) {
       wrap.innerHTML = "";
-      for (var i = 0; i < 3; i++) {        wrap.appendChild(el("div", { className: "line t_特殊" }, [
+      for (let i = 0; i < 3; i++) {        wrap.appendChild(el("div", { className: "line t_特殊" }, [
           el("div", { className: "l" }, [
             el("div", { className: "lineTop" }, [
               el("span", { className: "tierPill t_特殊" }, [
@@ -3382,7 +3143,7 @@ function refreshAllSummary() {
       }
     }
 
-    var cnt = d.getElementById("potui2_" + which + "_count");
+    const cnt = d.getElementById("potui2_" + which + "_count");
     if (cnt) cnt.textContent = "—";
   }
 
@@ -3393,15 +3154,15 @@ function refreshAllSummary() {
     if (waitCoreThenRefresh._running) return;
     waitCoreThenRefresh._running = true;
 
-    var tries = 0;
-    var maxTries = 80;   // 12s
-    var interval = 150;
+    let tries = 0;
+    const maxTries = 80;   // 12s
+    const interval = 150;
 
     function tick() {
       tries++;
       if (coreReady()) {
         waitCoreThenRefresh._running = false;
-        safe(function () { w.PotentialCoreV2.ensureLinesExist(); }, null);
+        safe(() => { w.PotentialCoreV2.ensureLinesExist(); }, null);
         refresh();
         return;
       }
@@ -3418,8 +3179,8 @@ function refreshAllSummary() {
   // -----------------------------
   // Small setters
   // -----------------------------
-  function setText(id, text) { var x = d.getElementById(id); if (x) x.textContent = text; }
-  function setWidth(id, wstr) { var x = d.getElementById(id); if (x) x.style.width = wstr; }
+  function setText(id, text) { const x = d.getElementById(id); if (x) x.textContent = text; }
+  function setWidth(id, wstr) { const x = d.getElementById(id); if (x) x.style.width = wstr; }
 
   // -----------------------------
   // Open / Close
@@ -3427,18 +3188,18 @@ function refreshAllSummary() {
   function open() { build(); refresh(); waitCoreThenRefresh(); }
   function close() {
     closeProbModal();
-    var m = d.getElementById("potui2_modal");
-    var b = d.getElementById("potui2_backdrop");
+    const m = d.getElementById("potui2_modal");
+    const b = d.getElementById("potui2_backdrop");
     if (m) m.remove();
     if (b) b.remove();
   }
 
-  w.PotentialUIV2 = { open: open, close: close, refresh: refresh, openProb: openProbModal };
+  w.PotentialUIV2 = { open, close, refresh, openProb: openProbModal };
 
   // Hotkey: P
-  d.addEventListener("keydown", function (e) {
+  d.addEventListener("keydown", (e) => {
     if (e.key === "p" || e.key === "P") {
-      var tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
       if (tag === "input" || tag === "textarea") return;
       open();
     }
