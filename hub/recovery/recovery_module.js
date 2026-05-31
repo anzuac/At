@@ -7,16 +7,16 @@
 
 let recoverySystem;
 
-const TICK_MS = 10000;          
-const BASE_HP_PER_TICK = 30;    
-const BASE_MP_PER_TICK = 3;     
-const HP_INC_PER_LEVEL   = 30;  
-const MP_INC_PER_LEVEL   = 2;   
-const RECOVERY_EAT_RATIO = 30;  
-let   RECOVERY_MAX_LEVEL = 200;  
+const TICK_MS = 10000;
+const BASE_HP_PER_TICK = 30;
+const BASE_MP_PER_TICK = 3;
+const HP_INC_PER_LEVEL   = 30;
+const MP_INC_PER_LEVEL   = 2;
+const RECOVERY_EAT_RATIO = 30;
+const   RECOVERY_MAX_LEVEL = 200;
 
-const SAVEHUB_NS = "recovery_system_simple_v1";     
-const RECOVERY_STORE_KEY = "恢復"; 
+const SAVEHUB_NS = "recovery_system_simple_v1";
+const RECOVERY_STORE_KEY = "恢復";
 const SH = window.SaveHub || null;
 
 // === 1. 核心計算函數 (先定義，防止 ReferenceError) ===
@@ -28,7 +28,7 @@ function costIncrementForLevel(prevLevel) {
 }
 
 function upgradeCostForLevel(level) {
-  let cost = 1000; 
+  let cost = 1000;
   for (let L = 1; L < level; L++) {
     cost += costIncrementForLevel(L);
   }
@@ -50,7 +50,7 @@ function getEffectiveRecoverBonus() {
 function getFlatPerTick(level) {
   const L = Math.max(1, level|0);
   const upgrades = Math.max(0, L - 1);
-  return { 
+  return {
     hp: BASE_HP_PER_TICK + HP_INC_PER_LEVEL * upgrades,
     mp: BASE_MP_PER_TICK + MP_INC_PER_LEVEL * upgrades
   };
@@ -161,7 +161,7 @@ function initRecoverySystem() {
     get mpFlatPerTick() { return getFlatPerTick(this.level).mp; },
     get hpPotRegenPercent() {
       const pot = player?.PotentialBonus?.bonusData?.collectionBook;
-      return (pot?.hpRegen || 0) * 2; 
+      return (pot?.hpRegen || 0) * 2;
     },
     get mpPotRegenPercent() {
       const pot = player?.PotentialBonus?.bonusData?.collectionBook;
@@ -234,7 +234,7 @@ function upgradeRecovery() {
   if (recoverySystem.level >= recoverySystem.maxLevel) return alert("已達上限");
   const cost = Math.floor(recoverySystem.upgradeCost);
   if ((player.stone || 0) < cost) return alert("強化石不足");
-  
+
   player.stone -= cost;
   recoverySystem.level++;
   persistRecoveryToStore();
@@ -251,7 +251,7 @@ window.syncRecoveryFromPlayer = function() {
   if (recoverySystem) {
     recoverySystem.level = store.level;
     // 強制 UI 在同步存檔後立刻重新整理數值，不要等 10 秒
-    updateLiveUI(); 
+    updateLiveUI();
   }
 };
 
@@ -391,6 +391,6 @@ window.syncRecoveryFromPlayer = function() {
   }
 
 if (window.GrowthHub?.registerTab) {
-    window.GrowthHub.registerTab({ id: 'recovery', title: '恢復系統', render: render });
+    window.GrowthHub.registerTab({ id: 'recovery', title: '恢復系統', render });
   }
 })();

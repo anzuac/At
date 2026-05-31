@@ -6,7 +6,7 @@ if (typeof window.applyPlayerStatus === 'undefined') {
   window.applyPlayerStatus = function(type, turns) {
     if (!type || !isFinite(turns) || !window.player) return;
     player.statusEffects = player.statusEffects || {};
-    var cur = player.statusEffects[type] || 0;
+    const cur = player.statusEffects[type] || 0;
     player.statusEffects[type] = Math.max(cur, Math.max(0, Math.floor(turns)));
   };
 }
@@ -18,37 +18,37 @@ function _nowSec() {
 function _clamp(n, lo, hi){ return Math.max(lo, Math.min(hi, n)); }
 
 // ===== 全域狀態（單純全域變數）=====
-var selectedRange = "1-10";
-var selectedMap   = "all";
+let selectedRange = "1-10";
+let selectedMap   = "all";
 
 // 多體 / 單體通用狀態
-var battleMode   = "single";  // "single" or "multi"
-var monsters     = [];        // 場上所有怪物
-var targetIndex  = 0;         // 玩家目前鎖定的怪物索引（多體用）
+let battleMode   = "single";  // "single" or "multi"
+let monsters     = [];        // 場上所有怪物
+let targetIndex  = 0;         // 玩家目前鎖定的怪物索引（多體用）
 
-var currentMonster = null;
-var monsterHP = 0;
-var isDead = false;
+let currentMonster = null;
+let monsterHP = 0;
+const isDead = false;
 
-var autoEnabled = false;         // 是否啟動自動戰鬥（按鈕或外部控制）
-var stopAfterEncounter = false;  // 優雅停止：打完本隻就停
+let autoEnabled = false;         // 是否啟動自動戰鬥（按鈕或外部控制）
+let stopAfterEncounter = false;  // 優雅停止：打完本隻就停
 
 // 以下兩者由 battleUtils.js 管：這裡只參照，不新建/清理
-var respawnTimer = null;
-var deathTimer   = null;
+const respawnTimer = null;
+const deathTimer   = null;
 
 // ===== 戰鬥日誌（單框） + 左右雙框代理 =====
 function logPrepend(text) {
-  var log = document.getElementById("battleLog");
+  const log = document.getElementById("battleLog");
   if (!log) return;
 
-  var now = new Date();
-  var hh = String(now.getHours()).padStart(2, "0");
-  var mm = String(now.getMinutes()).padStart(2, "0");
-  var ss = String(now.getSeconds()).padStart(2, "0");
-  var timeStr = "[" + hh + ":" + mm + ":" + ss + "]";
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mm = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+  const timeStr = "[" + hh + ":" + mm + ":" + ss + "]";
 
-  var entry = document.createElement("div");
+  const entry = document.createElement("div");
   entry.textContent = timeStr + " " + text;
   log.insertBefore(entry, log.firstChild);
 }
@@ -70,7 +70,7 @@ function postReward(msg){
 
 // ===== 閃避百分比（玩家/怪物共用）=====
 function getEvasionPercent(entity) {
-  var eva = 0;
+  let eva = 0;
 
   // 玩家或怪物 dodgePercent
   if (entity && isFinite(Number(entity.dodgePercent))) {
@@ -78,12 +78,12 @@ function getEvasionPercent(entity) {
 
     // 保留小數 0~1 的設計，如果有人給 1.0 就是 100%
     if (eva < 0) eva = 0;
-    if (eva > 1) eva = 1; 
+    if (eva > 1) eva = 1;
   }
 
   // 若 BossCore 有額外 evasion 屬性，也走 0~1 小數
   if (typeof BossCore !== "undefined" && BossCore && typeof BossCore.getStat === "function") {
-    var statEva = Number(BossCore.getStat(entity, "evasion") || 0);
+    let statEva = Number(BossCore.getStat(entity, "evasion") || 0);
     if (isFinite(statEva)) {
       if (statEva < 0) statEva = 0;
       if (statEva > 1) statEva = 1;
@@ -96,16 +96,16 @@ function getEvasionPercent(entity) {
 // ===== 多體輔助：目標選擇 / 全死判定 =====
 function getFirstAliveIndex() {
   if (!Array.isArray(monsters)) return -1;
-  for (var i = 0; i < monsters.length; i++) {
-    var m = monsters[i];
+  for (let i = 0; i < monsters.length; i++) {
+    const m = monsters[i];
     if (m && m.hp > 0) return i;
   }
   return -1;
 }
 function areAllMonstersDead() {
   if (Array.isArray(monsters) && monsters.length > 0) {
-    for (var i = 0; i < monsters.length; i++) {
-      var m = monsters[i];
+    for (let i = 0; i < monsters.length; i++) {
+      const m = monsters[i];
       if (m && m.hp > 0) return false;
     }
     return true;
@@ -128,7 +128,7 @@ function refreshCurrentMonster() {
     }
 
     // 2) 目前選的怪已死／不合法 → 改選第一隻活著的
-    var idx = getFirstAliveIndex();
+    const idx = getFirstAliveIndex();
     if (idx === -1) {
       currentMonster = null;
       monsterHP = 0;
@@ -154,7 +154,7 @@ function refreshCurrentMonster() {
 // ===== 戰鬥模式切換（給 UI 按鈕用）=====
 function toggleBattleMode() {
   battleMode = (battleMode === "single") ? "multi" : "single";
-  var btn = document.getElementById("btnToggleMode");
+  const btn = document.getElementById("btnToggleMode");
   if (btn) {
     btn.textContent = (battleMode === "single") ? "單體模式" : "多體模式";
   }
@@ -164,13 +164,13 @@ function toggleBattleMode() {
 function _randInt(min, max) {
   min = Math.floor(min);
   max = Math.floor(max);
-  if (max < min) { var t = min; min = max; max = t; }
+  if (max < min) { const t = min; min = max; max = t; }
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function spawnNewMonster() {
-  var mapSel = document.getElementById("mapSelect");
-  var lvlSel = document.getElementById("levelRange");
+  const mapSel = document.getElementById("mapSelect");
+  const lvlSel = document.getElementById("levelRange");
 
   selectedMap   = (mapSel && mapSel.value) ? mapSel.value : (selectedMap || "all");
   selectedRange = (lvlSel && lvlSel.value) ? lvlSel.value : (selectedRange || "1-10");
@@ -200,7 +200,7 @@ function spawnNewMonster() {
 
   // 單體模式：固定 1 隻
   // 多體模式：依地圖範圍隨機 min~max
-  var count = 1;
+  let count = 1;
   if (battleMode === "multi") {
     minCount = Math.max(1, Math.floor(minCount));
     maxCount = Math.max(minCount, Math.floor(maxCount));
@@ -209,8 +209,8 @@ function spawnNewMonster() {
   }
 
   // ------ 生怪 ------
-  for (var i = 0; i < count; i++) {
-    var m = getMonster(selectedMap, selectedRange);
+  for (let i = 0; i < count; i++) {
+    const m = getMonster(selectedMap, selectedRange);
     if (!m) continue;
 
     m.maxHp = (typeof m.maxHp === "number") ? m.maxHp : m.hp;
@@ -241,7 +241,7 @@ function spawnNewMonster() {
     postPlayer("👾 遭遇 " + monsters.length + " 隻怪物");
   }
 
-  var nowSec = _nowSec();
+  const nowSec = _nowSec();
   if (typeof updateMonsterInfo === "function" && currentMonster) {
     updateMonsterInfo(currentMonster, monsterHP, nowSec);
   }
@@ -251,7 +251,7 @@ function spawnNewMonster() {
 function _grantMonsterDrop(mon, nowSec) {
   if (!mon) return;
 
-  var drop = (typeof getDrop === "function") ? getDrop(mon) : { gold: 0, stone: 0, exp: 0, items: [] };
+  const drop = (typeof getDrop === "function") ? getDrop(mon) : { gold: 0, stone: 0, exp: 0, items: [] };
   if (drop.gold && typeof addGoldFromKill === "function") addGoldFromKill(drop.gold, 1);
   if (drop.stone && typeof addStone === "function") addStone(drop.stone);
   if (typeof gainExp === "function") gainExp(drop.exp || 0);
@@ -263,7 +263,7 @@ function _grantMonsterDrop(mon, nowSec) {
       (drop.items && drop.items.slice) ? drop.items : []
     );
   }
-  var dropItemsText = (drop.items && drop.items.length > 0)
+  const dropItemsText = (drop.items && drop.items.length > 0)
     ? "，並獲得 " + drop.items.join("、")
     : "";
 
@@ -278,9 +278,9 @@ function _grantMonsterDrop(mon, nowSec) {
 // ===== 整波結束（全部怪物死亡後，倒數重生 / Boss Gate 結算）=====
 function _onMonsterDead(nowSec) {
   // 是否為 Boss 戰（這一波有 Boss）
-  var hasBoss = false;
+  let hasBoss = false;
   if (Array.isArray(monsters) && monsters.length > 0) {
-    for (var i = 0; i < monsters.length; i++) {
+    for (let i = 0; i < monsters.length; i++) {
       if (monsters[i] && monsters[i].isBoss) { hasBoss = true; break; }
     }
   } else if (currentMonster && currentMonster.isBoss) {
@@ -320,7 +320,7 @@ function rtTickSec() {
   if (isDead || !autoEnabled) return;
   if (window.BattleGate && window.BattleGate.isLocked && window.BattleGate.isLocked()) return;
 
-  var nowSec = _nowSec();
+  const nowSec = _nowSec();
   window._NOW_SEC = nowSec;  // 提供給 UI 使用（其他功能還是可以用）
   window.round    = nowSec;
 
@@ -330,12 +330,12 @@ function rtTickSec() {
   // 2) 怪物持續狀態（DoT）
   if (battleMode === "single") {
     if (currentMonster && typeof processMonsterStatusEffects === "function") {
-      var prevHp = Number(currentMonster.hp || 0);
+      const prevHp = Number(currentMonster.hp || 0);
 
-      var out = processMonsterStatusEffects(currentMonster, player, nowSec);
+      const out = processMonsterStatusEffects(currentMonster, player, nowSec);
       if (out && out.events && out.events.length) {
-        for (var i = 0; i < out.events.length; i++) {
-          var ev = out.events[i];
+        for (let i = 0; i < out.events.length; i++) {
+          const ev = out.events[i];
           if (ev.damage > 0) {
             currentMonster.hp = Math.max(0, Number(currentMonster.hp || 0) - ev.damage);
             monsterHP = currentMonster.hp;
@@ -356,16 +356,16 @@ function rtTickSec() {
   } else {
     // 多體：每一隻怪都跑狀態
     if (Array.isArray(monsters) && typeof processMonsterStatusEffects === "function") {
-      for (var mi = 0; mi < monsters.length; mi++) {
-        var m = monsters[mi];
+      for (let mi = 0; mi < monsters.length; mi++) {
+        const m = monsters[mi];
         if (!m || m.hp <= 0) continue;
 
-        var prevHpM = Number(m.hp || 0);
+        const prevHpM = Number(m.hp || 0);
 
-        var out2 = processMonsterStatusEffects(m, player, nowSec);
+        const out2 = processMonsterStatusEffects(m, player, nowSec);
         if (out2 && out2.events && out2.events.length) {
-          for (var j = 0; j < out2.events.length; j++) {
-            var ev2 = out2.events[j];
+          for (let j = 0; j < out2.events.length; j++) {
+            const ev2 = out2.events[j];
             if (ev2.damage > 0) {
               m.hp = Math.max(0, Number(m.hp || 0) - ev2.damage);
               if (window.LogDual && LogDual.monster) LogDual.monster("[#" + (mi+1) + "] " + ev2.text + "（HP：" + m.hp + "）");
@@ -393,8 +393,8 @@ function rtTickSec() {
     }
   } else {
     if (Array.isArray(monsters) && typeof processMonsterBuffs === "function") {
-      for (var bi = 0; bi < monsters.length; bi++) {
-        var bm = monsters[bi];
+      for (let bi = 0; bi < monsters.length; bi++) {
+        const bm = monsters[bi];
         if (!bm || bm.hp <= 0) continue;
         processMonsterBuffs(bm);
       }
@@ -411,7 +411,7 @@ function rtTickSec() {
   // 5) 技能冷卻
   if (typeof reduceSkillCooldowns === "function") reduceSkillCooldowns();
   if (currentMonster) {
-    var hasBossTick = typeof currentMonster._tickEndTurn === "function";
+    const hasBossTick = typeof currentMonster._tickEndTurn === "function";
     if (hasBossTick) currentMonster._tickEndTurn(currentMonster);
     else if (typeof reduceMonsterSkillCooldowns === "function") reduceMonsterSkillCooldowns(currentMonster);
   }
@@ -438,16 +438,16 @@ function rtPlayerAct() {
   }
 
   // 多體：記錄出手前有哪些怪還活著，用來判斷這一招打死了幾隻
-  var preAliveFlags = null;
+  let preAliveFlags = null;
   if (Array.isArray(monsters) && monsters.length > 0) {
     preAliveFlags = [];
-    for (var pi = 0; pi < monsters.length; pi++) {
-      var pm = monsters[pi];
+    for (let pi = 0; pi < monsters.length; pi++) {
+      const pm = monsters[pi];
       preAliveFlags[pi] = !!(pm && pm.hp > 0);
     }
   }
 
-  var r = (window.Rpg_玩家 && typeof Rpg_玩家.actOnce === "function")
+  const r = (window.Rpg_玩家 && typeof Rpg_玩家.actOnce === "function")
     ? Rpg_玩家.actOnce()
     : { did:false };
 
@@ -457,23 +457,23 @@ function rtPlayerAct() {
 
   // 兼容舊檔：若玩家行動只改了 monsterHP，這裡同步回 currentMonster.hp
   if (currentMonster) {
-    var cap = currentMonster.maxHp || Infinity;
-    var hpFromLogic = Math.max(0, Math.min(cap, monsterHP));
-    var hpFromSource = isFinite(currentMonster.hp)
+    const cap = currentMonster.maxHp || Infinity;
+    const hpFromLogic = Math.max(0, Math.min(cap, monsterHP));
+    const hpFromSource = isFinite(currentMonster.hp)
       ? Math.max(0, Math.min(cap, Number(currentMonster.hp)))
       : hpFromLogic;
-    var merged = Math.min(hpFromLogic, hpFromSource);
+    const merged = Math.min(hpFromLogic, hpFromSource);
     currentMonster.hp = merged;
     monsterHP = merged;
   }
 
   // ── 判斷這一回合打死了哪些怪 ──
-  var killedMonsters = [];
+  const killedMonsters = [];
 
   if (Array.isArray(monsters) && monsters.length > 0 && preAliveFlags) {
     // 多體模式：看哪些「原本活著」的怪現在變成 hp <= 0
-    for (var i = 0; i < monsters.length && i < preAliveFlags.length; i++) {
-      var m = monsters[i];
+    for (let i = 0; i < monsters.length && i < preAliveFlags.length; i++) {
+      const m = monsters[i];
       if (!m) continue;
       if (!preAliveFlags[i]) continue;     // 本來就死的，不算這一回合
       if (m.hp <= 0) {
@@ -488,9 +488,9 @@ function rtPlayerAct() {
   // ── 擊殺處理 ──
   if (killedMonsters.length === 1) {
     // ✅ 一次只死一隻：沿用原本「單體掉落訊息」行為
-    var mon = killedMonsters[0];
-    var wasElite = !!mon.isElite;
-    var wasBoss  = !!mon.isBoss;
+    const mon = killedMonsters[0];
+    const wasElite = !!mon.isElite;
+    const wasBoss  = !!mon.isBoss;
 
     // 成就
     if (window.Achievements && typeof Achievements.onKill === "function") {
@@ -503,7 +503,7 @@ function rtPlayerAct() {
       Achievements.onBossKill(1);
     }
 
-    var nowSecKill = _nowSec();
+    const nowSecKill = _nowSec();
 
     // 單隻怪物掉落（沿用原本 _grantMonsterDrop，會自己發一行訊息）
     _grantMonsterDrop(mon, nowSecKill);
@@ -527,17 +527,17 @@ function rtPlayerAct() {
 
   } else if (killedMonsters.length > 1) {
     // ✅ 群體技能同一招打死多隻：每隻都算掉落，但只顯示一行「總掉落」
-    var nowSecKill2 = _nowSec();
+    const nowSecKill2 = _nowSec();
 
-    var totalGold  = 0;
-    var totalStone = 0;
-    var totalExp   = 0;
-    var itemMap    = Object.create(null); // { itemName: count }
+    let totalGold  = 0;
+    let totalStone = 0;
+    let totalExp   = 0;
+    const itemMap    = Object.create(null); // { itemName: count }
 
-    for (var k = 0; k < killedMonsters.length; k++) {
-      var km = killedMonsters[k];
-      var wasEliteM = !!km.isElite;
-      var wasBossM  = !!km.isBoss;
+    for (let k = 0; k < killedMonsters.length; k++) {
+      const km = killedMonsters[k];
+      const wasEliteM = !!km.isElite;
+      const wasBossM  = !!km.isBoss;
 
       // 成就（每隻各算一次）
       if (window.Achievements && typeof Achievements.onKill === "function") {
@@ -551,7 +551,7 @@ function rtPlayerAct() {
       }
 
       // 直接在這裡算掉落 & 給獎勵（不呼叫 _grantMonsterDrop，避免多行訊息）
-      var drop = (typeof getDrop === "function") ? getDrop(km) : { gold: 0, stone: 0, exp: 0, items: [] };
+      const drop = (typeof getDrop === "function") ? getDrop(km) : { gold: 0, stone: 0, exp: 0, items: [] };
 
       // 實際給獎勵（跟 _grantMonsterDrop 內部同一套）
       if (drop.gold && typeof addGoldFromKill === "function") addGoldFromKill(drop.gold, 1);
@@ -572,8 +572,8 @@ function rtPlayerAct() {
       totalExp   += drop.exp   || 0;
 
       if (Array.isArray(drop.items)) {
-        for (var di = 0; di < drop.items.length; di++) {
-          var itemName = drop.items[di];
+        for (let di = 0; di < drop.items.length; di++) {
+          const itemName = drop.items[di];
           if (!itemName) continue;
           if (!itemMap[itemName]) itemMap[itemName] = 0;
           itemMap[itemName] += 1;
@@ -590,7 +590,7 @@ function rtPlayerAct() {
     }
 
     // 組成「總掉落」訊息（只顯示一行）
-    var parts = [];
+    const parts = [];
     parts.push("群體技能擊敗 " + killedMonsters.length + " 隻怪物");
     parts.push("獲得 楓幣 " + totalGold);
     if (totalStone > 0) {
@@ -598,9 +598,9 @@ function rtPlayerAct() {
     }
     parts.push("EXP " + totalExp);
 
-    var itemText = "";
-    var itemNames = [];
-    for (var name in itemMap) {
+    let itemText = "";
+    const itemNames = [];
+    for (const name in itemMap) {
   if (!Object.prototype.hasOwnProperty.call(itemMap, name)) continue;
   itemNames.push(name + " ×" + itemMap[name]);
 }
@@ -630,7 +630,7 @@ function rtPlayerAct() {
   }
 
   // UI
-  var nowSec = _nowSec();
+  const nowSec = _nowSec();
   if (typeof updateResourceUI === "function") updateResourceUI();
   if (currentMonster && typeof updateMonsterInfo === "function") {
     updateMonsterInfo(currentMonster, Math.max(monsterHP, 0), nowSec);
@@ -645,9 +645,9 @@ function rtMonsterAct() {
   if (battleMode === "single") {
     if (!currentMonster) return;
 
-    var nowSec = _nowSec();
+    const nowSec = _nowSec();
 
-    var r = (window.Rpg_怪物 && typeof Rpg_怪物.actOnce === "function")
+    const r = (window.Rpg_怪物 && typeof Rpg_怪物.actOnce === "function")
       ? Rpg_怪物.actOnce()
       : { did:false };
 
@@ -674,20 +674,20 @@ function rtMonsterAct() {
   // 多體：每一隻活著的怪各跑一次 actOnce
   if (!Array.isArray(monsters) || !monsters.length) return;
 
-  var nowSecMulti = _nowSec();
+  const nowSecMulti = _nowSec();
 
-  for (var i = 0; i < monsters.length; i++) {
-    var m = monsters[i];
+  for (let i = 0; i < monsters.length; i++) {
+    const m = monsters[i];
     if (!m || m.hp <= 0) continue;
 
     // 暫時把 currentMonster / monsterHP 切到這一隻，讓 Rpg_怪物 使用全域
-    var oldCurrent = currentMonster;
-    var oldHP      = monsterHP;
+    const oldCurrent = currentMonster;
+    const oldHP      = monsterHP;
 
     currentMonster = m;
     monsterHP      = m.hp;
 
-    var r2 = (window.Rpg_怪物 && typeof Rpg_怪物.actOnce === "function")
+    const r2 = (window.Rpg_怪物 && typeof Rpg_怪物.actOnce === "function")
       ? Rpg_怪物.actOnce()
       : { did:false };
 

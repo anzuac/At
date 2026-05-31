@@ -1,10 +1,10 @@
-// quest_repeat_es5.js — 重複任務（V4：數值合理化、UI 強化、自動消失彈窗）
+// quest_repeat_es2020.js — 重複任務（V4：數值合理化、UI 強化、自動消失彈窗）
 (function(){
   if (!window.QuestCore) return;
-  var SH = window.SaveHub;
+  const SH = window.SaveHub;
 
   // ====== SaveHub（中央存檔）======
-  var NS = 'repeat:v3';
+  const NS = 'repeat:v3';
   function defState(){
     return {
       _ver: 1,
@@ -20,7 +20,7 @@
     s.diamondSpend = Math.max(0, Number(s.diamondSpend||0));
     s.kills = Math.max(0, Number(s.kills||0));
     s.done = s.done || { goldGain:0, stoneGain:0, diamondSpend:0, kills:0 };
-    ['goldGain','stoneGain','diamondSpend','kills'].forEach(function(k){
+    ['goldGain','stoneGain','diamondSpend','kills'].forEach((k) =>{
       s.done[k] = Math.max(0, Number(s.done[k]||0));
     });
     return s;
@@ -28,7 +28,7 @@
 
   if (SH && typeof SH.registerNamespaces === 'function') {
     SH.registerNamespaces({
-      [NS]: { version: 1, migrate: function(old){ return normalize(old||defState()); } }
+      [NS]: { version: 1, migrate(old){ return normalize(old||defState()); } }
     });
   }
 
@@ -43,7 +43,7 @@
   }
 
   // ====== 任務定義與合理化數值 ======
-  var QUESTS = [
+  const QUESTS = [
     {
       kind: 'goldGain', title: '💰 金幣達人',
       desc: '累積獲得金幣，兌換稀有星痕代幣。',
@@ -74,28 +74,28 @@
     }
   ];
 
-  var THRESH_MUL = 1.25;   // 難度成長合理化
-  var REWARD_MUL = 1.15;   // 獎勵成長合理化
-  var state = load();
+  const THRESH_MUL = 1.25;   // 難度成長合理化
+  const REWARD_MUL = 1.15;   // 獎勵成長合理化
+  let state = load();
 
   // ====== 工具 ======
   function fmt(n){ return Math.floor(n||0).toLocaleString(); }
   function pct(cur,max){ return (max>0)? Math.max(0, Math.min(100, Math.floor((cur/max)*100))) : 0; }
-  function round56(x){ var neg = x<0; x = Math.abs(x); var i = Math.floor(x), f = x - i; var r = (f>=0.6) ? (i+1) : i; return neg ? -r : r; }
+  function round56(x){ const neg = x<0; x = Math.abs(x); const i = Math.floor(x), f = x - i; const r = (f>=0.6) ? (i+1) : i; return neg ? -r : r; }
 
   function currentThresh(q){
     return Math.max(1, Math.floor(q.baseThresh * Math.pow(THRESH_MUL, state.done[q.kind]||0)));
   }
   function rewardPackFor(q){
-    var mul = Math.pow(REWARD_MUL, state.done[q.kind]||0);
-    return q.baseReward.map(function(r){
+    const mul = Math.pow(REWARD_MUL, state.done[q.kind]||0);
+    return q.baseReward.map((r) =>{
       return {type:r.type, amount: Math.max(1, round56((r.amount||0)*mul))};
     });
   }
 
   // ====== 彈窗通知系統 ======
   function showToast(title, rewards) {
-    var container = document.getElementById('quest-toast-container');
+    let container = document.getElementById('quest-toast-container');
     if (!container) {
       container = document.createElement('div');
       container.id = 'quest-toast-container';
@@ -103,9 +103,9 @@
       document.body.appendChild(container);
     }
 
-    var toast = document.createElement('div');
-    var rewardText = rewards.map(function(r){
-      var name = (r.type==='diamond'?'鑽石':(r.type==='star'?'星痕代幣':(r.type==='gold'?'金幣':(r.type==='stone'?'強化石':r.type))));
+    const toast = document.createElement('div');
+    const rewardText = rewards.map((r) =>{
+      const name = (r.type==='diamond'?'鑽石':(r.type==='star'?'星痕代幣':(r.type==='gold'?'金幣':(r.type==='stone'?'強化石':r.type))));
       return name + ' ×' + fmt(r.amount);
     }).join('、');
 
@@ -115,17 +115,17 @@
                       '<div style="font-size:12px;color:#a78bfa;margin-top:4px;text-align:center;">獲得：' + rewardText + '</div>';
 
     container.appendChild(toast);
-    setTimeout(function(){ toast.style.transform = 'translateY(0)'; toast.style.opacity = '1'; }, 10);
-    
-    setTimeout(function(){
+    setTimeout(() =>{ toast.style.transform = 'translateY(0)'; toast.style.opacity = '1'; }, 10);
+
+    setTimeout(() =>{
       toast.style.transform = 'translateY(-20px)';
       toast.style.opacity = '0';
-      setTimeout(function(){ if(toast.parentNode) container.removeChild(toast); }, 400);
+      setTimeout(() =>{ if(toast.parentNode) container.removeChild(toast); }, 400);
     }, 3500);
   }
 
   function grant(rew){
-    var t=rew.type, a=Math.max(0, Math.floor(rew.amount||0));
+    const t=rew.type, a=Math.max(0, Math.floor(rew.amount||0));
     if (a<=0) return;
     if (t==='gold'){ if (window.player) player.gold=(player.gold||0)+a; }
     else if (t==='stone'){ if (window.player) player.stone=(player.stone||0)+a; }
@@ -135,33 +135,33 @@
       else window.starToken = (window.starToken||0)+a;
     }
   }
-  function grantPack(list){ for(var i=0;i<(list||[]).length;i++) grant(list[i]); if (window.updateResourceUI) updateResourceUI(); }
+  function grantPack(list){ for(let i=0;i<(list||[]).length;i++) grant(list[i]); if (window.updateResourceUI) updateResourceUI(); }
 
   // ====== 核心結算與 UI ======
   function isActiveTab(){ try{ return QuestCore.getActiveTab && QuestCore.getActiveTab()==='repeatables'; }catch(_){ return false; } }
-  var __dirty = false;
-  var __rerenderTimer = null;
+  let __dirty = false;
+  let __rerenderTimer = null;
   function scheduleRender(force){
     if (!force && !isActiveTab()) { __dirty = true; return; }
     if (__rerenderTimer) return;
-    __rerenderTimer = setTimeout(function(){
+    __rerenderTimer = setTimeout(() =>{
       __rerenderTimer = null;
       if (!isActiveTab()) { __dirty = true; return; }
       try { render(); __dirty = false; } catch(e){}
     }, 0);
   }
 
-  var __settling = false;
+  let __settling = false;
   function settleQuest(q, counterKey){
     if (__settling) return;
     __settling = true;
     try {
-      var need = currentThresh(q);
-      var cur  = Math.max(0, state[counterKey]||0);
+      const need = currentThresh(q);
+      const cur  = Math.max(0, state[counterKey]||0);
       if (cur >= need){
         state[counterKey] = 0;
         state.done[q.kind] = (state.done[q.kind]||0) + 1;
-        var rewards = rewardPackFor(q);
+        const rewards = rewardPackFor(q);
         grantPack(rewards);
         save(state);
         showToast(q.title, rewards); // 彈窗通知
@@ -180,7 +180,7 @@
   function onKills(k){ if(k>0){ state.kills+=k; settleQuest(QUESTS[3],'kills'); } }
 
   function wrapGlobal(fnName, wrapper){
-    var old=window[fnName];
+    const old=window[fnName];
     window[fnName]=function(){
       if(typeof old==='function'){ try{ old.apply(this, arguments); }catch(e){} }
       try{ wrapper.apply(this, arguments); }catch(e){}
@@ -192,11 +192,11 @@
   window.RM_onDiamondSpent = function(v){ onDiamondSpent(v||0); };
 
   function cardHTML(q, curVal, needVal, doneTimes){
-    var rewards = rewardPackFor(q).map(function(r){
-      var name = (r.type==='diamond'?'鑽石':(r.type==='star'?'星痕代幣':(r.type==='gold'?'金幣':(r.type==='stone'?'強化石':r.type))));
+    const rewards = rewardPackFor(q).map((r) =>{
+      const name = (r.type==='diamond'?'鑽石':(r.type==='star'?'星痕代幣':(r.type==='gold'?'金幣':(r.type==='stone'?'強化石':r.type))));
       return '<span style="color:#fff;font-weight:bold">'+name+' ×'+fmt(r.amount)+'</span>';
     }).join('、');
-    var bar = pct(curVal, needVal);
+    const bar = pct(curVal, needVal);
     return ''+
       '<div style="border:1px solid rgba(255,255,255,0.1);border-radius:16px;background:linear-gradient(145deg, #111827, #0b1220);padding:16px;margin-bottom:12px;box-shadow: 0 4px 15px rgba(0,0,0,0.3);">'+
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
@@ -221,9 +221,9 @@
   }
 
   function render(){
-    var box=document.getElementById('questContent'); if(!box) return;
-    var html='';
-    QUESTS.forEach(function(q){
+    const box=document.getElementById('questContent'); if(!box) return;
+    let html='';
+    QUESTS.forEach((q) =>{
       html += cardHTML(q, state[q.kind]||0, currentThresh(q), state.done[q.kind]||0);
     });
     box.innerHTML=html;
@@ -236,12 +236,12 @@
   }
 
   function init(){
-    var btn=document.getElementById('tabRepeatables');
+    const btn=document.getElementById('tabRepeatables');
     if(btn) btn.onclick=function(){ QuestCore.setTab('repeatables'); };
     document.addEventListener('quest:tabchange', onTabChange);
     scheduleRender(true);
     if (SH && typeof SH.on === 'function') {
-      SH.on('change', function(ev){
+      SH.on('change', (ev) =>{
         if (!ev || (ev.type!=='set' && ev.type!=='flush')) return;
         if (ev.ns && ev.ns !== NS) return;
         state = normalize(SH.get(NS, defState()));

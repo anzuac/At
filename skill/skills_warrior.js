@@ -65,24 +65,24 @@ registerJobSkill('warrior3', {
   type: "attack",
   role: "attack",
   isBasic: false,
-  
+
   // 🔒 限制：從狂戰將軍這一轉開始，整條狂戰士線（3~6轉）都能用
   // 需要在 jobs 裡有 warrior_berserker3 這個職業（你已經有）
   requireJobLineFrom: "warrior_berserker3",
   requiredJobTier: 3, // 三轉以上解鎖
-  
+
   // === 初始等級設定 ===
   level: 1,
-  
+
   // 進化：0 → 1 → 2（100 等 / 150 等）
   currentTier: 0,
   evolveLevels: [0, 100, 150], // Tier0 / Tier1 / Tier2
-  
+
   // 全局等級上限（實際上看各 tier 的 maxLv）
   maxLevel: 20,
-  
+
   currentCooldown: 0,
-  
+
   // ===== 三階形態 =====
   tiers: [
     // === Tier 0：無雙劍舞（未進化） ===
@@ -98,7 +98,7 @@ registerJobSkill('warrior3', {
       extraChance: 0, // 無特性
       extraBonus: 0
     },
-    
+
     // === Tier 1：無雙亂斬‧極（第一次進化，100 等） ===
     {
       name: "無雙亂斬‧極",
@@ -112,7 +112,7 @@ registerJobSkill('warrior3', {
       extraChance: 0.25, // 25% 機率
       extraBonus: 0.25 // 最終傷害 +25%
     },
-    
+
     // === Tier 2：無雙亂斬‧絕（第二次進化，150 等） ===
     {
       name: "無雙亂斬‧絕",
@@ -127,7 +127,7 @@ registerJobSkill('warrior3', {
       extraBonus: 0.35 // 最終傷害 +35%
     }
   ],
-  
+
   // ===== 使用邏輯 =====
   use(monster) {
     // 再保險：施放前確認職業線＆轉數條件
@@ -136,41 +136,41 @@ registerJobSkill('warrior3', {
       alert("當前職業無法使用「無雙劍舞」。");
       return 0;
     }
-    
+
     const t = getActiveTier(this);
-    
+
     // 更新技能顯示
     const evoLabel = typeof getEvoLabel === "function" ? getEvoLabel(this) : "";
     const skillName = t.name + evoLabel;
-    
+
     this.name = skillName;
     this.mpCost = t.mpCost;
     this.cooldown = t.cooldown;
     this.maxTargets = t.maxTargets;
-    
+
     // 基礎攻擊力 + 力量加成
     const baseAtk = Math.max(player.totalStats.atk || 1, 1);
     const strBonus = typeof _getStrBonusWithCap === "function" ?
       (_getStrBonusWithCap(1.0) || 0) :
       0;
-    
+
     // === 計算傷害倍率 ===
     const perPct = t.dmgBase + t.dmgPerLv * this.level; // 單段％
     const perHit = perPct / 100;
-    
+
     const dmgPerHit = Math.floor(baseAtk * perHit * (1 + strBonus));
     let dmgPerTarget = dmgPerHit * t.hits;
-    
+
     // === 特性：進化後才會有的最終傷害加成 ===
     const bonusChance = t.extraChance || 0;
     const bonusDmg = t.extraBonus || 0;
     let proc = false;
-    
+
     if (bonusChance > 0 && Math.random() < bonusChance) {
       dmgPerTarget = Math.floor(dmgPerTarget * (1 + bonusDmg));
       proc = true;
     }
-    
+
     // 戰鬥Log
     if (typeof logPrepend === "function") {
       logPrepend(
@@ -179,16 +179,16 @@ registerJobSkill('warrior3', {
         (proc ? `《無雙亂斬特性觸發：傷害 +${Math.round(bonusDmg * 100)}%》` : "")
       );
     }
-    
+
     spendAndCooldown(this, this.mpCost);
     return dmgPerTarget;
   },
-  
+
   // 升級花費
   getUpgradeCost() {
     return 50 + (this.level - 1) * 15;
   },
-  
+
   // 描述
   getDescription() {
     const t = getActiveTier(this);
@@ -197,10 +197,10 @@ registerJobSkill('warrior3', {
     const nextEvoLv = typeof getNextEvoLevel === "function" ?
       getNextEvoLevel(this) :
       null;
-    
+
     const perPct = t.dmgBase + t.dmgPerLv * this.level; // 單段％
     const totalPct = perPct * t.hits; // 總％
-    
+
     let desc =
       `${t.name}${evoLabel}（狂戰線三轉技能）\n` +
       `・攻擊目標：${t.maxTargets} 名敵人\n` +
@@ -209,17 +209,17 @@ registerJobSkill('warrior3', {
       `・消耗 MP：${t.mpCost}｜冷卻：${t.cooldown} 秒\n` +
       `・目前等級上限：${lvCap} 級\n` +
       `・職業限制：狂戰士職業線（三轉「狂戰將軍」起，往後進階皆可使用）`;
-    
+
     if (t.extraChance > 0) {
       desc += `\n・特性：${Math.round(t.extraChance * 100)}% 機率讓最終傷害額外提高 ${Math.round(t.extraBonus * 100)}%`;
     }
-    
+
     if (nextEvoLv) {
       desc += `\n・下一次進化：達到等級 ${nextEvoLv}`;
     } else {
       desc += `\n・已達最終進化階段`;
     }
-    
+
     return desc;
   }
 });
@@ -302,42 +302,42 @@ use(monster) {
     alert("當前職業無法使用「聖盾審判」。");
     return 0;
   }
-  
+
   const t = getActiveTier(this);
-  
+
   const evoLabel = (typeof getEvoLabel === "function") ? getEvoLabel(this) : "";
   const skillName = t.name + evoLabel;
-  
+
   this.name = skillName;
   this.mpCost = t.mpCost;
   this.cooldown = t.cooldown;
   this.maxTargets = t.maxTargets;
-  
+
   const baseAtk = Math.max(player.totalStats.atk || 1, 1);
   const strBonus = (typeof _getStrBonusWithCap === "function") ?
     (_getStrBonusWithCap(1.0) || 0) :
     0;
-  
+
   const perPct = t.dmgBase + t.dmgPerLv * this.level;
   const perHit = perPct / 100;
-  
+
   const dmgPerHit = Math.floor(baseAtk * perHit * (1 + strBonus));
   const dmgPerTarget = dmgPerHit * t.hits; // 預估對「單一目標」的總傷害
-  
+
   // ===== 攻擊後回復自身：傷害 X 比例，但上限定在最大 HP * healMaxPct =====
   const maxHp = player.totalStats.hp || 1;
   const healRatio = t.healRatio || 0; // 對「這次傷害」的比例
   const healCap = t.healMaxPct || 0; // 對「最大 HP」的上限
-  
+
   // 用「對 1 隻敵人的傷害」作為計算基準，避免 AoE 太誇張
   const rawHeal = dmgPerTarget * healRatio;
   const maxHeal = maxHp * healCap;
   const healAmt = Math.floor(Math.min(rawHeal, maxHeal));
-  
+
   if (typeof player.currentHP === "number" && healAmt > 0) {
     player.currentHP = Math.min(player.currentHP + healAmt, maxHp);
   }
-  
+
   // ⭐ 給戰鬥摘要用的標籤：顯示本次回復
   if (healAmt > 0) {
     // 會變成：聖盾審判（+532 HP）造成 XXXX 傷害
@@ -345,7 +345,7 @@ use(monster) {
   } else {
     this.lastCastTag = ""; // 沒有回就不顯示
   }
-  
+
   // 🔍 log 中清楚顯示本次恢復量（詳細戰鬥 log）
   if (typeof logPrepend === "function") {
     logPrepend(
@@ -355,7 +355,7 @@ use(monster) {
       `（理論為傷害的 ${Math.round(healRatio * 100)}%，但上限為最大HP的 ${Math.round(healCap * 1000) / 10}%）`
     );
   }
-  
+
   spendAndCooldown(this, this.mpCost);
   return dmgPerTarget;
 },
@@ -438,7 +438,7 @@ registerJobSkill('warrior5', {
 
   currentCooldown: 0,
 
-  use: function(monster) {
+  use(monster) {
     const t = getActiveTier(this);
     this.name     = t.name;
     this.logic    = t.logic;
@@ -481,9 +481,9 @@ registerJobSkill('warrior5', {
     return finalDmg;
   },
 
-  getUpgradeCost: function() { return 1; },
+  getUpgradeCost() { return 1; },
 
-  getDescription: function() {
+  getDescription() {
     const t    = getActiveTier(this);
     const L    = Math.max(1, this.level | 0);
     const hits = Number(t.logic.hits || 1);
@@ -537,7 +537,7 @@ registerJobSkill('warrior5', {
 
   currentCooldown: 0,
 
-  use: function (monster) {
+  use (monster) {
     // 安全：職業線 / 轉數檢查
     if (typeof Skills_isUnlocked === "function" &&
         !Skills_isUnlocked(this)) {
@@ -580,9 +580,9 @@ registerJobSkill('warrior5', {
     return finalDmg;
   },
 
-  getUpgradeCost: function () { return 1; },
+  getUpgradeCost () { return 1; },
 
-  getDescription: function () {
+  getDescription () {
     const L    = Math.max(1, this.level | 0);
     const hits = Number(this.logic && this.logic.hits || 1);
 
@@ -639,7 +639,7 @@ registerJobSkill('warrior5', {
 
   currentCooldown: 0,
 
-  use: function (monster) {
+  use (monster) {
     // 安全：職業線 / 轉數檢查
     if (typeof Skills_isUnlocked === "function" &&
         !Skills_isUnlocked(this)) {
@@ -705,11 +705,11 @@ registerJobSkill('warrior5', {
     return totalDmg;
   },
 
-  getUpgradeCost: function () {
+  getUpgradeCost () {
     return 1;
   },
 
-  getDescription: function () {
+  getDescription () {
     const t    = getActiveTier(this);
     const L    = Math.max(1, this.level | 0);
     const hits = Number(t.logic.hits || 1);
@@ -744,54 +744,54 @@ registerJobSkill('warrior5', {
   type: "attack",
   role: "attack",
   isBasic: false,
-  
+
   requiredJobTier: 5,
   requireJobLineFrom: "warrior_guardian5",
-  
+
   level: 1,
   maxLevel: 20,
   maxTargets: 10,
-  
+
   mpCost: 70,
-  cooldown: 600, // 比原本 300 秒稍微短一點  
-  
+  cooldown: 600, // 比原本 300 秒稍微短一點
+
   logic: {
-    // 盾騎大招：高爆發 + 護盾  
-    damageMultiplier: 2.20, // 基礎約 320%  
-    levelMultiplier: 0.10, // 隨等級提升威力  
+    // 盾騎大招：高爆發 + 護盾
+    damageMultiplier: 2.20, // 基礎約 320%
+    levelMultiplier: 0.10, // 隨等級提升威力
     hits: 5 // 5 段爆發
   },
-  
+
   currentCooldown: 0,
-  
-  use: function(monster) {
+
+  use(monster) {
     const L = Math.max(1, this.level | 0);
     const baseMul = Number(this.logic && this.logic.damageMultiplier || 0);
     const lm = Number(this.logic && this.logic.levelMultiplier || 0);
     const hits = Number(this.logic && this.logic.hits || 1);
-    
+
     const perHitMul = baseMul + lm * (L - 1);
     const baseAtk = Math.max(player.totalStats.atk || 1, 1);
-    
-    // 盾騎大招：STR 上限 +350%（比狂戰稍低）  
+
+    // 盾騎大招：STR 上限 +350%（比狂戰稍低）
     const strBonus = _getStrBonusWithCap(3.5);
-    
+
     const totalDmg = Math.floor(baseAtk * perHitMul * (1 + strBonus)) * hits;
-    
-    // ===== 附帶護盾效果：給予自身最大 HP 一定比例的護盾 =====  
+
+    // ===== 附帶護盾效果：給予自身最大 HP 一定比例的護盾 =====
     const maxHp = player.totalStats.hp || 1;
     const curSh = player.shield || 0;
-    
+
     // 基礎護盾量：最大 HP 的 10%
     const shieldPct = 0.10; // 10%
     const rawShield = Math.floor(maxHp * shieldPct);
-    
+
     // 上限：單次最多 7500，總護盾最多 40000
     const SINGLE_CAP = 7500;
     const TOTAL_CAP = 20000;
     let shieldGain = 0;
     let shieldNote = "";
-    
+
     if (curSh < TOTAL_CAP) {
       const room = TOTAL_CAP - curSh;
       shieldGain = Math.floor(Math.min(rawShield, SINGLE_CAP, room));
@@ -803,7 +803,7 @@ registerJobSkill('warrior5', {
     } else {
       shieldNote = "（護盾已達上限，無法再獲得）";
     }
-    
+
     logPrepend?.(
       "✨ " + this.name +
       " 對最多 " + this.maxTargets + " 名敵人降下 " + hits + " 重神裁，總傷害 " + totalDmg +
@@ -812,23 +812,23 @@ registerJobSkill('warrior5', {
         "本次獲得約 " + shieldGain + " 點護盾（基於最大HP 10%，單次上限 7500，總護盾上限 20000）" :
         "本次未獲得護盾" + shieldNote)
     );
-    
+
     spendAndCooldown(this, this.mpCost);
     return totalDmg;
   },
-  
-  getUpgradeCost: function() { return 1; },
-  
-  getDescription: function() {
+
+  getUpgradeCost() { return 1; },
+
+  getDescription() {
     const L = Math.max(1, this.level | 0);
     const hits = Number(this.logic && this.logic.hits || 1);
-    
+
     const perHitMul = Number(this.logic && this.logic.damageMultiplier || 0) +
       Number(this.logic && this.logic.levelMultiplier || 0) * (L - 1);
-    
+
     const per = Math.round(perHitMul * 100);
     const total = Math.round(perHitMul * hits * 100);
-    
+
     return (
       "盾騎士線五轉最終級大招，兼具輸出與防禦。\n" +
       "・對最多 " + this.maxTargets + " 名敵人降下 " + hits + " 重神裁\n" +

@@ -1,5 +1,5 @@
 // =======================================================
-// job_passives_tab.js — GrowthHub 分頁（UI 層，ES5）
+// job_passives_tab.js — GrowthHub 分頁（UI 層，ES2020+）
 //
 // - 僅依賴 JobPassivesCore
 // - 技能卡片完全由 Core 的 skillDefs 渲染，不在 UI 寫死數字
@@ -15,7 +15,7 @@
   function fmt(n){ return Number(n || 0).toLocaleString(); }
 
   function getBaseJobSafe(job){
-    var j = String(job || "").toLowerCase();
+    const j = String(job || "").toLowerCase();
     if (typeof w.getBaseJob === "function") return w.getBaseJob(j);
     return j.replace(/\d+$/, "");
   }
@@ -55,13 +55,13 @@
 
   function getLevelFromSnapshot(lv, def){
     if (!lv || !def) return 0;
-    var root = lv[def.stateRoot] || {};
-    var val = root[def.stateKey];
+    const root = lv[def.stateRoot] || {};
+    const val = root[def.stateKey];
     return (val | 0) || 0;
   }
 
   function isGoddessUnlocked(lv, skillDefs, baseJob){
-    var i, def, lvl;
+    let i, def, lvl;
     for (i = 0; i < skillDefs.length; i++) {
       def = skillDefs[i];
       if (!def || !def.isPrimary) continue;
@@ -74,14 +74,14 @@
 
   function renderCurrentBonusHtml(Core, lv){
     try{
-      var cfg = Core.getConfig ? Core.getConfig() : null;
-      var goddessDesign = cfg && cfg.DESIGN && cfg.DESIGN.GODDESS;
-      var perLvPct = goddessDesign ? (goddessDesign.PER_LV_PERCENT * 100) : 0;
-      var maxPct   = goddessDesign ? (goddessDesign.MAX_TOTAL_PERCENT * 100) : 0;
+      const cfg = Core.getConfig ? Core.getConfig() : null;
+      const goddessDesign = cfg && cfg.DESIGN && cfg.DESIGN.GODDESS;
+      const perLvPct = goddessDesign ? (goddessDesign.PER_LV_PERCENT * 100) : 0;
+      const maxPct   = goddessDesign ? (goddessDesign.MAX_TOTAL_PERCENT * 100) : 0;
 
-      var c = (w.player && w.player.coreBonus && w.player.coreBonus.bonusData) || {};
-      var b = c.jobPassives || {};
-      var items = [];
+      const c = (w.player && w.player.coreBonus && w.player.coreBonus.bonusData) || {};
+      const b = c.jobPassives || {};
+      const items = [];
 
       function pct(val){
         return (Math.round((Number(val || 0) * 100) * 10) / 10) + "%";
@@ -103,20 +103,20 @@
       add("魔力護盾", b.magicShieldPercent, pct);
       add("連擊機率", b.doubleHitChance, pct);
       add("先手再動機率", b.preemptiveChance, pct);
-      add("每次攻擊再動上限", b.preemptivePerAttackMax, function (v){ return "+" + (v | 0); });
+      add("每次攻擊再動上限", b.preemptivePerAttackMax, (v) =>{ return "+" + (v | 0); });
 
       // 平坦
-      add("生命值(平坦)", b.hp, function (v){ return "+" + fmt(v | 0); });
-      add("魔力值(平坦)", b.mp, function (v){ return "+" + fmt(v | 0); });
+      add("生命值(平坦)", b.hp, (v) =>{ return "+" + fmt(v | 0); });
+      add("魔力值(平坦)", b.mp, (v) =>{ return "+" + fmt(v | 0); });
 
       // 女神祈禱 10等起攻防平坦
-      add("女神祈禱・攻擊力(平坦)", b.goddessAtkFlat, function (v){ return "+" + fmt(v | 0); });
-      add("女神祈禱・防禦力(平坦)", b.goddessDefFlat, function (v){ return "+" + fmt(v | 0); });
-add("攻擊力(平坦)", b.atk, function (v){ return "+" + fmt(v | 0); });
-add("防禦力(平坦)", b.def, function (v){ return "+" + fmt(v | 0); });
+      add("女神祈禱・攻擊力(平坦)", b.goddessAtkFlat, (v) =>{ return "+" + fmt(v | 0); });
+      add("女神祈禱・防禦力(平坦)", b.goddessDefFlat, (v) =>{ return "+" + fmt(v | 0); });
+add("攻擊力(平坦)", b.atk, (v) =>{ return "+" + fmt(v | 0); });
+add("防禦力(平坦)", b.def, (v) =>{ return "+" + fmt(v | 0); });
       // 女神祈禱主增量百分比：直接用設計 + 等級算（PotentialBonus那邊真正加成）
-      var gLv = (lv && lv.global && (lv.global.goddessGrace | 0)) || 0;
-      var gPct = 0;
+      const gLv = (lv && lv.global && (lv.global.goddessGrace | 0)) || 0;
+      let gPct = 0;
       if (goddessDesign) {
         gPct = Math.min(maxPct, gLv * perLvPct);
       } else {
@@ -147,9 +147,9 @@ add("防禦力(平坦)", b.def, function (v){ return "+" + fmt(v | 0); });
   }
 
   function renderSkillCard(def, lv, Core, baseJob, goddessUnlocked){
-    var levelVal = getLevelFromSnapshot(lv, def);
-    var canLevel = false;
-    var lockedMsg = "";
+    const levelVal = getLevelFromSnapshot(lv, def);
+    let canLevel = false;
+    let lockedMsg = "";
 
     if (Core && typeof Core.canLevelUp === "function") {
       canLevel = Core.canLevelUp(def.jobKey || def.id);
@@ -159,9 +159,9 @@ add("防禦力(平坦)", b.def, function (v){ return "+" + fmt(v | 0); });
       lockedMsg = '<div style="opacity:.75;margin-bottom:4px">🔒 需先將本職的新被動點滿（' + baseJob + "）</div>";
     }
 
-    var btnId = "btnJP_" + def.id;
-    var disabledAttr = "";
-    var btnStyle = 'background:#4b5563;border:0;border-radius:8px;padding:6px 10px;color:#e5e7eb;cursor:pointer';
+    const btnId = "btnJP_" + def.id;
+    let disabledAttr = "";
+    let btnStyle = 'background:#4b5563;border:0;border-radius:8px;padding:6px 10px;color:#e5e7eb;cursor:pointer';
 
     if (!canLevel) {
       disabledAttr = 'disabled style="opacity:.5;cursor:not-allowed"';
@@ -169,9 +169,9 @@ add("防禦力(平坦)", b.def, function (v){ return "+" + fmt(v | 0); });
       btnStyle = 'background:#16a34a;border:0;border-radius:8px;padding:6px 10px;color:#031318;cursor:pointer';
     }
 
-    var title = jobIcon(def.job) + " " + def.name;
+    const title = jobIcon(def.job) + " " + def.name;
 
-    var inner =
+    const inner =
       '<div style="opacity:.85;margin-bottom:4px">' + (def.detailDesc || def.shortDesc || "") + "</div>" +
       lockedMsg +
       '<div>等級：<b>' + levelVal + "</b> / " + (def.cap || 0) + "</div>" +
@@ -185,26 +185,26 @@ add("防禦力(平坦)", b.def, function (v){ return "+" + fmt(v | 0); });
   }
 
   function renderInto(container){
-    var Core = w.JobPassivesCore || null;
+    const Core = w.JobPassivesCore || null;
     if (!Core) {
       container.innerHTML = card("⚠️ 職業被動", "缺少模組：job_passives_core");
       return;
     }
 
-    var lv   = Core.getLevels();
-    var base = getBaseJobSafe(w.player && w.player.job);
-    var ticketStr = fmt(getTickets());
-    var ONLY_SELF = true; // 只顯示本職 + global
+    const lv   = Core.getLevels();
+    const base = getBaseJobSafe(w.player && w.player.job);
+    const ticketStr = fmt(getTickets());
+    const ONLY_SELF = true; // 只顯示本職 + global
 
-    var skillDefs = [];
+    let skillDefs = [];
     if (typeof Core.getAllSkillDefs === "function") {
       skillDefs = Core.getAllSkillDefs() || [];
     } else if (typeof Core.getSkillDefs === "function") {
       skillDefs = Core.getSkillDefs() || [];
     }
 
-    var filtered = [];
-    var i, def;
+    const filtered = [];
+    let i, def;
     for (i = 0; i < skillDefs.length; i++) {
       def = skillDefs[i];
       if (!def || def.hidden) continue;
@@ -214,41 +214,41 @@ add("防禦力(平坦)", b.def, function (v){ return "+" + fmt(v | 0); });
       filtered.push(def);
     }
 
-    var goddessUnlocked = isGoddessUnlocked(lv, skillDefs, base);
+    const goddessUnlocked = isGoddessUnlocked(lv, skillDefs, base);
 
-    var groups = { old: [], new: [], goddess: [], other: [] };
+    const groups = { old: [], new: [], goddess: [], other: [] };
     for (i = 0; i < filtered.length; i++) {
       def = filtered[i];
-      var g = def.group || "other";
+      const g = def.group || "other";
       if (!groups[g]) groups[g] = [];
       groups[g].push(def);
     }
 
     function sortBySort(a, b){
-      var as = (a.sort || 0);
-      var bs = (b.sort || 0);
+      const as = (a.sort || 0);
+      const bs = (b.sort || 0);
       return as - bs;
     }
-    for (var gKey in groups) {
+    for (const gKey in groups) {
       if (groups.hasOwnProperty(gKey)) {
         groups[gKey].sort(sortBySort);
       }
     }
 
-    var sections = [];
+    const sections = [];
 
     sections.push(card("📈 目前被動加成", renderCurrentBonusHtml(Core, lv)));
     sections.push(card("🎟 可用憑證", "被動能力券：<b>" + ticketStr + "</b>"));
 
-    var groupOrder = ["old", "new", "goddess", "other"];
+    const groupOrder = ["old", "new", "goddess", "other"];
 
-    for (var gi = 0; gi < groupOrder.length; gi++) {
-      var gName = groupOrder[gi];
-      var list = groups[gName] || [];
+    for (let gi = 0; gi < groupOrder.length; gi++) {
+      const gName = groupOrder[gi];
+      const list = groups[gName] || [];
       if (!list.length) continue;
 
-      var groupTitle = groupLabel(gName);
-      var htmlParts = [];
+      const groupTitle = groupLabel(gName);
+      const htmlParts = [];
       for (i = 0; i < list.length; i++) {
         def = list[i];
         htmlParts.push(
@@ -266,10 +266,10 @@ add("防禦力(平坦)", b.def, function (v){ return "+" + fmt(v | 0); });
     container.innerHTML = sections.join("");
 
     function bindSkillButtons(defs){
-      var i, def, btn, jobKey;
+      let i, def, btn, jobKey;
       for (i = 0; i < defs.length; i++) {
         def = defs[i];
-        var btnId = "btnJP_" + def.id;
+        const btnId = "btnJP_" + def.id;
         btn = byId(btnId);
         if (!btn) continue;
         jobKey = def.jobKey || def.id;
@@ -293,13 +293,13 @@ add("防禦力(平坦)", b.def, function (v){ return "+" + fmt(v | 0); });
     if (w.GrowthHub && typeof w.GrowthHub.requestRerender === "function") {
       w.GrowthHub.requestRerender();
     } else {
-      var root = byId("job-passives-fallback");
+      const root = byId("job-passives-fallback");
       if (root) renderInto(root);
     }
   }
 
   function mountFallback(){
-    var root = byId("job-passives-fallback");
+    let root = byId("job-passives-fallback");
     if (!root){
       root = d.createElement("div");
       root.id = "job-passives-fallback";
@@ -313,12 +313,12 @@ add("防禦力(平坦)", b.def, function (v){ return "+" + fmt(v | 0); });
     w.SkillsHub.registerTab({
       id: "job-passives",
       title: "職業被動",
-      render: function (c){ renderInto(c); },
-      tick: function(){},
-      onOpen: function (){
+      render (c){ renderInto(c); },
+      tick(){},
+      onOpen (){
         try { (w.JobPassivesCore || {}).apply && w.JobPassivesCore.apply(); } catch (_){}
       },
-      onClose: function (){
+      onClose (){
         try { (w.JobPassivesCore || {}).apply && w.JobPassivesCore.apply(); } catch (_){}
       }
     });

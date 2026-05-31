@@ -21,10 +21,10 @@
     hp: 800, mp: 80, atk: 800, def: 800,
     // 其他％型（每點固定%）
     crit: 50,       //
-    critDmg: 50,    // 
-    aspd: 100,       // 
+    critDmg: 50,    //
+    aspd: 100,       //
     exp: 200, drop: 200, gold: 200,
-  //  skillDamage: 250,   // 
+  //  skillDamage: 250,   //
     totalDamage: 300,   //
     recover: 20,       // recoverPercent
     ignoreDef: 100      //  ignoreDefPct
@@ -50,8 +50,8 @@
     hp:60, mp:2, atk:8, def:6
   };
   const PER_POINT_PERCENT = {
-    crit:0.002,      // 
-    critDmg:0.003,   // 
+    crit:0.002,      //
+    critDmg:0.003,   //
     aspd:0.005,     // +0.05 / 點
     exp:0.005, drop:0.005, gold:0.005,
   //  skillDamage:0.001,   // +0.1%
@@ -61,7 +61,7 @@
   };
 
   // ===== SaveHub 封裝 =====
-  var SH = w.SaveHub || null;
+  const SH = w.SaveHub || null;
 
   function normalizeSP(obj){
     const base = {
@@ -89,9 +89,9 @@
   (function registerSaveHub(){
     if (!SH) return;
     try{
-      var schema = { version: 2, migrate: function(old){ return normalizeSP(old||{}); } };
+      const schema = { version: 2, migrate(old){ return normalizeSP(old||{}); } };
       if (typeof SH.registerNamespaces === "function"){
-        var pack = {}; pack[SAVEHUB_NS]=schema; SH.registerNamespaces(pack);
+        const pack = {}; pack[SAVEHUB_NS]=schema; SH.registerNamespaces(pack);
       } else if (typeof SH.registerNamespace === "function"){
         SH.registerNamespace(SAVEHUB_NS, schema);
       }

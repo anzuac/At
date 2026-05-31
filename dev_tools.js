@@ -1,6 +1,6 @@
-// dev/dev_tools.js — 開發者專用：一鍵清除所有儲存與快取（ES5）
+// dev/dev_tools.js — 開發者專用：一鍵清除所有儲存與快取（ES2020+）
 (function(){
-  var DEV_TOOL_VISIBLE = true;
+  const DEV_TOOL_VISIBLE = true;
 
   // === 主功能：完全清除所有儲存與快取 ===
   function clearAllStorage() {
@@ -9,11 +9,11 @@
 
     // IndexedDB
     if (window.indexedDB && typeof indexedDB.databases === "function") {
-      indexedDB.databases().then(function(dbs){
-        dbs.forEach(function(db){
+      indexedDB.databases().then((dbs) =>{
+        dbs.forEach((db) =>{
           try { indexedDB.deleteDatabase(db.name); } catch(e) { console.warn("IndexedDB 刪除失敗", e); }
         });
-      }).catch(function(e){ console.warn("indexedDB.databases() 失敗", e); });
+      }).catch((e) =>{ console.warn("indexedDB.databases() 失敗", e); });
     } else if (window.indexedDB) {
       // 舊版瀏覽器無法列舉，只嘗試刪一個常見命名
       try { indexedDB.deleteDatabase("GAME_SAVE_V2"); } catch(e){}
@@ -21,8 +21,8 @@
 
     // Cache Storage (Service Worker)
     if (window.caches && typeof caches.keys === "function") {
-      caches.keys().then(function(keys){
-        keys.forEach(function(k){ caches.delete(k); });
+      caches.keys().then((keys) =>{
+        keys.forEach((k) =>{ caches.delete(k); });
       });
     }
 
@@ -35,7 +35,7 @@
     console.log("🧹 已清除所有儲存與快取。3 秒後自動重新整理。");
     alert("🧹 已清除所有儲存與快取。\n頁面將自動重新整理。");
 
-    setTimeout(function(){ location.reload(true); }, 1000);
+    setTimeout(() =>{ location.reload(true); }, 1000);
   }
 
   // Console 可呼叫
@@ -46,12 +46,12 @@
     if (!DEV_TOOL_VISIBLE) return;
     if (document.getElementById("__devClearBtn")) return;
 
-    var btn = document.createElement("button");
+    const btn = document.createElement("button");
     btn.id = "__devClearBtn";
     btn.textContent = "🧹清除所有存檔";
     btn.title = "清空所有儲存、快取與資料庫，並重新整理";
     btn.onclick = function(){
-      var ok = confirm("⚠️ 確定要清除所有存檔與快取？\n（包括 localStorage、sessionStorage、IndexedDB、CacheStorage）");
+      const ok = confirm("⚠️ 確定要清除所有存檔與快取？\n（包括 localStorage、sessionStorage、IndexedDB、CacheStorage）");
       if (ok) clearAllStorage();
     };
     btn.style.position = "fixed";

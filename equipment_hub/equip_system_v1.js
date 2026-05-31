@@ -1,8 +1,8 @@
 /*
 
 內部版本6.0
- * equip_system_v4_1_es5.js — 裝備系統 v4.1（ES5 / 外掛模組 / 潛能等級累積只升不降 / SLR 動態外框）
- 
+ * equip_system_v4_1_es2020.js — 裝備系統 v4.1（ES2020+ / 外掛模組 / 潛能等級累積只升不降 / SLR 動態外框）
+
  * 依賴：StarforceTableV1, ScrollForgeV2, EquipStatsV2, PotentialCoreV21
  * 儲存：localStorage('EQUIP_SYS_STANDALONE_V2')
  */
@@ -22,14 +22,14 @@
   // === 潛能徽章樣式（含 SLR 動態） ===
   (function injectPotentialBadgeCSS(){
     if (document.getElementById('potential-badge-style')) return;
-    var css = "\n  .tier-badge{display:inline-flex;align-items:center;justify-content:center;\n    padding:2px 8px;border-radius:999px;font:700 12px/1 ui-monospace,monospace;\n    border:1px solid #2d3a4d;background:#0f172a;color:#e5e7eb}\n  .tier-R   {color:#d1d5db;border-color:#374151;background:#1f2937}\n  .tier-SR  {color:#60a5fa;border-color:#1e40af;background:#0b2555}\n  .tier-SSR {color:#a78bfa;border-color:#4c1d95;background:#25104a}\n  .tier-UR  {color:#34d399;border-color:#065f46;background:#062b23}\n  .tier-LR  {color:#fbbf24;border-color:#92400e;background:#2b1803}\n  /* SLR：彩色外框＋動態發光 */\n  .tier-SLR{\n    color:#fff;border:2px solid transparent;background:#0b1220;\n    background-image:linear-gradient(#0b1220,#0b1220),\n      linear-gradient(90deg,#ff5,#f0f,#6ff);\n    background-origin:border-box;background-clip:padding-box,border-box;\n    box-shadow:0 0 0 rgba(255,255,255,.6); animation:slrGlow 1.2s linear infinite;\n  }\n  @keyframes slrGlow{\n    0%{ box-shadow:0 0 0px rgba(255,255,255,.6); }\n    50%{ box-shadow:0 0 16px rgba(255,255,255,.95); }\n    100%{ box-shadow:0 0 0px rgba(255,255,255,.6); }\n  }\n  .pot-sparkle{animation:potSparkle 700ms ease-out 1;}\n  @keyframes potSparkle{0%{transform:scale(1);filter:brightness(1);}40%{transform:scale(1.02);filter:brightness(1.35);}100%{transform:scale(1);filter:brightness(1);}}";
-    var s=document.createElement('style'); s.id='potential-badge-style'; s.textContent=css;
+    const css = "\n  .tier-badge{display:inline-flex;align-items:center;justify-content:center;\n    padding:2px 8px;border-radius:999px;font:700 12px/1 ui-monospace,monospace;\n    border:1px solid #2d3a4d;background:#0f172a;color:#e5e7eb}\n  .tier-R   {color:#d1d5db;border-color:#374151;background:#1f2937}\n  .tier-SR  {color:#60a5fa;border-color:#1e40af;background:#0b2555}\n  .tier-SSR {color:#a78bfa;border-color:#4c1d95;background:#25104a}\n  .tier-UR  {color:#34d399;border-color:#065f46;background:#062b23}\n  .tier-LR  {color:#fbbf24;border-color:#92400e;background:#2b1803}\n  /* SLR：彩色外框＋動態發光 */\n  .tier-SLR{\n    color:#fff;border:2px solid transparent;background:#0b1220;\n    background-image:linear-gradient(#0b1220,#0b1220),\n      linear-gradient(90deg,#ff5,#f0f,#6ff);\n    background-origin:border-box;background-clip:padding-box,border-box;\n    box-shadow:0 0 0 rgba(255,255,255,.6); animation:slrGlow 1.2s linear infinite;\n  }\n  @keyframes slrGlow{\n    0%{ box-shadow:0 0 0px rgba(255,255,255,.6); }\n    50%{ box-shadow:0 0 16px rgba(255,255,255,.95); }\n    100%{ box-shadow:0 0 0px rgba(255,255,255,.6); }\n  }\n  .pot-sparkle{animation:potSparkle 700ms ease-out 1;}\n  @keyframes potSparkle{0%{transform:scale(1);filter:brightness(1);}40%{transform:scale(1.02);filter:brightness(1.35);}100%{transform:scale(1);filter:brightness(1);}}";
+    const s=document.createElement('style'); s.id='potential-badge-style'; s.textContent=css;
     document.head.appendChild(s);
   })();
   // === v8: 裝備外框樣式（內建，不依賴外部 CSS） ===
   (function injectEquipTierBorderCSS(){
     if (document.getElementById('equip-tier-border-style')) return;
-    var css = ""
+    const css = ""
       + "\n  .border-ur{box-shadow:0 0 6px rgba(255,152,0,.75);}"
       + "\n  .border-lr{box-shadow:0 0 8px rgba(255,87,34,.78);}"
       + "\n  .border-slr-rainbow{position:relative;border-radius:12px;}"
@@ -53,7 +53,7 @@
       + "\n  .slr-activate.border-slr-rainbow::before{animation-duration:.75s;filter:saturate(1.65) brightness(1.35);"
       + "box-shadow:0 0 18px rgba(255,255,255,.28),0 0 32px rgba(255,255,255,.18);}"
     ;
-    var st = document.createElement('style');
+    const st = document.createElement('style');
     st.id = 'equip-tier-border-style';
     st.textContent = css;
     document.head.appendChild(st);
@@ -75,25 +75,25 @@
   // 2) 否則優先使用當前存檔 st.equips 的所有 key
   // 3) 若 st 不可用，則退回 DEF_BASE 的 key（初始化後可用）
   function resolveSetTypes(st){
-    var keys = null;
+    let keys = null;
 
     if (global.SET_TYPES && Object.prototype.toString.call(global.SET_TYPES) === '[object Array]') {
       keys = global.SET_TYPES.slice();
     } else if (st && st.equips) {
       keys = [];
-      for (var k in st.equips) if (st.equips.hasOwnProperty(k)) keys.push(k);
+      for (const k in st.equips) if (st.equips.hasOwnProperty(k)) keys.push(k);
     } else if (typeof DEF_BASE === 'object' && DEF_BASE) {
       keys = [];
-      for (var k2 in DEF_BASE) if (DEF_BASE.hasOwnProperty(k2)) keys.push(k2);
+      for (const k2 in DEF_BASE) if (DEF_BASE.hasOwnProperty(k2)) keys.push(k2);
     } else {
       keys = [];
     }
 
     // 排序：若有 DEF_ORDER（後面會定義），就照 DEF_ORDER；其餘照字母
     if (keys && keys.length){
-      keys.sort(function(a,b){
-        var ia = (typeof DEF_ORDER!=='undefined' && DEF_ORDER && DEF_ORDER.indexOf) ? DEF_ORDER.indexOf(a) : -1;
-        var ib = (typeof DEF_ORDER!=='undefined' && DEF_ORDER && DEF_ORDER.indexOf) ? DEF_ORDER.indexOf(b) : -1;
+      keys.sort((a,b) =>{
+        let ia = (typeof DEF_ORDER!=='undefined' && DEF_ORDER && DEF_ORDER.indexOf) ? DEF_ORDER.indexOf(a) : -1;
+        let ib = (typeof DEF_ORDER!=='undefined' && DEF_ORDER && DEF_ORDER.indexOf) ? DEF_ORDER.indexOf(b) : -1;
         if (ia === -1) ia = 9999;
         if (ib === -1) ib = 9999;
         if (ia !== ib) return ia - ib;
@@ -105,16 +105,16 @@
 
   // 舊版相容：避免仍有殘留函式引用 SET_RULES 時拋出錯誤
   //（新套裝邏輯已改用 SET_RULES_V2 / computeSetBonusV2）
-  var SET_RULES = global.SET_RULES || {};
+  const SET_RULES = global.SET_RULES || {};
   global.SET_RULES = SET_RULES;
 
   // ==== 顏色 ====
-  var THEME = {
+  const THEME = {
     cardBg:"#0b1220", cardBorder:"#203048", cardShadow:"0 6px 20px rgba(0,0,0,.35)",
     text:"#e5e7eb", pillBg:"#0f172a", pillBorder:"#2a364b", pillActiveBg:"#1d4ed8", pillActiveBorder:"#2b3f8f",
     success:"#22c55e", warn:"#f59e0b", blue:"#3b82f6", neg:"#ef4444", zero:"#94a3b8"
   };
-  var TIER_COLOR = {
+  const TIER_COLOR = {
     R:{ border:"#334155", badge:"#93a3b8", text:"#e5e7eb", glow:"0 0 0 0 rgba(0,0,0,0)" },
     SR:{ border:"#2563eb", badge:"#60a5fa", text:"#eaf2ff", glow:"0 0 0 2px rgba(37,99,235,.25)" },
     SSR:{ border:"#7c3aed", badge:"#a78bfa", text:"#f3e8ff", glow:"0 0 0 2px rgba(124,58,237,.25)" },
@@ -136,7 +136,7 @@
   /* === Star FX (20+ shimmer, 25+ rainbow+shimmer, 30+ special glow, max crown) === */
 function Equip_getMaxStar(){
   try{
-    var T = (typeof StarforceTableV1!=='undefined') ? StarforceTableV1 : (typeof window!=='undefined' ? window.StarforceTableV1 : null);
+    const T = (typeof StarforceTableV1!=='undefined') ? StarforceTableV1 : (typeof window!=='undefined' ? window.StarforceTableV1 : null);
     if(!T) return 30;
     if(typeof T.maxStar === 'number') return T.maxStar|0;
     if(typeof T.MAX_STAR === 'number') return T.MAX_STAR|0;
@@ -146,7 +146,7 @@ function Equip_getMaxStar(){
 }
 function Equip_applyStarFX(el, star){
   if(!el) return;
-  var s = star|0;
+  const s = star|0;
   el.classList.remove('sf20','sf25','sf30','sfMax');
   if(s>=20) el.classList.add('sf20');
   if(s>=25) el.classList.add('sf25');
@@ -156,7 +156,7 @@ function Equip_applyStarFX(el, star){
 ;(function Equip_injectStarFxStyle(){
   if(typeof document==='undefined') return;
   if(document.getElementById('equip-starfx-style')) return;
-  var st=document.createElement('style');
+  const st=document.createElement('style');
   st.id='equip-starfx-style';
   st.textContent = [
     '.sf20{animation:equipStarPulse 1.2s ease-in-out infinite alternate; text-shadow:0 0 6px rgba(255,215,0,.65),0 0 14px rgba(255,215,0,.35);}',
@@ -177,14 +177,14 @@ function starGlow(star){
     return '0 0 18px rgba(251,191,36,.25)';
   }
 
-  var TIER_ORDER = { R:0, SR:1, SSR:2, UR:3, LR:4, SLR:5 };
+  const TIER_ORDER = { R:0, SR:1, SSR:2, UR:3, LR:4, SLR:5 };
 
   // ==== v7: 職業對應命名（生成=N名 / 升階換名） + UR以上才改外框（SLR 使用外部 CSSv2 彩虹流動） ====
   // ※ 職業來源：player.job（warrior/mage/archer/thief），你的專案已 window.jobs = jobs
-  var TIER_TEXT_COLOR = { N:"#9aa0a6", R:"#4caf50", SR:"#2196f3", SSR:"#9c27b0", UR:"#ff9800", LR:"#ff5722", SLR:"#ffd700" };
-  var TIER_BORDER_CLASS = { UR:"border-ur", LR:"border-lr", SLR:"border-slr-rainbow" }; // 內建：UR/LR光暈；SLR霓虹流動外框(僅外框)
+  const TIER_TEXT_COLOR = { N:"#9aa0a6", R:"#4caf50", SR:"#2196f3", SSR:"#9c27b0", UR:"#ff9800", LR:"#ff5722", SLR:"#ffd700" };
+  const TIER_BORDER_CLASS = { UR:"border-ur", LR:"border-lr", SLR:"border-slr-rainbow" }; // 內建：UR/LR光暈；SLR霓虹流動外框(僅外框)
 
-  var EQUIP_NAME_TABLE = {
+  const EQUIP_NAME_TABLE = {
   warrior: {
     hat: { N:'制式頭盔', R:'鋼盔', SR:'戰衛鋼盔', SSR:'王衛戰盔', UR:'誓約戰盔', LR:'古戰王盔', SLR:'終局王冠盔' },
     suit: { N:'制式戰甲', R:'鋼甲', SR:'戰衛重鎧', SSR:'王衛戰鎧', UR:'誓約戰鎧', LR:'古戰聖鎧', SLR:'終局戰皇鎧' },
@@ -327,17 +327,17 @@ function starGlow(star){
   set('thief','gem2',       { N:'幽影寶玉Ⅱ', R:'幽影寶玉Ⅱ·精鍛', SR:'幽影寶玉Ⅱ·影紋', SSR:'幽影寶玉Ⅱ·王印', UR:'幽影寶玉Ⅱ·夜行', LR:'幽影寶玉Ⅱ·終焉', SLR:'幽影寶玉Ⅱ·至高' });
   set('thief','gem3',       { N:'幽影寶玉Ⅲ', R:'幽影寶玉Ⅲ·精鍛', SR:'幽影寶玉Ⅲ·影紋', SSR:'幽影寶玉Ⅲ·王印', UR:'幽影寶玉Ⅲ·夜行', LR:'幽影寶玉Ⅲ·終焉', SLR:'幽影寶玉Ⅲ·至高' });
   set('thief','gem4',       { N:'幽影寶玉Ⅳ', R:'幽影寶玉Ⅳ·精鍛', SR:'幽影寶玉Ⅳ·影紋', SSR:'幽影寶玉Ⅳ·王印', UR:'幽影寶玉Ⅳ·夜行', LR:'幽影寶玉Ⅳ·終焉', SLR:'幽影寶玉Ⅳ·至高' });
-})(); 
+})();
 
-  var __lastSlrUpgrade = { type:null, at:0 };
+  const __lastSlrUpgrade = { type:null, at:0 };
 
   function equipNameByTier(type, tier){
-    var job = (window.player && window.player.job) ? window.player.job : 'warrior';
+    let job = (window.player && window.player.job) ? window.player.job : 'warrior';
     // 進階職業：向上追溯 parent，直到一轉（warrior/mage/archer/thief）
-    var jobs = window.jobs || {};
-    var guard = 0;
+    const jobs = window.jobs || {};
+    let guard = 0;
     while (jobs[job] && jobs[job].parent && guard++ < 20) job = jobs[job].parent;
-    var t = EQUIP_NAME_TABLE[job] && EQUIP_NAME_TABLE[job][type];
+    const t = EQUIP_NAME_TABLE[job] && EQUIP_NAME_TABLE[job][type];
     if (t && t[tier]) return t[tier];
     return getTypeName(type);
   }
@@ -350,7 +350,7 @@ function starGlow(star){
     dom.classList.remove('slr-activate');
     void dom.offsetWidth; // restart animation
     dom.classList.add('slr-activate');
-    window.setTimeout(function(){ dom.classList.remove('slr-activate'); }, 650);
+    window.setTimeout(() =>{ dom.classList.remove('slr-activate'); }, 650);
   }
   window.triggerSlrActivate = triggerSlrActivate;
 
@@ -370,18 +370,18 @@ function starGlow(star){
   window.applyTierStyle = applyTierVisual;
   function tierMax(lines){
     if (!lines || !lines.length) return 'R';
-    var best='R', i; for(i=0;i<lines.length;i++){ var t=lines[i]&&lines[i].tier; if(t && (TIER_ORDER[t]||0)>(TIER_ORDER[best]||0)) best=t; }
+    let best='R', i; for(i=0;i<lines.length;i++){ const t=lines[i]&&lines[i].tier; if(t && (TIER_ORDER[t]||0)>(TIER_ORDER[best]||0)) best=t; }
     return best;
   }
 // === 件數與狀態工具 ===
 function countPiecesAtOrAbove(st, tier){
-  var need = (TIER_ORDER && TIER_ORDER[tier] != null) ? TIER_ORDER[tier] : 0;
-  var types = resolveSetTypes(st);
-  var c = 0;
-  for (var i=0;i<types.length;i++){
-    var n = st.equips[types[i]];
+  const need = (TIER_ORDER && TIER_ORDER[tier] != null) ? TIER_ORDER[tier] : 0;
+  const types = resolveSetTypes(st);
+  let c = 0;
+  for (let i=0;i<types.length;i++){
+    const n = st.equips[types[i]];
     if (!n || n.locked) continue;
-    var cur = (TIER_ORDER && TIER_ORDER[n.tier] != null) ? TIER_ORDER[n.tier] : 0;
+    const cur = (TIER_ORDER && TIER_ORDER[n.tier] != null) ? TIER_ORDER[n.tier] : 0;
     if (cur >= need) c++;
   }
   return c;
@@ -391,20 +391,20 @@ function hasAnyAtOrAbove(st, tier){ return countPiecesAtOrAbove(st, tier) > 0; }
 // === 效果疊加 ===
 function addEff(sum, eff){
   sum = sum || {str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0,ignoreDefPct:0,totalDamage:0,skillDamage:0};
-  for (var k in eff) if (eff.hasOwnProperty(k)) sum[k] = (Number(sum[k])||0) + (Number(eff[k])||0);
+  for (const k in eff) if (eff.hasOwnProperty(k)) sum[k] = (Number(sum[k])||0) + (Number(eff[k])||0);
   return sum;
 }
 
 // === 最高階 ===
 function bestTierFromState(st){
-  var tiers=['R','SR','SSR','UR','LR','SLR'], bestIdx = 0;
+  let tiers=['R','SR','SSR','UR','LR','SLR'], bestIdx = 0;
   if (!st || !st.equips) return 'R';
-  for (var k in st.equips){
+  for (const k in st.equips){
     if (!st.equips.hasOwnProperty(k)) continue;
-    var n = st.equips[k];
+    const n = st.equips[k];
     if (!n || n.locked) continue; // 只看已解鎖/已擁有的裝備，避免未解鎖高階裝備提前啟用規則
-    var t = String(n.tier || 'R');
-    var idx = tiers.indexOf(t);
+    const t = String(n.tier || 'R');
+    const idx = tiers.indexOf(t);
     if (idx > bestIdx) bestIdx = idx;
   }
   return tiers[bestIdx];
@@ -414,16 +414,16 @@ function bestTierFromState(st){
 // === 合併要用的規則行（依最高階掛 SSR_BASE / LR_EXTRA / SLR_EXTRA） ===
 function getMergedSetRows(bestTier){
   if (['SSR','UR','LR','SLR'].indexOf(bestTier) === -1) return [];
-  var order = ['SSR_BASE'];
+  const order = ['SSR_BASE'];
   if (bestTier === 'LR' || bestTier === 'SLR') order.push('LR_EXTRA');
   if (bestTier === 'SLR') order.push('SLR_EXTRA');
 
-  var out = [];
-  for (var i=0;i<order.length;i++){
-    var arr = SET_RULES[order[i]] || [];
-    for (var j=0;j<arr.length;j++) out.push(arr[j]);
+  const out = [];
+  for (let i=0;i<order.length;i++){
+    const arr = SET_RULES[order[i]] || [];
+    for (let j=0;j<arr.length;j++) out.push(arr[j]);
   }
-  out.sort(function(a,b){ return a.pieces - b.pieces; });
+  out.sort((a,b) =>{ return a.pieces - b.pieces; });
   return out;
 }
 
@@ -431,7 +431,7 @@ function getMergedSetRows(bestTier){
 
 
   // ==== 基底（10 部位）====
-  var DEF_BASE = {
+  const DEF_BASE = {
     // 防具
     hat:{str:10,dex:10,int:10,luk:10,atk:10,def:30,hp:200,mp:20},
     suit:{str:12,dex:12,int:12,luk:12,atk:6,def:30,hp:180,mp:20},
@@ -472,14 +472,14 @@ function getMergedSetRows(bestTier){
     gem4:{str:2,dex:2,int:2,luk:2,atk:2,def:0,hp:20,mp:20}
   };
 
-  var DEF_SLOTS = {
+  const DEF_SLOTS = {
     // 防具
     hat:12, suit:12, glove:8, cape:7, shoes:8, shoulder:3,
 
     // 武器類
     weapon:9,
-    subweapon:10, 
-    energy:6,    
+    subweapon:10,
+    energy:6,
 
     // 飾品類
     eye:6, face:4, earring:3, belt:7, ornament2:5, necklace2:4, ornament:6,
@@ -498,7 +498,7 @@ function getMergedSetRows(bestTier){
 
 
   // ==== 部位定義（集中管理：新增裝備只要在 DEF_BASE/DEF_SLOTS/DEF_NAME 追加即可）====
-  var DEF_NAME = {
+  const DEF_NAME = {
     // 防具
     hat:'帽子', suit:'套服', glove:'手套', cape:'披風', shoes:'鞋子', shoulder:'肩膀',
 
@@ -522,7 +522,7 @@ function getMergedSetRows(bestTier){
 
 
   // 想要固定顯示順序就放這裡；新增部位若不在此陣列，會自動排到最後
-  var DEF_ORDER = [
+  const DEF_ORDER = [
     // 武器類
     'weapon','subweapon','energy',
     // 防具類
@@ -542,13 +542,13 @@ function getMergedSetRows(bestTier){
 
   function getEquipTypes(){
     // 以 DEF_BASE 的 key 當「目前系統所有部位」來源 → UI/存檔/計算都走同一份
-    var keys = [];
-    for (var k in DEF_BASE) { if (DEF_BASE.hasOwnProperty(k)) keys.push(k); }
+    const keys = [];
+    for (const k in DEF_BASE) { if (DEF_BASE.hasOwnProperty(k)) keys.push(k); }
 
     // 依 DEF_ORDER 排序；不在 DEF_ORDER 的新部位自動排到最後（依字母）
-    keys.sort(function(a,b){
-      var ia = DEF_ORDER.indexOf(a);
-      var ib = DEF_ORDER.indexOf(b);
+    keys.sort((a,b) =>{
+      let ia = DEF_ORDER.indexOf(a);
+      let ib = DEF_ORDER.indexOf(b);
       if (ia === -1) ia = 9999;
       if (ib === -1) ib = 9999;
       if (ia !== ib) return ia - ib;
@@ -560,12 +560,12 @@ function getMergedSetRows(bestTier){
   function ensurePotentialBonus(){
     if (global.PotentialBonus) return global.PotentialBonus;
 
-    var bonusData = {};
+    const bonusData = {};
     function calc(key){
-      var sum = 0;
-      for (var k in bonusData){
+      let sum = 0;
+      for (const k in bonusData){
         if (!bonusData.hasOwnProperty(k)) continue;
-        var v = bonusData[k];
+        const v = bonusData[k];
         if (v && typeof v === 'object' && v[key] !== undefined){
           sum += Number(v[key]) || 0;
         }
@@ -573,8 +573,8 @@ function getMergedSetRows(bestTier){
       return sum;
     }
 
-    var api = { bonusData: bonusData };
-    var KEYS = [
+    const api = { bonusData };
+    const KEYS = [
       'hp','mp','atk','def','str','agi','int','luk',
       'totalDamage','skillDamage','spellDamage',
       'normalDamage','eliteDamage','bossDamage',
@@ -584,9 +584,9 @@ function getMergedSetRows(bestTier){
       'preemptiveChance','preemptivePerAttackMax',
       'expBonus','dropBonus','goldBonus'
     ];
-    for (var i=0;i<KEYS.length;i++){
+    for (let i=0;i<KEYS.length;i++){
       (function(key){
-        Object.defineProperty(api, key, { enumerable:true, get:function(){ return calc(key); } });
+        Object.defineProperty(api, key, { enumerable:true, get(){ return calc(key); } });
       })(KEYS[i]);
     }
 
@@ -598,7 +598,7 @@ function getMergedSetRows(bestTier){
 
   // ==== 解放需求（集中管理） ====
   // 你只需要改這裡的數字即可調整各部位「解放石」需求
-  var UNLOCK_COST = {
+  const UNLOCK_COST = {
     default: 1,
     subweapon: 10,
     badge: 10,
@@ -626,7 +626,7 @@ function getMergedSetRows(bestTier){
 
 function freshEquipNode(type) {
   return {
-    type: type,
+    type,
     tier: 'N',
     name: equipNameByTier(type, 'N'),
     locked: true,
@@ -644,14 +644,14 @@ function freshEquipNode(type) {
   };
 }
 function normEquipNode(raw, type){
-  var d = freshEquipNode(type); 
+  const d = freshEquipNode(type);
   raw = raw || {};
 
   d.tier = String(raw.tier || 'N');
   d.locked = (typeof raw.locked === 'boolean') ? raw.locked : d.locked;
   // 名稱：若存檔沒有，就依「職業 + 階級」補上
   d.name   = String(raw.name || equipNameByTier(type, d.tier) || d.name);
-    var defSlots = toInt(DEF_SLOTS[type] || 0);
+    const defSlots = toInt(DEF_SLOTS[type] || 0);
   // slots：以 DEF_SLOTS 為唯一權威（自動化）
   // - 若 DEF_SLOTS=0 → 強制不可卷（即使舊存檔有 slotsMax 也會歸零）
   // - 若舊存檔 slotsMax 未設定/為 0 → 自動補成 DEF_SLOTS
@@ -671,8 +671,8 @@ function normEquipNode(raw, type){
   // base 永遠用預設
   d.base = clone(DEF_BASE[type] || {});
 
-  var e = clone(raw.enhance || {});
-  ['str','dex','int','luk','atk','def','hp','mp'].forEach(function(k){
+  const e = clone(raw.enhance || {});
+  ['str','dex','int','luk','atk','def','hp','mp'].forEach((k) =>{
     d.enhance[k] = isNum(e[k]) ? e[k] : 0;
   });
 
@@ -699,8 +699,8 @@ function normEquipNode(raw, type){
 }
 
 // ==== 使用 SaveHub 的中央存檔 ====
-  var Storage = (function () {
-    var NS = 'equip_system_v4_1'; // SaveHub 命名空間
+  const Storage = (function () {
+    const NS = 'equip_system_v4_1'; // SaveHub 命名空間
 
     // --- 正規化工具（沿用舊邏輯） ---
     function normalizeSummary(x) {
@@ -726,14 +726,14 @@ function normalizePotential(p) {
 
     function normalizeState(s) {
       s = s && typeof s === 'object' ? clone(s) : {};
-      var out = {
+      const out = {
         _ver: 41,
         equips: {},
         globalPotential: normalizePotential(s.globalPotential)
       };
-      var ALL = getEquipTypes();
-      for (var i = 0; i < ALL.length; i++) {
-        var t = ALL[i];
+      const ALL = getEquipTypes();
+      for (let i = 0; i < ALL.length; i++) {
+        const t = ALL[i];
         out.equips[t] = normEquipNode(s.equips && s.equips[t], t);
       }
       return out;
@@ -743,10 +743,10 @@ function normalizePotential(p) {
     function repairState(out){
       out = out && typeof out === 'object' ? out : emptyState();
       out.equips = out.equips && typeof out.equips === 'object' ? out.equips : {};
-      var ALL = getEquipTypes();
+      const ALL = getEquipTypes();
 
-      for (var i=0;i<ALL.length;i++){
-        var t = ALL[i];
+      for (let i=0;i<ALL.length;i++){
+        const t = ALL[i];
         // 缺部位：補上
         if (!out.equips[t]) out.equips[t] = freshEquipNode(t);
 
@@ -771,12 +771,12 @@ function normalizePotential(p) {
       }
 
       // 純讀，不傳 defaultObj → 不會自動寫檔
-      var raw = SaveHub.get(NS);
+      let raw = SaveHub.get(NS);
       if (!raw) {
         // 沒有節點時，用 getOrInit 建立初始節點並寫入 SaveHub
         raw = SaveHub.getOrInit(NS, emptyState());
       }
-      var st = normalizeState(raw);
+      let st = normalizeState(raw);
       st = repairState(st);
       return st;
     }
@@ -788,13 +788,13 @@ function normalizePotential(p) {
         return null;
       }
 
-      var cur = read();
+      const cur = read();
 
       // 1) 合併外部傳入的 equips（先正規化，再移除 base/_baseVer）
       if (next && next.equips) {
-        for (var k in next.equips) {
+        for (const k in next.equips) {
           if (!next.equips.hasOwnProperty(k)) continue;
-          var n = normEquipNode(next.equips[k], k);
+          const n = normEquipNode(next.equips[k], k);
           if (n && typeof n === 'object') {
             delete n.base;
             delete n._baseVer;
@@ -804,9 +804,9 @@ function normalizePotential(p) {
       }
 
       // 2) 再保險：掃一次 cur，清掉任何殘留的 base / _baseVer
-      for (var t in cur.equips) {
+      for (const t in cur.equips) {
         if (!cur.equips.hasOwnProperty(t)) continue;
-        var eq = cur.equips[t];
+        const eq = cur.equips[t];
         if (eq && typeof eq === 'object') {
           if ('base' in eq) delete eq.base;
           if ('_baseVer' in eq) delete eq._baseVer;
@@ -831,10 +831,10 @@ function normalizePotential(p) {
       return cur;
     }
 
-    return { read: read, write: write };
+    return { read, write };
   })();
   // ==== 物品 ====
-  var ITEM={
+  const ITEM={
     解放石:'裝備解放石',
     衝星石:'衝星石',
     恢復卷:'恢復卷軸',
@@ -855,60 +855,60 @@ function normalizePotential(p) {
     武30:'武器強化卷30%',
     武10:'武器強化卷10%',
     武1:'武器強化卷1%',
-    混60標準:'混沌卷軸60%', 
-    混60高級:'高級混沌卷軸60%', 
+    混60標準:'混沌卷軸60%',
+    混60高級:'高級混沌卷軸60%',
     混選:'混沌選擇券',
-    潛能方塊:'潛能方塊', 
-    上限卷:'卷軸上限提升', 
+    潛能方塊:'潛能方塊',
+    上限卷:'卷軸上限提升',
     高級潛能方塊:'高級潛能方塊',
     結合方塊:'結合方塊',
     階級石:'裝備階級石',
     星火:'星火',
     高級星火:'高級星火',
     永恆星火:'永恆星火',
-  
-  
+
+
   };
 
   // ==== 背包橋接 ====
   function invCount(name){ try{ if (typeof global.getItemQuantity==='function') return global.getItemQuantity(name)|0; return (global.inventory&&global.inventory[name])|0; }catch(_){return 0;} }
   function invUse(name,n){ n=n||1; if(invCount(name)<n) return false; try{ if(typeof global.removeItem==='function'){ global.removeItem(name,n); return true; } global.inventory=global.inventory||{}; global.inventory[name]=(global.inventory[name]|0)-n; if(global.inventory[name]<=0) delete global.inventory[name]; return true; }catch(_){ return false; } }
-  
-  
+
+
 
 function evolveEquipTier(type){
-  var st=Storage.read(), n=st.equips[type];
+  const st=Storage.read(), n=st.equips[type];
   if(!n) return {ok:false,msg:'裝備不存在'};
   if(n.locked) return {ok:false,msg:'裝備未解鎖'};
 
   // --- Tier 設定（含 N） ---
-  var tierOrder=['N','R','SR','SSR','UR','LR','SLR'];
+  const tierOrder=['N','R','SR','SSR','UR','LR','SLR'];
   function tierLevel(t){
     t=String(t||'N');
-    var i=tierOrder.indexOf(t);
+    const i=tierOrder.indexOf(t);
     return (i<0)?0:i; // N=0 ... SLR=6
   }
-  var curLvl=tierLevel(n.tier);
+  const curLvl=tierLevel(n.tier);
   if(curLvl>=tierOrder.length-1) return {ok:false,msg:'已達最高階級或資料異常'};
 
-  var nextLvl=curLvl+1;
-  var nextTier=tierOrder[nextLvl];
+  const nextLvl=curLvl+1;
+  const nextTier=tierOrder[nextLvl];
 
   // --- 成本（以「目標階級」為索引） ---
   // N->R->SR->SSR->UR->LR->SLR
-  var costTable=[0,2,5,10,20,40,100];
-  var cost=costTable[nextLvl]||0;
+  const costTable=[0,2,5,10,20,40,100];
+  const cost=costTable[nextLvl]||0;
   if(!invUse(ITEM.階級石,cost)) return {ok:false,msg:'缺少 '+ITEM.階級石+' ×'+cost};
 
   // --- 史詩命名（升階會變名） ---
   function hashStr(s){
-    s=String(s||''); var h=2166136261;
-    for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h = (h*16777619)>>>0; }
+    s=String(s||''); let h=2166136261;
+    for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h = (h*16777619)>>>0; }
     return h>>>0;
   }
   function pick(arr, seed, salt){
     if(!arr||!arr.length) return '';
-    var x=(seed ^ hashStr(String(salt||'')))>>>0;
+    const x=(seed ^ hashStr(String(salt||'')))>>>0;
     return arr[x % arr.length];
   }
   function ensureSeed(node){
@@ -919,9 +919,9 @@ function evolveEquipTier(type){
     return node._nameSeed>>>0;
   }
   function genEpicName(tier, seed){
-    var base=getTypeName(type);
+    const base=getTypeName(type);
     // Tier 風格：越高越「史詩」
-    var PFX={
+    const PFX={
       N:  ['粗製','生鐵','舊制','破曉前','訓練用','野戰','工匠試作'],
       R:  ['精鍛','銀紋','獵人','疾風','熾火','夜行','守望者'],
       SR: ['王家','蒼雷','焰牙','霜誓','聖徽','影刃','星紋'],
@@ -930,7 +930,7 @@ function evolveEquipTier(type){
       LR: ['創世','終焉','萬象','天命','永恆','諸神黃昏','寰宇'],
       SLR:['至高','無限','超越','太古','虛空王座','時空裂隙','群星支配者']
     };
-    var MID={
+    const MID={
       N:  ['短刃','護符','布甲','皮革','指環','扣環','銘牌'],
       R:  ['刃','護具','戰衣','護手','披風','戰靴','徽記'],
       SR: ['誓約','咒印','聖痕','戰紋','龍骨','星核','審判印'],
@@ -939,7 +939,7 @@ function evolveEquipTier(type){
       LR: ['創世律','終焉印','萬象核','天命契','永恆痕','寰宇核','神代律'],
       SLR:['無限律','超越印','太古核','虛空契','時空律','群星核','王座律']
     };
-    var SFX={
+    const SFX={
       N:  ['（試作）','（舊型）','（簡裝）','（磨損）','（未精煉）'],
       R:  ['·疾襲','·守護','·斬鐵','·凝霜','·灼焰','·夜巡'],
       SR: ['·破魔','·誓衛','·裁決','·流星','·龍息','·幽影'],
@@ -948,24 +948,24 @@ function evolveEquipTier(type){
       LR: ['·創世序曲','·終焉宣告','·萬象歸一','·天命裁決','·永恆聖約'],
       SLR:['·無限輪迴','·超越法則','·太古神裁','·虛空王權','·群星終章']
     };
-    var p=pick(PFX[tier]||PFX.N, seed, 'pfx:'+tier);
-    var m=pick(MID[tier]||MID.N, seed, 'mid:'+tier);
-    var s=pick(SFX[tier]||SFX.N, seed, 'sfx:'+tier);
+    const p=pick(PFX[tier]||PFX.N, seed, 'pfx:'+tier);
+    const m=pick(MID[tier]||MID.N, seed, 'mid:'+tier);
+    const s=pick(SFX[tier]||SFX.N, seed, 'sfx:'+tier);
     // 例：『創世｜寰宇核』＋『武器』＋『·創世序曲』
     // 讓名稱看起來像「套裝名 + 部位名」
-    var pack = p + '「' + m + '」';
+    const pack = p + '「' + m + '」';
     return pack + ' ' + base + ' ' + s;
   }
 
-  var oldName = n.name;
-  var seed = ensureSeed(n);
+  const oldName = n.name;
+  const seed = ensureSeed(n);
 
   // ==== 階級加成（目標總量法，避免累加誤差） ====
   // lvl：N=0, R=1, SR=2, SSR=3, UR=4, LR=5, SLR=6
-  var prevApplied = tierLevel(n.tier);
+  const prevApplied = tierLevel(n.tier);
 
   // 目標總量
-  var target = { str:0, dex:0, int:0, luk:0, atk:0, def:0 };
+  const target = { str:0, dex:0, int:0, luk:0, atk:0, def:0 };
   if (type === 'weapon'){
     target.atk = 8*nextLvl;
     target.def = 2*nextLvl;
@@ -981,7 +981,7 @@ function evolveEquipTier(type){
   }
 
   // 已套總量
-  var had = { str:0, dex:0, int:0, luk:0, atk:0, def:0 };
+  const had = { str:0, dex:0, int:0, luk:0, atk:0, def:0 };
   if (type === 'weapon'){
     had.atk = 8*prevApplied;
     had.def = 2*prevApplied;
@@ -997,7 +997,7 @@ function evolveEquipTier(type){
   }
 
   // 增量
-  var delta = {
+  const delta = {
     str: (target.str - had.str),
     dex: (target.dex - had.dex),
     int: (target.int - had.int),
@@ -1023,10 +1023,10 @@ function evolveEquipTier(type){
   n.name = equipNameByTier(type, nextTier);
   if (nextTier === 'SLR') { __lastSlrUpgrade.type = type; __lastSlrUpgrade.at = Date.now(); }
 
-  var o={}; o[type]=n; Storage.write({equips:o}); syncAndPing();
+  const o={}; o[type]=n; Storage.write({equips:o}); syncAndPing();
 
-  var msgParts = ['進化成功：'+oldName+'（'+(n.tier||nextTier)+'） → '+n.name+'（'+nextTier+'）'];
-  var add = function(k,v){ if(v){ msgParts.push(k+'+'+v); } };
+  const msgParts = ['進化成功：'+oldName+'（'+(n.tier||nextTier)+'） → '+n.name+'（'+nextTier+'）'];
+  const add = function(k,v){ if(v){ msgParts.push(k+'+'+v); } };
   if (delta.atk) add('ATK', delta.atk);
   if (delta.def) add('DEF', delta.def);
   if (delta.str) add('STR', delta.str);
@@ -1043,7 +1043,7 @@ function evolveEquipTier(type){
 // - 規則：每個門檻只取最高等級（SLR > UR > SSR > N）
 // - 不同門檻可同時生效（累加）
 // =========================
-var SET_RULES_V2 = {
+const SET_RULES_V2 = {
   N: [
     { pieces:2,  eff:{ hp:500, mp:30 } },
     { pieces:3,  eff:{ atk:5, def:5 } },
@@ -1087,11 +1087,11 @@ var SET_RULES_V2 = {
 // - startPieces: 從幾件開始計 overflow（10 表示 11 件起每多 1 件累積）
 // - grade: 只有當 bestTierFromState(st) == grade 才啟用（避免低階套裝吃到）
 // - perPiece: 每超過 1 件增加多少（平坦）
-var SET_OVERFLOW_RULES = {
+const SET_OVERFLOW_RULES = {
   enabled: true,
   startPieces: 10,
-  grade: 'SLR', 
-  
+  grade: 'SLR',
+
   perPiece: { allStat:50, atk:20, def:20, hp:500, mp:50 }
 };
 
@@ -1106,12 +1106,12 @@ function setGradeFromTier(tier){
 }
 
 function countSetPiecesByGrade(st, setTypes){
-  var out = { N:0, SSR:0, UR:0, SLR:0, total:0 };
-  for (var i=0;i<setTypes.length;i++){
-    var n = st.equips[setTypes[i]];
+  const out = { N:0, SSR:0, UR:0, SLR:0, total:0 };
+  for (let i=0;i<setTypes.length;i++){
+    const n = st.equips[setTypes[i]];
     if (!n || n.locked) continue;
     out.total++;
-    var g = setGradeFromTier(n.tier);
+    const g = setGradeFromTier(n.tier);
     out[g] = (out[g]||0) + 1;
   }
   return out;
@@ -1126,52 +1126,52 @@ function setCountAtOrAbove(counts, grade){
 }
 
 function getThresholdsFromRules(rules){
-  var m = {}, grades=['N','SSR','UR','SLR'];
-  for (var gi=0; gi<grades.length; gi++){
-    var arr = rules[grades[gi]] || [];
-    for (var i=0;i<arr.length;i++) m[arr[i].pieces|0] = 1;
+  const m = {}, grades=['N','SSR','UR','SLR'];
+  for (let gi=0; gi<grades.length; gi++){
+    const arr = rules[grades[gi]] || [];
+    for (let i=0;i<arr.length;i++) m[arr[i].pieces|0] = 1;
   }
-  var out = Object.keys(m).map(function(x){ return x|0; });
-  out.sort(function(a,b){ return a-b; });
+  const out = Object.keys(m).map((x) =>{ return x|0; });
+  out.sort((a,b) =>{ return a-b; });
   return out;
 }
 
 function findEffFor(rules, grade, pieces){
-  var arr = rules[grade] || [];
-  for (var i=0;i<arr.length;i++){
+  const arr = rules[grade] || [];
+  for (let i=0;i<arr.length;i++){
     if ((arr[i].pieces|0) === (pieces|0)) return arr[i].eff || null;
   }
   return null;
 }
 
 function mergeEffSum(sum, eff){
-  for (var k in eff) if (eff.hasOwnProperty(k)) sum[k] = (Number(sum[k])||0) + (Number(eff[k])||0);
+  for (const k in eff) if (eff.hasOwnProperty(k)) sum[k] = (Number(sum[k])||0) + (Number(eff[k])||0);
   return sum;
 }
 
 // 計算：每門檻只取最高等級（SLR>UR>SSR>N），不同門檻累加
 // 回傳：{ counts, applied:[{pieces,grade,eff}], sum }
 function computeSetBonusV2(st, setTypes){
-  var counts = countSetPiecesByGrade(st, setTypes);
-  var thresholds = getThresholdsFromRules(SET_RULES_V2);
-  var grades = ['SLR','UR','SSR','N'];
+  const counts = countSetPiecesByGrade(st, setTypes);
+  const thresholds = getThresholdsFromRules(SET_RULES_V2);
+  const grades = ['SLR','UR','SSR','N'];
 
-  var sum = {
+  const sum = {
     str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0,allStat:0,
     ignoreDefPct:0,totalDamage:0,bossDamage:0,normalMobDamage:0,critMultiplier:0
   };
-  var applied = [];
-  var overflowCount = 0;
-  var overflowEff = null;
+  const applied = [];
+  let overflowCount = 0;
+  const overflowEff = null;
 
-  for (var ti=0; ti<thresholds.length; ti++){
-    var p = thresholds[ti];
-    var chosen = null;
+  for (let ti=0; ti<thresholds.length; ti++){
+    const p = thresholds[ti];
+    let chosen = null;
 
-    for (var gi=0; gi<grades.length; gi++){
-      var g = grades[gi];
+    for (let gi=0; gi<grades.length; gi++){
+      const g = grades[gi];
       if (setCountAtOrAbove(counts, g) < p) continue;
-      var eff = findEffFor(SET_RULES_V2, g, p);
+      const eff = findEffFor(SET_RULES_V2, g, p);
       if (!eff) continue;
       chosen = { pieces:p, grade:g, eff:clone(eff) };
       break;
@@ -1186,14 +1186,14 @@ function computeSetBonusV2(st, setTypes){
   // ===== SLR overflow：超過 startPieces 後每多 1 件累積（可調表） =====
   try{
     if (SET_OVERFLOW_RULES && SET_OVERFLOW_RULES.enabled){
-      var sp = (SET_OVERFLOW_RULES.startPieces|0) || 10;
-      var overflow = Math.max(0, (counts.SLR|0) - sp);
-      var needGrade = String(SET_OVERFLOW_RULES.grade||'SLR');
-      var best = bestTierFromState(st);
+      const sp = (SET_OVERFLOW_RULES.startPieces|0) || 10;
+      const overflow = Math.max(0, (counts.SLR|0) - sp);
+      const needGrade = String(SET_OVERFLOW_RULES.grade||'SLR');
+      const best = bestTierFromState(st);
       if (overflow > 0 && best === needGrade){
         overflowCount = overflow;
-        var pp = SET_OVERFLOW_RULES.perPiece || {};
-        var overflowEff = {
+        const pp = SET_OVERFLOW_RULES.perPiece || {};
+        let overflowEff = {
           allStat: (pp.allStat|0) * overflow,
           atk: (pp.atk|0) * overflow,
           def: (pp.def|0) * overflow,
@@ -1208,19 +1208,19 @@ function computeSetBonusV2(st, setTypes){
   }catch(_){ }
 
 
-  return { counts:counts, applied:applied, sum:sum, overflow:overflowCount, overflowEff:overflowEff };
+  return { counts, applied, sum, overflow:overflowCount, overflowEff };
 }
 
 // ==== 能力計算與同步 ====
 
   function calcFinalStats(node){
-    var base;
+    let base;
     if (global.EquipStatsV2 && global.EquipStatsV2.calcEquipFinal) base = global.EquipStatsV2.calcEquipFinal(node);
     else base = { str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0, starAtkPctSum:0, atkFromStar:0, atkFlat:0 };
 
     // 星火：加在裝備最終平砍（不吃%）
     if (node && (node.flameFlat || node.flame)) {
-      var ff = node.flameFlat;
+      let ff = node.flameFlat;
       if (!ff && global.FlameCore && typeof global.FlameCore.linesToFlat === 'function') {
         ff = global.FlameCore.linesToFlat(node.flame);
         node.flameFlat = ff;
@@ -1241,21 +1241,21 @@ function computeSetBonusV2(st, setTypes){
     return base;
   }
 function computeEquipAggregate(){
-  var st = Storage.read();
-  var keys = resolveSetTypes(st);
+  const st = Storage.read();
+  const keys = resolveSetTypes(st);
 
   // 先把每件裝備 → 最終(基礎+卷軸+星力) 做平砍合計
-  var sum = {str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0};
-  for (var i=0;i<keys.length;i++){
-    var s = calcFinalStats(st.equips[keys[i]]);
+  const sum = {str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0};
+  for (let i=0;i<keys.length;i++){
+    const s = calcFinalStats(st.equips[keys[i]]);
     sum.str+=s.str; sum.dex+=s.dex; sum.int+=s.int; sum.luk+=s.luk;
     sum.atk+=s.atk; sum.def+=s.def; sum.hp+=s.hp; sum.mp+= (s.mp||0);
   }
   // 套裝（V2：每門檻只取最高等級）
-  var setDetail = computeSetBonusV2(st, keys);
-  var setS = setDetail.sum || {};
-  var all = (setS.allStat|0);
-  var equipSetFlat = {
+  const setDetail = computeSetBonusV2(st, keys);
+  const setS = setDetail.sum || {};
+  const all = (setS.allStat|0);
+  const equipSetFlat = {
     str:(setS.str|0)+all, dex:(setS.dex|0)+all, int:(setS.int|0)+all, luk:(setS.luk|0)+all,
     atk:setS.atk|0, def:setS.def|0, hp:setS.hp|0, mp:setS.mp|0,
     ignoreDefPct:+setS.ignoreDefPct||0, totalDamage:+setS.totalDamage||0,
@@ -1264,14 +1264,14 @@ function computeEquipAggregate(){
   };
 
   // 讀取全域潛能（R→LR→SLR 的合計），注意：DEX 潛能要「當作 AGI 匯入」
-  var gp = (st.globalPotential && st.globalPotential.summary) ? st.globalPotential.summary : {
+  const gp = (st.globalPotential && st.globalPotential.summary) ? st.globalPotential.summary : {
     str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0,
     strPct:0,dexPct:0,intPct:0,lukPct:0,atkPct:0,defPct:0,hpPct:0,mpPct:0,allStatPct:0
   };
 
   // === 只把潛能加在「裝備合計 sum」上；不影響套裝 ===
   // 這裡做 DEX→AGI 的映射：gp.dex / gp.dexPct 變成 agi / agiPct
-  var gpMapped = {
+  const gpMapped = {
     str: gp.str|0,  int: gp.int|0,  luk: gp.luk|0,
     atk: gp.atk|0,  def: gp.def|0,  hp: gp.hp|0, mp: gp.mp|0,
     strPct:+gp.strPct||0, intPct:+gp.intPct||0, lukPct:+gp.lukPct||0,
@@ -1281,16 +1281,16 @@ function computeEquipAggregate(){
   };
   // 小工具：把 % 與平砍套用到某個 base 值上
   function apStat(baseVal, pct1, pctAll, flat){
-    var m = 1 + (Number(pct1)||0)/100 + (Number(pctAll)||0)/100;
+    const m = 1 + (Number(pct1)||0)/100 + (Number(pctAll)||0)/100;
     return Math.floor((baseVal|0) * m) + (flat|0);
   }
   function apOnlyPct(baseVal, pct){
-    var m = 1 + (Number(pct)||0)/100;
+    const m = 1 + (Number(pct)||0)/100;
     return Math.floor((baseVal|0) * m);
   }
 
   // 潛能套用到「裝備合計」：DEX 的潛能當 AGI 吃
-  var afterPotential = {
+  const afterPotential = {
     str: apStat(sum.str, gpMapped.strPct, gpMapped.allStatPct, gpMapped.str),
     agi: apStat(sum.dex, gpMapped.agiPct, gpMapped.allStatPct, gpMapped.agi), // 注意：用 sum.dex 當基底
     int: apStat(sum.int, gpMapped.intPct, gpMapped.allStatPct, gpMapped.int),
@@ -1301,7 +1301,7 @@ function computeEquipAggregate(){
     mp : apOnlyPct(sum.mp,  gpMapped.mpPct)  + (gpMapped.mp|0)
   };
   // 潛能換算成「實際加成量」（讓外部用 PotentialBonus 加回去）
-  var potBonus = {
+  const potBonus = {
     str: afterPotential.str - (sum.str|0),
     agi: afterPotential.agi - (sum.dex|0), // dex 潛能當 agi
     int: afterPotential.int - (sum.int|0),
@@ -1314,7 +1314,7 @@ function computeEquipAggregate(){
 
   // 同步到全域 PotentialBonus（避免潛能再被算進 coreBonus）
   try{
-    var PB = ensurePotentialBonus();
+    const PB = ensurePotentialBonus();
     PB.bonusData.globalPotential = {
       hp: potBonus.hp|0,
       mp: potBonus.mp|0,
@@ -1328,7 +1328,7 @@ function computeEquipAggregate(){
   }catch(_){}
 
   // 最終面板值（不含潛能）＝ 裝備合計 ＋ 套裝平砍；套裝的 % 類保留獨立欄位
-  var final = {
+  const final = {
     str: (sum.str|0) + (equipSetFlat.str|0),
     agi: (sum.dex|0) + (equipSetFlat.dex|0),
     int: (sum.int|0) + (equipSetFlat.int|0),
@@ -1346,7 +1346,7 @@ function computeEquipAggregate(){
   // 寫回 coreBonus（只提供兩塊：equip=已含潛能；equipSet=套裝。不要再寫 potential/final 以免重複）
   try{
     if (global.player && global.player.coreBonus && global.player.coreBonus.bonusData){
-      var bd = global.player.coreBonus.bonusData;
+      const bd = global.player.coreBonus.bonusData;
 
       // 裝備（已含潛能；敏捷用 agi）
       bd.equip = {
@@ -1379,14 +1379,14 @@ function computeEquipAggregate(){
   }catch(_){}
 
   // 回傳：sum=原裝備合計(未套潛能)、set=套裝、gp=潛能、final=面板值
-  return { sum:sum, set:setDetail, unlocked:(setDetail && setDetail.counts ? (setDetail.counts.total|0) : 0), gp:gp, potBonus:potBonus, afterPotential:afterPotential, equipSetFlat:equipSetFlat, final:final };
+  return { sum, set:setDetail, unlocked:(setDetail && setDetail.counts ? (setDetail.counts.total|0) : 0), gp, potBonus, afterPotential, equipSetFlat, final };
 }
   function syncAndPing(){
     computeEquipAggregate();
 
     function fire(name){
       try{
-        var evt;
+        let evt;
         try{ evt = new CustomEvent(name,{ detail:{ source:'equip' } }); }
         catch(__){
           try{ evt = document.createEvent('CustomEvent'); evt.initCustomEvent(name,true,true,{ source:'equip' }); }
@@ -1404,11 +1404,11 @@ function computeEquipAggregate(){
 
   // ==== 操作 ====
   function unlockEquip(type){
-    var st=Storage.read(), n=st.equips[type]; if(!n) return {ok:false,msg:'裝備不存在'};
+    const st=Storage.read(), n=st.equips[type]; if(!n) return {ok:false,msg:'裝備不存在'};
     if(!n.locked) return {ok:false,msg:'已解鎖'};
-    var need=unlockCostByType(type); if(!invUse(ITEM.解放石,need)) return {ok:false,msg:'缺少 裝備解放石 ×'+need};
+    const need=unlockCostByType(type); if(!invUse(ITEM.解放石,need)) return {ok:false,msg:'缺少 裝備解放石 ×'+need};
     n.locked=false; if(isNum(n._pendingStar)){ n.star=n._pendingStar|0; delete n._pendingStar; }
-    var o={}; o[type]=n; Storage.write({equips:o}); syncAndPing();
+    const o={}; o[type]=n; Storage.write({equips:o}); syncAndPing();
     return {ok:true,msg:'已解鎖 '+n.name + (n.star? ('（從 '+n.star+'★ 開始）') : '') };
   }
   function canUseScroll(type){
@@ -1417,83 +1417,83 @@ function computeEquipAggregate(){
   }
 function updateBestChaosEff(node, eff){
     if (!eff) return node._bestChaosEff||null;
-    var keys=['str','dex','int','luk','atk','hp','def'], best=clone(node._bestChaosEff||{}), i,k,v;
-    for(i=0;i<keys.length;i++){ k=keys[i]; v=Number(eff[k]||0); if(v>0){ var cur=Number(best[k]||0); if(v>cur) best[k]=v; } }
+    let keys=['str','dex','int','luk','atk','hp','def'], best=clone(node._bestChaosEff||{}), i,k,v;
+    for(i=0;i<keys.length;i++){ k=keys[i]; v=Number(eff[k]||0); if(v>0){ const cur=Number(best[k]||0); if(v>cur) best[k]=v; } }
     return best;
   }
 
   function useScroll(type, name){
     if (!global.ScrollForgeV2) return {ok:false,msg:'未載入 ScrollForgeV2'};
-    var st=Storage.read(), n=st.equips[type];
+    const st=Storage.read(), n=st.equips[type];
     if (!canUseScroll(type)) return {ok:false,msg:'此部位不可使用卷軸'};
-    var chk=ScrollForgeV2.canUse(n,name);
+    const chk=ScrollForgeV2.canUse(n,name);
     if(!chk.ok){
-      var msg = chk.reason==='not_found' ? '沒有這種卷軸' : chk.reason==='locked' ? '裝備未解鎖' : chk.reason==='wrong_type' ? '卷軸不符合裝備' : '已無卷軸次數';
-      return {ok:false,msg:msg};
+      const msg = chk.reason==='not_found' ? '沒有這種卷軸' : chk.reason==='locked' ? '裝備未解鎖' : chk.reason==='wrong_type' ? '卷軸不符合裝備' : '已無卷軸次數';
+      return {ok:false,msg};
     }
-    var isChaos=(name===ITEM.混60標準||name===ITEM.混60高級);
+    const isChaos=(name===ITEM.混60標準||name===ITEM.混60高級);
     if(!isChaos){
       if(!invUse(name,1)) return {ok:false,msg:'背包沒有：'+name};
-      var res=ScrollForgeV2.apply(n,name); var next=res.nextNode;
-      var o={}; o[type]=next; Storage.write({equips:o}); syncAndPing();
+      const res=ScrollForgeV2.apply(n,name); const next=res.nextNode;
+      const o={}; o[type]=next; Storage.write({equips:o}); syncAndPing();
       return {ok:true,success:res.success,msg:(res.success?'強化成功':'強化失敗')+'（成功率 '+res.rate+'%｜已用 '+next.slotsUsed+'/'+next.slotsMax+'）'};
     }
     if(!invUse(name,1)) return {ok:false,msg:'背包沒有：'+name};
-    var pv=ScrollForgeV2.chaosPreview(n,name);
+    const pv=ScrollForgeV2.chaosPreview(n,name);
     if(!pv.ok){ return {ok:false,msg:'混沌檢定失敗（狀態不符）'}; }
     if(!pv.success){
-      var nf=clone(n); nf.slotsUsed=(nf.slotsUsed|0)+1; var o1={}; o1[type]=nf; Storage.write({equips:o1}); syncAndPing();
+      const nf=clone(n); nf.slotsUsed=(nf.slotsUsed|0)+1; const o1={}; o1[type]=nf; Storage.write({equips:o1}); syncAndPing();
       return {ok:true,success:false,msg:name+' 失敗（卷軸次數 +1）｜已用 '+nf.slotsUsed+'/'+nf.slotsMax};
     }
-    var hasTicket=invCount(ITEM.混選)>0, doApply=true;
+    let hasTicket=invCount(ITEM.混選)>0, doApply=true;
     if(hasTicket){ try{ doApply=confirm('混沌成功！是否套用？\n\n結果：'+JSON.stringify(pv.effPreview)+'\n\n是：套用並扣 1 次\n否：不套用、不扣次（混沌選擇券消耗）'); }catch(_){ doApply=true; } invUse(ITEM.混選,1); }
-    var cm=ScrollForgeV2.chaosCommit(n,name,pv.effPreview,doApply); var next=cm.nextNode;
+    const cm=ScrollForgeV2.chaosCommit(n,name,pv.effPreview,doApply); const next=cm.nextNode;
     if(doApply){ next._lastChaosEff=pv.effPreview||null; next._bestChaosEff=updateBestChaosEff(next,pv.effPreview); }
-    var o2={}; o2[type]=next; Storage.write({equips:o2}); syncAndPing();
-    var tip=doApply?'混沌成功並套用（+1 次）':'混沌成功但未套用（不扣次）';
+    const o2={}; o2[type]=next; Storage.write({equips:o2}); syncAndPing();
+    const tip=doApply?'混沌成功並套用（+1 次）':'混沌成功但未套用（不扣次）';
     return {ok:true,success:true,msg:tip+'｜已用 '+next.slotsUsed+'/'+next.slotsMax};
   }
 
   function restoreFailed(type){
     if (!global.ScrollForgeV2) return {ok:false,msg:'未載入 ScrollForgeV2'};
-    var st=Storage.read(), n=st.equips[type];
+    const st=Storage.read(), n=st.equips[type];
     if (!canUseScroll(type)) return {ok:false,msg:'此部位不可使用卷軸（無法恢復）'};
     if (!invUse(ITEM.恢復卷,1)) return {ok:false,msg:'缺少 恢復卷軸 ×1'};
-    var r=ScrollForgeV2.recoverFailedOnce(n);
+    const r=ScrollForgeV2.recoverFailedOnce(n);
     if(!r.ok) return {ok:false,msg:(r.reason==='locked'?'裝備未解鎖':'沒有可恢復的失敗次數')};
-    var o={}; o[type]=r.nextNode; Storage.write({equips:o}); syncAndPing();
+    const o={}; o[type]=r.nextNode; Storage.write({equips:o}); syncAndPing();
     return {ok:true,msg:(r.success?'恢復成功（-1 失敗次數）':'恢復失敗（機率 50%）')};
   }
   function perfectReset(type){
     if (!global.ScrollForgeV2) return {ok:false,msg:'未載入 ScrollForgeV2'};
-    var st=Storage.read(), n=st.equips[type];
+    const st=Storage.read(), n=st.equips[type];
     if (!invUse(ITEM.完美卷,1)) return {ok:false,msg:'缺少 完美重置卷軸 ×1'};
-    var r=ScrollForgeV2.perfectReset(n); r.nextNode._lastChaosEff=null; r.nextNode._bestChaosEff=null;
-    var o={}; o[type]=r.nextNode; Storage.write({equips:o}); syncAndPing();
+    const r=ScrollForgeV2.perfectReset(n); r.nextNode._lastChaosEff=null; r.nextNode._bestChaosEff=null;
+    const o={}; o[type]=r.nextNode; Storage.write({equips:o}); syncAndPing();
     return {ok:true,msg:'裝備已完美重置（卷軸與歸零）'};
   }
   function starAttempt(type){
     if (!global.StarforceTableV1) return {ok:false,msg:'未載入 StarforceTableV1'};
-    var st=Storage.read(), n=st.equips[type]; if(!n) return {ok:false,msg:'裝備不存在'}; if(n.locked) return {ok:false,msg:'裝備未解鎖'};
+    const st=Storage.read(), n=st.equips[type]; if(!n) return {ok:false,msg:'裝備不存在'}; if(n.locked) return {ok:false,msg:'裝備未解鎖'};
     // 允許卷軸未用完也能升星（依需求移除限制）
     if (!invUse(ITEM.衝星石,1)) return {ok:false,msg:'缺少 衝星石 ×1'};
-    var r=StarforceTableV1.attempt(n.star|0,{maxStar:30,boomReset:{locked:true,pendingStar:12}});
+    const r=StarforceTableV1.attempt(n.star|0,{maxStar:30,boomReset:{locked:true,pendingStar:12}});
     if(r.boom){ n.locked=true; n._pendingStar=12; } else if(r.success){ n.star=r.next|0; }
-    var o={}; o[type]=n; Storage.write({equips:o}); syncAndPing();
+    const o={}; o[type]=n; Storage.write({equips:o}); syncAndPing();
     return {ok:r.success, msg: r.boom?'★失敗並爆炸！需重新解鎖；重新解鎖後從 12★ 開始（卷軸能力保留）':(r.success?'星力成功 → '+n.star+'★':'星力失敗'), success:r.success, boom:r.boom};
   }
 
   // ==== 潛能（只升不降；強制套用）====
   function emptySummary(){ return {str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,strPct:0,dexPct:0,intPct:0,lukPct:0,atkPct:0,hpPct:0,allStatPct:0}; }
-  function getGlobalPotential(){ var st=Storage.read(); return st.globalPotential || {lines:[],summary:emptySummary(),tier:'R'}; }
+  function getGlobalPotential(){ const st=Storage.read(); return st.globalPotential || {lines:[],summary:emptySummary(),tier:'R'}; }
 
   function applyGlobalPotentialWithTier(lines, tier){
-    var bonus=PotentialCoreV21.linesToBonus(lines||[]);
+    const bonus=PotentialCoreV21.linesToBonus(lines||[]);
     Storage.write({ globalPotential:{ lines:clone(lines||[]), summary:bonus, tier: tier||'R' } });
     syncAndPing(); return {ok:true,msg:'已套用全域潛能'};
   }
 
-  
+
   // ==== 潛能洗方塊（由 PotentialCoreV21 方塊定義主導；彈窗操作）====
   function cubeItemByCubeType(cubeType){
     if (cubeType==='cube_combine') return ITEM.結合方塊;
@@ -1504,12 +1504,12 @@ function updateBestChaosEff(node, eff){
     if (!global.PotentialCoreV21){ alert('未載入 PotentialCoreV21'); return null; }
     cubeType = (cubeType==='cube_plus') ? 'cube_plus' : 'cube';
 
-    var item = cubeItemByCubeType(cubeType);
+    const item = cubeItemByCubeType(cubeType);
     if(!invUse(item,1)){ alert('缺少 '+item+' ×1'); return null; }
 
-    var st=Storage.read();
-    var curTier=(st.globalPotential&&st.globalPotential.tier)?st.globalPotential.tier:'R';
-    var res=PotentialCoreV21.rollThreeSessionFrom(curTier, cubeType); // {sessionTier, lines}
+    const st=Storage.read();
+    const curTier=(st.globalPotential&&st.globalPotential.tier)?st.globalPotential.tier:'R';
+    const res=PotentialCoreV21.rollThreeSessionFrom(curTier, cubeType); // {sessionTier, lines}
     applyGlobalPotentialWithTier(res.lines, res.sessionTier);
 
     if(!silent) alert('潛能已套用（本次等級：'+res.sessionTier+'；原：'+curTier+'）');
@@ -1522,16 +1522,16 @@ function updateBestChaosEff(node, eff){
     if (!global.PotentialCoreV21){ alert('未載入 PotentialCoreV21'); return null; }
     cubeType = (cubeType==='cube_plus') ? 'cube_plus' : 'cube';
 
-    var item = cubeItemByCubeType(cubeType);
+    const item = cubeItemByCubeType(cubeType);
     if(!invUse(item,1)){ alert('缺少 '+item+' ×1'); return null; }
 
-    var st=Storage.read();
-    var curTier=(st.globalPotential&&st.globalPotential.tier)?st.globalPotential.tier:'R';
-    var curLines=(st.globalPotential&&st.globalPotential.lines)?clone(st.globalPotential.lines):[];
-    var res=PotentialCoreV21.rollThreeSessionFrom(curTier, cubeType); // {sessionTier, lines}
+    const st=Storage.read();
+    const curTier=(st.globalPotential&&st.globalPotential.tier)?st.globalPotential.tier:'R';
+    const curLines=(st.globalPotential&&st.globalPotential.lines)?clone(st.globalPotential.lines):[];
+    const res=PotentialCoreV21.rollThreeSessionFrom(curTier, cubeType); // {sessionTier, lines}
     return {
-      curTier: curTier,
-      curLines: curLines,
+      curTier,
+      curLines,
       nextTier: res.sessionTier,
       nextLines: res.lines
     };
@@ -1539,30 +1539,30 @@ function updateBestChaosEff(node, eff){
 
   // 兼容舊按鈕呼叫（若外部仍用 'normal'/'plus'）
   function rollPotentialAndApply(kind){ // 'normal' | 'plus'
-    var cubeType = (kind==='plus') ? 'cube_plus' : 'cube';
+    const cubeType = (kind==='plus') ? 'cube_plus' : 'cube';
     return rollPotentialAndApplyCube(cubeType, false);
   }
 
   function Equip_showPotentialCubeModal(){
     // local helpers (avoid scope issues)
-    function _div(css){ var d=document.createElement('div'); if(css) d.style.cssText=css; return d; }
+    function _div(css){ const d=document.createElement('div'); if(css) d.style.cssText=css; return d; }
     function _txt(t){ return document.createTextNode(t); }
     function _btn(label,on,kind){
-      var b=document.createElement('button'); b.textContent=label; b.onclick=on;
-      var bg = (kind==='primary') ? '#2563eb' : (kind==='secondary') ? '#334155' : '#1f2937';
+      const b=document.createElement('button'); b.textContent=label; b.onclick=on;
+      const bg = (kind==='primary') ? '#2563eb' : (kind==='secondary') ? '#334155' : '#1f2937';
       b.style.cssText='padding:6px 10px;border:1px solid #334155;border-radius:10px;background:'+bg+';color:#fff;cursor:pointer;font-weight:800';
       return b;
     }
     function _sel(){
-      var s=document.createElement('select');
+      const s=document.createElement('select');
       s.style.cssText='padding:6px 8px;border:1px solid #334155;border-radius:10px;background:#0b1220;color:#e5e7eb;font-weight:800';
       return s;
     }
-    function _hr(){ var h=document.createElement('div'); h.style.cssText='height:1px;background:#243044;margin:10px 0'; return h; }
+    function _hr(){ const h=document.createElement('div'); h.style.cssText='height:1px;background:#243044;margin:10px 0'; return h; }
 
     // blink style once
     if(!document.getElementById('POT_MODAL_BLINK_STYLE')){
-      var st=document.createElement('style'); st.id='POT_MODAL_BLINK_STYLE';
+      const st=document.createElement('style'); st.id='POT_MODAL_BLINK_STYLE';
       st.textContent='@keyframes potBlink{0%{box-shadow:0 0 0 rgba(0,0,0,0);}50%{box-shadow:0 0 0 3px rgba(59,130,246,.65);}100%{box-shadow:0 0 0 rgba(0,0,0,0);}}';
       document.head.appendChild(st);
     }
@@ -1573,33 +1573,33 @@ function updateBestChaosEff(node, eff){
       return;
     }
 
-    var defs = PotentialCoreV21.getCubeDefs();
+    const defs = PotentialCoreV21.getCubeDefs();
     if(!defs || !defs.length){ alert('沒有可用的方塊定義'); return; }
 
     function readCurrent(){
-      var st=Storage.read();
-      var tier=(st.globalPotential&&st.globalPotential.tier)?st.globalPotential.tier:'R';
-      var lines=(st.globalPotential&&st.globalPotential.lines)?st.globalPotential.lines:[];
-      return { tier:tier, lines:lines };
+      const st=Storage.read();
+      const tier=(st.globalPotential&&st.globalPotential.tier)?st.globalPotential.tier:'R';
+      const lines=(st.globalPotential&&st.globalPotential.lines)?st.globalPotential.lines:[];
+      return { tier, lines };
     }
 
     // state
-    var cubeId = defs[0].id;
-    var base = readCurrent();
-    var ctx = PotentialCoreV21.flowInit(cubeId, base.tier, base.lines);
+    let cubeId = defs[0].id;
+    const base = readCurrent();
+    let ctx = PotentialCoreV21.flowInit(cubeId, base.tier, base.lines);
 
     // overlay
-    var bd=_div('position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:10000;padding:12px;');
-    var w =_div('width:min(980px,96vw);max-height:92vh;overflow:auto;background:#111827;color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:12px;box-shadow:0 12px 36px rgba(0,0,0,.5)');
+    const bd=_div('position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:10000;padding:12px;');
+    const w =_div('width:min(980px,96vw);max-height:92vh;overflow:auto;background:#111827;color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:12px;box-shadow:0 12px 36px rgba(0,0,0,.5)');
 
-    var head=_div('display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;font-weight:900');
-    var left=_div('display:flex;align-items:center;gap:8px;flex-wrap:wrap');
+    const head=_div('display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;font-weight:900');
+    const left=_div('display:flex;align-items:center;gap:8px;flex-wrap:wrap');
     left.appendChild(_txt('🧊 潛能方塊'));
 
-    var sel=_sel();
-    var countEl=_div('margin-left:8px;opacity:.9;font-weight:900');
-    for(var i=0;i<defs.length;i++){
-      var opt=document.createElement('option');
+    const sel=_sel();
+    const countEl=_div('margin-left:8px;opacity:.9;font-weight:900');
+    for(let i=0;i<defs.length;i++){
+      const opt=document.createElement('option');
       opt.value=defs[i].id;
       opt.textContent=defs[i].title || defs[i].id;
       sel.appendChild(opt);
@@ -1609,7 +1609,7 @@ function updateBestChaosEff(node, eff){
     left.appendChild(countEl);
 
     // update remaining count display for selected cube
-    function _cubeDefById(id){ for(var ii=0; ii<defs.length; ii++){ if(defs[ii].id===id) return defs[ii]; } return null; }
+    function _cubeDefById(id){ for(let ii=0; ii<defs.length; ii++){ if(defs[ii].id===id) return defs[ii]; } return null; }
     function _cubeItemName(def){
       if(!def) return '';
       try{
@@ -1618,58 +1618,58 @@ function updateBestChaosEff(node, eff){
       return def.itemName || def.item || def.title || def.id;
     }
     function _updateCount(){
-      var def=_cubeDefById(sel.value);
-      var nm=_cubeItemName(def);
-      var c=0; try{ c = (typeof invCount==='function') ? invCount(nm) : 0; }catch(_){ c=0; }
+      const def=_cubeDefById(sel.value);
+      const nm=_cubeItemName(def);
+      let c=0; try{ c = (typeof invCount==='function') ? invCount(nm) : 0; }catch(_){ c=0; }
       countEl.textContent = nm ? ('剩餘：'+nm+' x'+c) : '';
     }
     _updateCount();
-    sel.addEventListener('change', function(){ _updateCount(); });
+    sel.addEventListener('change', () =>{ _updateCount(); });
 
-    var close=_btn('關閉', function(){ bd.remove(); }, 'secondary');
+    const close=_btn('關閉', () =>{ bd.remove(); }, 'secondary');
     head.appendChild(left); head.appendChild(close);
     w.appendChild(head);
 
-    var msg=_div('margin:6px 0 8px 0;opacity:.9;font-size:12px;line-height:1.4');
+    const msg=_div('margin:6px 0 8px 0;opacity:.9;font-size:12px;line-height:1.4');
     w.appendChild(msg);
 
-    var panelWrap=_div('display:flex;gap:10px;flex-wrap:wrap');
+    const panelWrap=_div('display:flex;gap:10px;flex-wrap:wrap');
     w.appendChild(panelWrap);
 
     w.appendChild(_hr());
 
-    var actionBar=_div('display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end');
+    const actionBar=_div('display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end');
     w.appendChild(actionBar);
 
     function renderPanels(view){
       panelWrap.innerHTML='';
-      var panels=view.panels||[];
-      for(var p=0;p<panels.length;p++){
-        var P=panels[p]||{};
-        var card=_div('flex:1 1 320px;min-width:260px;border:1px solid #263247;border-radius:12px;background:#0b1220;padding:10px');
-        var title=_div('font-weight:900;margin-bottom:8px;color:#93c5fd;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap');
-        var t=_div('font-weight:900'); t.textContent = (P.title||'');
-        var r=_div('opacity:.85'); r.textContent = '等級：'+(P.tier||'—');
+      const panels=view.panels||[];
+      for(let p=0;p<panels.length;p++){
+        const P=panels[p]||{};
+        const card=_div('flex:1 1 320px;min-width:260px;border:1px solid #263247;border-radius:12px;background:#0b1220;padding:10px');
+        const title=_div('font-weight:900;margin-bottom:8px;color:#93c5fd;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap');
+        const t=_div('font-weight:900'); t.textContent = (P.title||'');
+        const r=_div('opacity:.85'); r.textContent = '等級：'+(P.tier||'—');
         title.appendChild(t); title.appendChild(r);
         card.appendChild(title);
 
-        var lines=P.lines||[];
-        for(var li=0; li<3; li++){
-          var row=_div('padding:8px;border:1px solid #1f2a3a;border-radius:10px;margin:6px 0;background:#0f172a;');
+        const lines=P.lines||[];
+        for(let li=0; li<3; li++){
+          const row=_div('padding:8px;border:1px solid #1f2a3a;border-radius:10px;margin:6px 0;background:#0f172a;');
           if(P.highlightLine && (li+1)===P.highlightLine){
             row.style.animation='potBlink 1s ease-in-out infinite';
             row.style.borderColor='#3b82f6';
           }
-          var L=lines[li]||{};
-          var tier = L.tier || '';
-          var label = L.label || '—';
-          var vv = (L.value!=null) ? Number(L.value) : null;
-          var unit = (L.unit==='pct' || L.unit==='allpct') ? '%' : '';
-          var valText = '';
+          const L=lines[li]||{};
+          const tier = L.tier || '';
+          const label = L.label || '—';
+          const vv = (L.value!=null) ? Number(L.value) : null;
+          const unit = (L.unit==='pct' || L.unit==='allpct') ? '%' : '';
+          let valText = '';
           if (vv!=null && !isNaN(vv)){
             valText = unit ? (String(vv)+unit) : ('+'+String(vv));
           }
-          var lineText = label + (valText ? (' ' + valText) : '');
+          const lineText = label + (valText ? (' ' + valText) : '');
 
           // row layout: [tier badge] [text]
           row.innerHTML='';
@@ -1677,11 +1677,11 @@ function updateBestChaosEff(node, eff){
           row.style.alignItems='center';
           row.style.gap='8px';
 
-          var badge=document.createElement('span');
+          const badge=document.createElement('span');
           badge.textContent=tier;
           // tier badge color
-          var _tier=tier;
-          var _tierMap={
+          const _tier=tier;
+          const _tierMap={
             'R': {bg:'rgba(148,163,184,.12)', bd:'#64748b', tx:'#e5e7eb'},
             'SR':{bg:'rgba(96,165,250,.12)',  bd:'#60a5fa', tx:'#dbeafe'},
             'SSR':{bg:'rgba(167,139,250,.14)', bd:'#a78bfa', tx:'#ede9fe'},
@@ -1689,11 +1689,11 @@ function updateBestChaosEff(node, eff){
             'LR':{bg:'rgba(250,204,21,.12)',   bd:'#facc15', tx:'#fef9c3'},
             'SLR':{bg:'rgba(244,114,182,.14)', bd:'#f472b6', tx:'#ffe4f2'}
           };
-          var _st=_tierMap[_tier] || {bg:'rgba(148,163,184,.10)', bd:'#334155', tx:'#e5e7eb'};
+          const _st=_tierMap[_tier] || {bg:'rgba(148,163,184,.10)', bd:'#334155', tx:'#e5e7eb'};
           badge.style.cssText='min-width:44px;text-align:center;padding:2px 10px;border-radius:999px;border:1px solid '+_st.bd+';background:'+_st.bg+';color:'+_st.tx+';font-weight:950;font-size:11px;letter-spacing:.3px;';
           row.appendChild(badge);
 
-          var tspan=document.createElement('span');
+          const tspan=document.createElement('span');
           tspan.textContent=lineText;
           tspan.style.flex='1';
           row.appendChild(tspan);
@@ -1705,12 +1705,12 @@ function updateBestChaosEff(node, eff){
 
     function renderActions(view){
       actionBar.innerHTML='';
-      var acts=view.actions||[];
-      for(var a=0;a<acts.length;a++){
+      const acts=view.actions||[];
+      for(let a=0;a<acts.length;a++){
         (function(act){
-          var label = act.label || act.id;
+          let label = act.label || act.id;
           if(act.cost && act.cost>0) label += ' (-'+act.cost+')';
-          var b=_btn(label, function(){ doAction(act); }, act.kind);
+          const b=_btn(label, () =>{ doAction(act); }, act.kind);
           actionBar.appendChild(b);
         })(acts[a]);
       }
@@ -1718,10 +1718,10 @@ function updateBestChaosEff(node, eff){
 
     function refresh(){
       // 同步目前潛能（避免外部同時更動）
-      var now=readCurrent();
+      const now=readCurrent();
       ctx.curTier = now.tier;
       ctx.curLines = (PotentialCoreV21.flowInit(cubeId, now.tier, now.lines).curLines); // cheap clone via init
-      var view = PotentialCoreV21.flowView(cubeId, ctx);
+      const view = PotentialCoreV21.flowView(cubeId, ctx);
       msg.textContent = view.message || '';
       renderPanels(view);
       renderActions(view);
@@ -1731,16 +1731,16 @@ function updateBestChaosEff(node, eff){
     function doAction(act){
       // 扣道具（由 flow action 決定何時扣、扣幾顆）
       if(act.cost && act.cost>0){
-        var def=null;
-        for(var i=0;i<defs.length;i++){ if(defs[i].id===cubeId){ def=defs[i]; break; } }
-        var item = cubeItemByCubeType(def ? def.cubeType : 'cube');
+        let def=null;
+        for(let i=0;i<defs.length;i++){ if(defs[i].id===cubeId){ def=defs[i]; break; } }
+        const item = cubeItemByCubeType(def ? def.cubeType : 'cube');
         if(!invUse(item, act.cost)){
           alert('缺少 '+item+' ×'+act.cost);
           return;
         }
       }
 
-      var out = PotentialCoreV21.flowDispatch(cubeId, ctx, act.id) || {};
+      const out = PotentialCoreV21.flowDispatch(cubeId, ctx, act.id) || {};
       ctx = out.ctx || ctx;
       // optional fx metadata
       if(out.fx) ctx.fx = out.fx;
@@ -1756,13 +1756,13 @@ function updateBestChaosEff(node, eff){
 
     sel.onchange = function(){
       cubeId = sel.value;
-      var now=readCurrent();
+      const now=readCurrent();
       ctx = PotentialCoreV21.flowInit(cubeId, now.tier, now.lines);
       refresh();
     };
 
     bd.appendChild(w);
-    bd.addEventListener('click',function(e){ if(e.target===bd) bd.remove(); });
+    bd.addEventListener('click',(e) =>{ if(e.target===bd) bd.remove(); });
     document.body.appendChild(bd);
 
     refresh();
@@ -1772,54 +1772,54 @@ function updateBestChaosEff(node, eff){
 
 
   // ==== UI 小件 ====
-  function makeCard(p){ var d=document.createElement('div'); d.style.cssText="border:1px solid "+THEME.cardBorder+";background:"+THEME.cardBg+";border-radius:16px;padding:"+(p||"14px")+";color:"+THEME.text+";box-shadow:"+THEME.cardShadow+";font-size:14px;line-height:1.6;"; return d; }
-  function section(title){ var card=makeCard("12px"); var h=document.createElement('div'); h.style.cssText='font-weight:900;letter-spacing:.3px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center'; h.textContent=title; card.appendChild(h); return {card:card, head:h}; }
-  function chip(label,val){ var el=document.createElement('div'); el.style.cssText="background:"+THEME.pillBg+";border:1px solid "+THEME.pillBorder+";border-radius:999px;padding:8px 12px;font:800 13px ui-monospace,monospace;display:flex;gap:8px;align-items:center"; el.innerHTML='<span style="opacity:.85">'+label+'</span><span>'+val+'</span>'; return el; }
-  function pill(text,active,onclick){ var b=document.createElement('button'); b.textContent=text; b.style.cssText="border:1px solid "+(active?THEME.pillActiveBorder:THEME.pillBorder)+";background:"+(active?THEME.pillActiveBg:THEME.pillBg)+";color:#fff;border-radius:999px;padding:8px 14px;cursor:pointer;font-weight:900;font-size:14px"; if(onclick) b.onclick=onclick; return b; }
-  function btn(txt,fn,primary,disabled){ var b=document.createElement('button'); b.textContent=txt; b.style.cssText='padding:10px 14px;border:1px solid '+(primary?THEME.pillActiveBorder:THEME.pillBorder)+';border-radius:12px;background:'+(primary?THEME.pillActiveBg:THEME.pillBg)+';color:#fff;cursor:pointer;font-weight:900;font-size:14px'; if(disabled){ b.style.opacity='.5'; b.style.cursor='not-allowed'; } else if(fn){ b.onclick=fn; } return b; }
-  function line(){ var hr=document.createElement('div'); hr.style.cssText='height:1px;background:'+THEME.cardBorder+';margin:12px 0'; return hr; }
-  function badgeForTier(t){ var span=document.createElement('span'); span.className='tier-badge tier-'+t; span.textContent=t; span.title='潛能等級：'+t; return span; }
+  function makeCard(p){ const d=document.createElement('div'); d.style.cssText="border:1px solid "+THEME.cardBorder+";background:"+THEME.cardBg+";border-radius:16px;padding:"+(p||"14px")+";color:"+THEME.text+";box-shadow:"+THEME.cardShadow+";font-size:14px;line-height:1.6;"; return d; }
+  function section(title){ const card=makeCard("12px"); const h=document.createElement('div'); h.style.cssText='font-weight:900;letter-spacing:.3px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center'; h.textContent=title; card.appendChild(h); return {card, head:h}; }
+  function chip(label,val){ const el=document.createElement('div'); el.style.cssText="background:"+THEME.pillBg+";border:1px solid "+THEME.pillBorder+";border-radius:999px;padding:8px 12px;font:800 13px ui-monospace,monospace;display:flex;gap:8px;align-items:center"; el.innerHTML='<span style="opacity:.85">'+label+'</span><span>'+val+'</span>'; return el; }
+  function pill(text,active,onclick){ const b=document.createElement('button'); b.textContent=text; b.style.cssText="border:1px solid "+(active?THEME.pillActiveBorder:THEME.pillBorder)+";background:"+(active?THEME.pillActiveBg:THEME.pillBg)+";color:#fff;border-radius:999px;padding:8px 14px;cursor:pointer;font-weight:900;font-size:14px"; if(onclick) b.onclick=onclick; return b; }
+  function btn(txt,fn,primary,disabled){ const b=document.createElement('button'); b.textContent=txt; b.style.cssText='padding:10px 14px;border:1px solid '+(primary?THEME.pillActiveBorder:THEME.pillBorder)+';border-radius:12px;background:'+(primary?THEME.pillActiveBg:THEME.pillBg)+';color:#fff;cursor:pointer;font-weight:900;font-size:14px'; if(disabled){ b.style.opacity='.5'; b.style.cursor='not-allowed'; } else if(fn){ b.onclick=fn; } return b; }
+  function line(){ const hr=document.createElement('div'); hr.style.cssText='height:1px;background:'+THEME.cardBorder+';margin:12px 0'; return hr; }
+  function badgeForTier(t){ const span=document.createElement('span'); span.className='tier-badge tier-'+t; span.textContent=t; span.title='潛能等級：'+t; return span; }
 
   // ==== 機率視窗（顯示目前等級的升級機率＋本等級詞條池）====
   function showRatesModal(){
-    var old = document.getElementById('equipRateModal');
+    const old = document.getElementById('equipRateModal');
     if (old){ old.style.display='flex'; return; }
 
-    var st = Storage.read();
-    var curTier = (st.globalPotential && st.globalPotential.tier) ? st.globalPotential.tier : 'R';
+    const st = Storage.read();
+    const curTier = (st.globalPotential && st.globalPotential.tier) ? st.globalPotential.tier : 'R';
 
-    var backdrop = document.createElement('div');
+    const backdrop = document.createElement('div');
     backdrop.id='equipRateModal';
     backdrop.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:10000;padding:12px;';
 
-    var wrap = (function(){ var c=makeCard("14px"); c.style.cssText += ";width:min(920px,96vw);max-height:92vh;overflow:auto;"; return c; })();
+    const wrap = (function(){ const c=makeCard("14px"); c.style.cssText += ";width:min(920px,96vw);max-height:92vh;overflow:auto;"; return c; })();
 
     // header
-    var head = document.createElement('div');
+    const head = document.createElement('div');
     head.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px';
-    var title = document.createElement('div');
+    const title = document.createElement('div');
     title.style.cssText='font-weight:900;letter-spacing:.4px';
     title.textContent = '📊 機率資訊';
-    var tierBadge = badgeForTier(curTier);
+    const tierBadge = badgeForTier(curTier);
     tierBadge.style.marginLeft='8px';
     tierBadge.title='目前潛能等級（從此等級檢定升級）';
-    var left = document.createElement('div'); left.style.cssText='display:flex;align-items:center';
+    const left = document.createElement('div'); left.style.cssText='display:flex;align-items:center';
     left.appendChild(title); left.appendChild(tierBadge);
-    var closeBtn = document.createElement('button');
+    const closeBtn = document.createElement('button');
     closeBtn.textContent='✕';
     closeBtn.style.cssText='border:1px solid '+THEME.pillBorder+';background:'+THEME.pillBg+';color:#fff;border-radius:10px;padding:6px 10px;cursor:pointer;font-weight:900';
     closeBtn.onclick=function(){ backdrop.remove(); };
     head.appendChild(left); head.appendChild(closeBtn);
     wrap.appendChild(head);
 
-    function section2(t){ var s=section(t); return s; }
+    function section2(t){ const s=section(t); return s; }
     function tableFrom(rows){
-      var t=document.createElement('table');
+      const t=document.createElement('table');
       t.style.cssText='width:100%;border-collapse:collapse;font-size:13px;margin-top:8px';
-      for(var i=0;i<rows.length;i++){
-        var tr=document.createElement('tr'); if(i===0) tr.style.cssText='background:#0f172a';
-        for(var j=0;j<rows[i].length;j++){
-          var td=document.createElement(i?'td':'th');
+      for(let i=0;i<rows.length;i++){
+        const tr=document.createElement('tr'); if(i===0) tr.style.cssText='background:#0f172a';
+        for(let j=0;j<rows[i].length;j++){
+          const td=document.createElement(i?'td':'th');
           td.textContent=rows[i][j];
           td.style.cssText='border:1px solid '+THEME.cardBorder+';padding:6px;text-align:center';
           tr.appendChild(td);
@@ -1832,10 +1832,10 @@ function updateBestChaosEff(node, eff){
 
     // ① 目前等級 → 下一階升級機率
     if (global.PotentialCoreV21 && PotentialCoreV21.upgradeChanceFrom){
-      var r1 = PotentialCoreV21.upgradeChanceFrom(curTier,'cube');
-      var r2 = PotentialCoreV21.upgradeChanceFrom(curTier,'cube_plus');
-      var sec = section2('目前等級 → 下一階（升級機率）');
-      var rows = [['目前等級','一般方塊','高級方塊'],
+      const r1 = PotentialCoreV21.upgradeChanceFrom(curTier,'cube');
+      const r2 = PotentialCoreV21.upgradeChanceFrom(curTier,'cube_plus');
+      const sec = section2('目前等級 → 下一階（升級機率）');
+      const rows = [['目前等級','一般方塊','高級方塊'],
                   [curTier, pct(r1), pct(r2)]];
       sec.card.appendChild(tableFrom(rows));
       wrap.appendChild(sec.card);
@@ -1843,18 +1843,18 @@ function updateBestChaosEff(node, eff){
 
     // ② 本次等級的詞條池（已套倍率）
     if (global.PotentialCoreV21 && PotentialCoreV21.effectTableForSession){
-      var list = PotentialCoreV21.effectTableForSession(curTier);
-      var sec2 = section2('本次等級詞條池（數值已套 '+curTier+' 倍率）');
-      var rows2 = [['詞條','數值','機率']];
-      for (var k=0;k<list.length;k++){
-        var e=list[k]; rows2.push([e.label, (e.value + (e.unit||'')), e.prob.toFixed(2)+'%']);
+      const list = PotentialCoreV21.effectTableForSession(curTier);
+      const sec2 = section2('本次等級詞條池（數值已套 '+curTier+' 倍率）');
+      const rows2 = [['詞條','數值','機率']];
+      for (let k=0;k<list.length;k++){
+        const e=list[k]; rows2.push([e.label, (e.value + (e.unit||'')), e.prob.toFixed(2)+'%']);
       }
       sec2.card.appendChild(tableFrom(rows2));
       wrap.appendChild(sec2.card);
     }
 
     backdrop.appendChild(wrap);
-    backdrop.addEventListener('click', function(e){ if(e.target===backdrop) backdrop.remove(); });
+    backdrop.addEventListener('click', (e) =>{ if(e.target===backdrop) backdrop.remove(); });
     document.body.appendChild(backdrop);
   }
   global.Equip_showRatesModal = showRatesModal;
@@ -1862,39 +1862,39 @@ function updateBestChaosEff(node, eff){
 // ===== 詳細彈窗（套裝 / 能力 / 潛能）=====
 function Equip_showModal(titleText, buildBody){
   try{
-    var bd=document.createElement('div');
+    const bd=document.createElement('div');
     bd.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:10000;padding:12px;';
-    var w=makeCard('14px');
+    const w=makeCard('14px');
     w.style.cssText += ';width:min(980px,96vw);max-height:92vh;overflow:auto;';
     // header
-    var head=document.createElement('div');
+    const head=document.createElement('div');
     head.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-weight:900;letter-spacing:.3px';
-    var t=document.createElement('div'); t.textContent=titleText||'詳細';
-    var close=document.createElement('button');
+    const t=document.createElement('div'); t.textContent=titleText||'詳細';
+    const close=document.createElement('button');
     close.textContent='關閉';
     close.style.cssText='padding:6px 10px;border:1px solid '+THEME.pillBorder+';background:'+THEME.pillBg+';color:#fff;border-radius:10px;cursor:pointer;font-weight:900';
     close.onclick=function(){ bd.remove(); };
     head.appendChild(t); head.appendChild(close);
     w.appendChild(head);
 
-    var body=document.createElement('div');
+    const body=document.createElement('div');
     body.style.cssText='margin-top:6px';
     if (typeof buildBody==='function') buildBody(body);
     w.appendChild(body);
 
     bd.appendChild(w);
-    bd.addEventListener('click',function(e){ if(e.target===bd) bd.remove(); });
+    bd.addEventListener('click',(e) =>{ if(e.target===bd) bd.remove(); });
     document.body.appendChild(bd);
   }catch(_){ }
 }
 
 function _effLine(eff){
   eff = eff || {};
-  var out = [];
+  const out = [];
   function fmtPct(v){ return (Math.round((Number(v)||0)*10000)/100)+'%'; }
   function push(label, v, isPct){
     if (v==null) return;
-    var n = Number(v)||0;
+    const n = Number(v)||0;
     if (!n) return;
     out.push(label + '+' + (isPct ? fmtPct(n) : String(n)));
   }
@@ -1916,22 +1916,22 @@ function _effLine(eff){
 }
 
 function Equip_showSetDetailModal(){
-  Equip_showModal('套裝效果（詳細）', function(root){
-    var stNow = Storage.read();
-    var setTypes = resolveSetTypes(stNow);
-    var detail = computeSetBonusV2(stNow, setTypes);
-    var c = detail.counts || {total:0,N:0,SSR:0,UR:0,SLR:0};
+  Equip_showModal('套裝效果（詳細）', (root) =>{
+    const stNow = Storage.read();
+    const setTypes = resolveSetTypes(stNow);
+    const detail = computeSetBonusV2(stNow, setTypes);
+    const c = detail.counts || {total:0,N:0,SSR:0,UR:0,SLR:0};
 
-    var top = document.createElement('div');
+    const top = document.createElement('div');
     top.style.cssText='opacity:.95;margin-bottom:10px';
     top.innerHTML='件數：<b>'+c.total+'</b> ｜ N <b>'+c.N+'</b> ｜ SSR <b>'+c.SSR+'</b> ｜ UR <b>'+c.UR+'</b> ｜ SLR <b>'+c.SLR+'</b>';
     root.appendChild(top);
 
     // 門檻表
-    var thresholds = getThresholdsFromRules(SET_RULES_V2);
-    var pickMap = {};
-    var applied = detail.applied || [];
-    for (var i=0;i<applied.length;i++) pickMap[applied[i].pieces|0] = applied[i];
+    const thresholds = getThresholdsFromRules(SET_RULES_V2);
+    const pickMap = {};
+    const applied = detail.applied || [];
+    for (let i=0;i<applied.length;i++) pickMap[applied[i].pieces|0] = applied[i];
 
     function gradeColor(g){
       if (g==='SLR') return '#fff';
@@ -1940,32 +1940,32 @@ function Equip_showSetDetailModal(){
       return '#94a3b8';
     }
 
-    var table = document.createElement('div');
+    const table = document.createElement('div');
     table.style.cssText='display:grid;grid-template-columns:80px 70px 1fr;gap:6px;align-items:start';
     root.appendChild(table);
 
-    ['門檻','採用','效果'].forEach(function(t){
-      var h=document.createElement('div');
+    ['門檻','採用','效果'].forEach((t) =>{
+      const h=document.createElement('div');
       h.textContent=t;
       h.style.cssText='font-weight:900;opacity:.85;padding:8px 10px;border:1px solid '+THEME.cardBorder+';border-radius:12px;background:'+THEME.pillBg;
       table.appendChild(h);
     });
 
-    for (var ti=0; ti<thresholds.length; ti++){
-      var p = thresholds[ti];
-      var picked = pickMap[p];
+    for (let ti=0; ti<thresholds.length; ti++){
+      const p = thresholds[ti];
+      const picked = pickMap[p];
 
-      var a = document.createElement('div');
+      const a = document.createElement('div');
       a.style.cssText='padding:8px 10px;border:1px solid '+THEME.cardBorder+';border-radius:12px;background:'+THEME.cardBg;
       a.textContent = p + '件';
       table.appendChild(a);
 
-      var b = document.createElement('div');
+      const b = document.createElement('div');
       b.style.cssText='padding:8px 10px;border:1px solid '+THEME.cardBorder+';border-radius:12px;background:'+THEME.cardBg+';font-weight:950;color:'+gradeColor(picked?picked.grade:'N');
       b.textContent = picked ? picked.grade : '—';
       table.appendChild(b);
 
-      var c3 = document.createElement('div');
+      const c3 = document.createElement('div');
       c3.style.cssText='padding:8px 10px;border:1px solid '+THEME.cardBorder+';border-radius:12px;background:'+THEME.cardBg+';opacity:'+(picked?1:.55);
       c3.textContent = picked ? _effLine(picked.eff) : '未達成';
       table.appendChild(c3);
@@ -1973,7 +1973,7 @@ function Equip_showSetDetailModal(){
 
     // overflow（單一格子）
     if ((detail.overflow|0) > 0 && detail.overflowEff){
-      var ov = document.createElement('div');
+      const ov = document.createElement('div');
       ov.style.cssText='margin-top:12px;padding:12px;border:1px solid '+THEME.cardBorder+';border-radius:14px;background:'+THEME.cardBg;
       ov.innerHTML='<div style="font-weight:950;opacity:.9">SLR 額外累積（+'+(detail.overflow|0)+' 件）</div>' +
                    '<div style="opacity:.95;line-height:1.6;margin-top:6px">'+_effLine(detail.overflowEff)+'</div>';
@@ -1981,7 +1981,7 @@ function Equip_showSetDetailModal(){
     }
 
     // 最終累積
-    var sumCard = document.createElement('div');
+    const sumCard = document.createElement('div');
     sumCard.style.cssText='margin-top:12px;padding:12px;border:1px solid '+THEME.cardBorder+';border-radius:14px;background:'+THEME.pillBg;
     sumCard.innerHTML='<div style="font-weight:950;opacity:.9;margin-bottom:6px">最終套裝加成（累加結果）</div>' +
                       '<div style="opacity:.95;line-height:1.6">'+_effLine(detail.sum||{})+'</div>';
@@ -1991,16 +1991,16 @@ function Equip_showSetDetailModal(){
 global.Equip_showSetDetailModal = Equip_showSetDetailModal;
 
 function Equip_showEquipDetailModal(){
-  Equip_showModal('整體能力（詳細）', function(root){
-    var r = computeEquipAggregate();
-    var sum = r.sum || {};
-    var ap  = r.afterPotential || sum; // 含潛能的裝備合計
-    var set = r.equipSetFlat || {};
-    var pb  = r.potBonus || {};
-    var final = r.final || {};
+  Equip_showModal('整體能力（詳細）', (root) =>{
+    const r = computeEquipAggregate();
+    const sum = r.sum || {};
+    const ap  = r.afterPotential || sum; // 含潛能的裝備合計
+    const set = r.equipSetFlat || {};
+    const pb  = r.potBonus || {};
+    const final = r.final || {};
 
     function h(t){
-      var d=document.createElement('div');
+      const d=document.createElement('div');
       d.textContent=t;
       d.style.cssText='margin:10px 0 6px;font-weight:950;color:#93c5fd';
       return d;
@@ -2008,7 +2008,7 @@ function Equip_showEquipDetailModal(){
 
     // 最終（含潛能 + 套裝平砍）
     root.appendChild(h('最終面板（含潛能）'));
-    var chips1=document.createElement('div');
+    const chips1=document.createElement('div');
     chips1.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
     chips1.appendChild(chip('STR', fmt((ap.str|0) + (set.str|0) + (set.allStat|0))));
     chips1.appendChild(chip('DEX', fmt((ap.agi!=null?ap.agi:ap.dex|0) + (set.dex|0) + (set.allStat|0))));
@@ -2020,9 +2020,9 @@ function Equip_showEquipDetailModal(){
     chips1.appendChild(chip('MP',  fmt((ap.mp|0)  + (set.mp|0))));
     root.appendChild(chips1);
 
-    var pctLine=document.createElement('div');
+    const pctLine=document.createElement('div');
     pctLine.style.cssText='margin-top:8px;opacity:.9;line-height:1.6';
-    var pctParts=[];
+    const pctParts=[];
     if (set.ignoreDefPct) pctParts.push('無視防禦+'+Math.round(set.ignoreDefPct*10000)/100+'%');
     if (set.totalDamage)  pctParts.push('總傷害+'+Math.round(set.totalDamage*10000)/100+'%');
     if (set.bossDamage)   pctParts.push('BOSS傷害+'+Math.round(set.bossDamage*10000)/100+'%');
@@ -2033,15 +2033,15 @@ function Equip_showEquipDetailModal(){
 
     // 分解
     root.appendChild(h('分解'));
-    var box=document.createElement('div');
+    const box=document.createElement('div');
     box.style.cssText='display:grid;grid-template-columns:1fr;gap:8px;margin-top:4px';
 
     function mini(title, text){
-      var c=makeCard('10px');
+      const c=makeCard('10px');
       c.style.boxShadow='none';
       c.style.borderColor=THEME.cardBorder;
-      var a=document.createElement('div'); a.style.cssText='font-weight:950;opacity:.9;margin-bottom:6px'; a.textContent=title;
-      var b=document.createElement('div'); b.style.cssText='opacity:.92;line-height:1.6;white-space:pre-line'; b.textContent=text;
+      const a=document.createElement('div'); a.style.cssText='font-weight:950;opacity:.9;margin-bottom:6px'; a.textContent=title;
+      const b=document.createElement('div'); b.style.cssText='opacity:.92;line-height:1.6;white-space:pre-line'; b.textContent=text;
       c.appendChild(a); c.appendChild(b);
       return c;
     }
@@ -2055,48 +2055,48 @@ function Equip_showEquipDetailModal(){
 global.Equip_showEquipDetailModal = Equip_showEquipDetailModal;
 
 function Equip_showPotentialDetailModal(){
-  Equip_showModal('潛能（詳細）', function(root){
-    var st=Storage.read();
-    var gp=st.globalPotential||{lines:[],summary:emptySummary(),tier:'R'};
-    var r=computeEquipAggregate();
-    var pb=r.potBonus||{};
+  Equip_showModal('潛能（詳細）', (root) =>{
+    const st=Storage.read();
+    const gp=st.globalPotential||{lines:[],summary:emptySummary(),tier:'R'};
+    const r=computeEquipAggregate();
+    const pb=r.potBonus||{};
 
-    var head=document.createElement('div');
+    const head=document.createElement('div');
     head.style.cssText='opacity:.95;line-height:1.6;margin-bottom:10px';
     head.innerHTML='目前等級：<b>'+String(gp.tier||'R')+'</b>';
     root.appendChild(head);
 
-    var box=makeCard('10px');
+    const box=makeCard('10px');
     box.style.boxShadow='none';
 
-    var t=document.createElement('div');
+    const t=document.createElement('div');
     t.style.cssText='font-weight:950;margin-bottom:6px';
     t.textContent='目前三條';
     box.appendChild(t);
 
     if(!gp.lines||!gp.lines.length){
-      var none=document.createElement('div'); none.style.cssText='opacity:.8'; none.textContent='（尚未設定）';
+      const none=document.createElement('div'); none.style.cssText='opacity:.8'; none.textContent='（尚未設定）';
       box.appendChild(none);
     }else{
-      for(var i=0;i<gp.lines.length;i++){
-        var ln=gp.lines[i]||{};
-        var unit=(ln.unit==='pct'||ln.unit==='allpct')?'%':'';
-        var row=document.createElement('div');
+      for(let i=0;i<gp.lines.length;i++){
+        const ln=gp.lines[i]||{};
+        const unit=(ln.unit==='pct'||ln.unit==='allpct')?'%':'';
+        const row=document.createElement('div');
         row.style.cssText='display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.03);margin:6px 0';
-        var b=document.createElement('span'); b.className='tier-badge tier-'+(ln.tier||'R'); b.textContent=ln.tier||'R';
+        const b=document.createElement('span'); b.className='tier-badge tier-'+(ln.tier||'R'); b.textContent=ln.tier||'R';
         row.appendChild(b);
-        var s=document.createElement('span'); s.textContent=(ln.label||'—')+' +'+(ln.value!=null?ln.value:'')+unit;
+        const s=document.createElement('span'); s.textContent=(ln.label||'—')+' +'+(ln.value!=null?ln.value:'')+unit;
         row.appendChild(s);
         box.appendChild(row);
       }
     }
 
-    var t2=document.createElement('div');
+    const t2=document.createElement('div');
     t2.style.cssText='font-weight:950;margin:10px 0 6px';
     t2.textContent='潛能提升能力（實際加成）';
     box.appendChild(t2);
 
-    var chips=document.createElement('div');
+    const chips=document.createElement('div');
     chips.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
     chips.appendChild(chip('STR','+'+fmt(pb.str||0)));
     chips.appendChild(chip('DEX','+'+fmt(pb.agi||0)));
@@ -2109,9 +2109,9 @@ function Equip_showPotentialDetailModal(){
     box.appendChild(chips);
 
     // 機率資訊按鈕
-    var row=document.createElement('div');
+    const row=document.createElement('div');
     row.style.cssText='display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px';
-    row.appendChild(btn('機率資訊', function(){ global.Equip_showUnifiedRatesModal && global.Equip_showUnifiedRatesModal(); }, false));
+    row.appendChild(btn('機率資訊', () =>{ global.Equip_showUnifiedRatesModal && global.Equip_showUnifiedRatesModal(); }, false));
     box.appendChild(row);
 
     root.appendChild(box);
@@ -2121,15 +2121,15 @@ global.Equip_showPotentialDetailModal = Equip_showPotentialDetailModal;
 
 // ===== 主頁：只顯示最終值（細節進彈窗）=====
 function renderSummaryCard(root){
-  var r = computeEquipAggregate();
-  var ap = r.afterPotential || r.sum || {};
-  var set = r.equipSetFlat || {};
-  var detail = r.set || {};
-  var cnt = r.unlocked|0;
+  const r = computeEquipAggregate();
+  const ap = r.afterPotential || r.sum || {};
+  const set = r.equipSetFlat || {};
+  const detail = r.set || {};
+  const cnt = r.unlocked|0;
 
   // 1) 最終能力（含潛能 + 套裝平砍）
-  var sec = section('最終能力（含潛能）');
-  var chips = document.createElement('div');
+  const sec = section('最終能力（含潛能）');
+  const chips = document.createElement('div');
   chips.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:6px';
 
   chips.appendChild(chip('STR', fmt((ap.str|0) + (set.str|0) + (set.allStat|0))));
@@ -2142,32 +2142,32 @@ function renderSummaryCard(root){
   chips.appendChild(chip('MP',  fmt((ap.mp|0)  + (set.mp|0))));
   sec.card.appendChild(chips);
 
-  var rowBtn=document.createElement('div');
+  const rowBtn=document.createElement('div');
   rowBtn.style.cssText='display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:10px';
-  rowBtn.appendChild(btn('能力詳細', function(){ global.Equip_showEquipDetailModal && global.Equip_showEquipDetailModal(); }, false));
-  rowBtn.appendChild(btn('潛能詳細', function(){ global.Equip_showPotentialDetailModal && global.Equip_showPotentialDetailModal(); }, false));
+  rowBtn.appendChild(btn('能力詳細', () =>{ global.Equip_showEquipDetailModal && global.Equip_showEquipDetailModal(); }, false));
+  rowBtn.appendChild(btn('潛能詳細', () =>{ global.Equip_showPotentialDetailModal && global.Equip_showPotentialDetailModal(); }, false));
   sec.card.appendChild(rowBtn);
 
   root.appendChild(sec.card);
 
   // 2) 套裝效果（最終）
   (function(){
-    var sec2 = section('最終套裝效果');
-    var stText = document.createElement('div');
+    const sec2 = section('最終套裝效果');
+    const stText = document.createElement('div');
     stText.style.cssText='opacity:.95;line-height:1.6;margin-top:4px';
     stText.textContent = _effLine((detail && detail.sum) ? detail.sum : {});
     sec2.card.appendChild(stText);
 
     // 概覽（件數）
-    var c = (detail && detail.counts) ? detail.counts : {total:0,N:0,SSR:0,UR:0,SLR:0};
-    var top = document.createElement('div');
+    const c = (detail && detail.counts) ? detail.counts : {total:0,N:0,SSR:0,UR:0,SLR:0};
+    const top = document.createElement('div');
     top.style.cssText='opacity:.85;margin-top:8px;font-size:12px';
     top.innerHTML='件數：<b>'+c.total+'</b> ｜ N <b>'+c.N+'</b> ｜ SSR <b>'+c.SSR+'</b> ｜ UR <b>'+c.UR+'</b> ｜ SLR <b>'+c.SLR+'</b>';
     sec2.card.appendChild(top);
 
-    var row=document.createElement('div');
+    const row=document.createElement('div');
     row.style.cssText='display:flex;justify-content:flex-end;margin-top:10px';
-    row.appendChild(btn('套裝詳細', function(){ global.Equip_showSetDetailModal && global.Equip_showSetDetailModal(); }, false));
+    row.appendChild(btn('套裝詳細', () =>{ global.Equip_showSetDetailModal && global.Equip_showSetDetailModal(); }, false));
     sec2.card.appendChild(row);
     root.appendChild(sec2.card);
   })();
@@ -2175,13 +2175,13 @@ function renderSummaryCard(root){
 
 
   // ==== 分頁 ====
-var innerState = { current:(getEquipTypes()[0]||'hat'), gpOpen:false, setOpen:true, setOnlyAchieved:false, equipCat:null }; 
+const innerState = { current:(getEquipTypes()[0]||'hat'), gpOpen:false, setOpen:true, setOnlyAchieved:false, equipCat:null };
 function renderSwitcher(container){
-  var types=getEquipTypes();
+  const types=getEquipTypes();
 
   // 分類：你要的四類
-  var CAT_ORDER=['武器類','防具類','飾品類','戒指類','特殊類'];
-  var CAT_MAP={
+  const CAT_ORDER=['武器類','防具類','飾品類','戒指類','特殊類'];
+  const CAT_MAP={
     '武器類':['weapon','subweapon','energy'],
     '防具類':['hat','suit','glove','cape','shoes','shoulder'],
     '飾品類':['eye','face','earring','belt','ornament2','necklace2','badge'],
@@ -2191,22 +2191,22 @@ function renderSwitcher(container){
 
   // ✅ 自動收納：若新增部位忘了加 CAT_MAP，也會自動出現在「飾品類」最後（避免新增後 UI 消失）
   (function(){
-    var mapped = {};
-    for (var c in CAT_MAP){
+    const mapped = {};
+    for (const c in CAT_MAP){
       if(!CAT_MAP.hasOwnProperty(c)) continue;
-      var arr = CAT_MAP[c] || [];
-      for (var i=0;i<arr.length;i++) mapped[arr[i]] = true;
+      const arr = CAT_MAP[c] || [];
+      for (let i=0;i<arr.length;i++) mapped[arr[i]] = true;
     }
-    var fallback = CAT_MAP['飾品類'] || (CAT_MAP['飾品類'] = []);
-    for (var ti=0; ti<types.length; ti++){
-      var t = types[ti];
+    const fallback = CAT_MAP['飾品類'] || (CAT_MAP['飾品類'] = []);
+    for (let ti=0; ti<types.length; ti++){
+      const t = types[ti];
       if (!mapped[t]) fallback.push(t);
     }
   })();
 
   // type -> category（找不到就丟到飾品類）
   function catOfType(t){
-    for(var c in CAT_MAP){
+    for(const c in CAT_MAP){
       if(!CAT_MAP.hasOwnProperty(c)) continue;
       if(CAT_MAP[c].indexOf(t)>=0) return c;
     }
@@ -2217,23 +2217,23 @@ function renderSwitcher(container){
   if(!innerState.equipCat) innerState.equipCat = catOfType(innerState.current);
 
   // 類別選單（上排）
-  var catRow=document.createElement('div');
+  const catRow=document.createElement('div');
   catRow.style.cssText='display:flex;gap:10px;margin:10px 0 8px;flex-wrap:wrap;align-items:center';
-  for(var ci=0;ci<CAT_ORDER.length;ci++){
+  for(let ci=0;ci<CAT_ORDER.length;ci++){
     (function(cat){
       // 沒有任何部位就不顯示（避免空分類）
-      var hasAny=false;
-      var list=CAT_MAP[cat]||[];
-      for(var j=0;j<list.length;j++){ if(types.indexOf(list[j])>=0){ hasAny=true; break; } }
+      let hasAny=false;
+      const list=CAT_MAP[cat]||[];
+      for(let j=0;j<list.length;j++){ if(types.indexOf(list[j])>=0){ hasAny=true; break; } }
       if(!hasAny) return;
 
       catRow.appendChild(
-        pill(cat, innerState.equipCat===cat, function(){
+        pill(cat, innerState.equipCat===cat, () =>{
           innerState.equipCat=cat;
           // 切類別時，若目前部位不在該類，就自動跳到該類第一個可用部位
-          var arr=CAT_MAP[cat]||[];
-          var pick=null;
-          for(var k=0;k<arr.length;k++){ if(types.indexOf(arr[k])>=0){ pick=arr[k]; break; } }
+          const arr=CAT_MAP[cat]||[];
+          let pick=null;
+          for(let k=0;k<arr.length;k++){ if(types.indexOf(arr[k])>=0){ pick=arr[k]; break; } }
           if(pick && (arr.indexOf(innerState.current)<0)) innerState.current=pick;
           global.EquipHub&&global.EquipHub.requestRerender&&global.EquipHub.requestRerender();
         })
@@ -2243,8 +2243,8 @@ function renderSwitcher(container){
   container.appendChild(catRow);
 
   // 部位選單（下排：對齊格子）
-  var grid=document.createElement('div');
-  var isRingTab = (innerState.equipCat === '戒指類');
+  const grid=document.createElement('div');
+  const isRingTab = (innerState.equipCat === '戒指類');
   grid.style.cssText =
     'display:grid;' +
     (isRingTab
@@ -2254,14 +2254,14 @@ function renderSwitcher(container){
     'gap:10px;margin:0 0 10px;align-items:stretch';
   container.appendChild(grid);
 
-  var curCat=innerState.equipCat;
-  var showList=(CAT_MAP[curCat]||[]).filter(function(t){ return types.indexOf(t)>=0; });
+  const curCat=innerState.equipCat;
+  let showList=(CAT_MAP[curCat]||[]).filter((t) =>{ return types.indexOf(t)>=0; });
   // 若某分類空了（例如未來部位調整），保底用全部 types
   if(!showList.length) showList=types.slice();
 
-  for(var i=0;i<showList.length;i++){
+  for(let i=0;i<showList.length;i++){
     (function(t){
-      var b=pill(getTypeName(t), innerState.current===t, function(){
+      const b=pill(getTypeName(t), innerState.current===t, () =>{
         innerState.current=t;
         innerState.equipCat=catOfType(t);
         global.EquipHub&&global.EquipHub.requestRerender&&global.EquipHub.requestRerender();
@@ -2278,66 +2278,66 @@ function renderSwitcher(container){
 
   // ==== 潛能卡 ====
   function summaryChips(sum){
-    var wrap=document.createElement('div'); wrap.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:6px';
-    function add(label,v,isPct){ var n=Number(v||0); if(!n) return; wrap.appendChild(chip(label, isPct?(n.toFixed(0)+'%'):fmt(n))); }
+    const wrap=document.createElement('div'); wrap.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:6px';
+    function add(label,v,isPct){ const n=Number(v||0); if(!n) return; wrap.appendChild(chip(label, isPct?(n.toFixed(0)+'%'):fmt(n))); }
     add('STR',sum.str); add('DEX',sum.dex); add('INT',sum.int); add('LUK',sum.luk);
     add('ATK',sum.atk); add('DEF',sum.def); add('HP',sum.hp);
     add('STR%',sum.strPct,true); add('DEX%',sum.dexPct,true); add('INT%',sum.intPct,true); add('LUK%',sum.lukPct,true);
     add('ATK%',sum.atkPct,true); add('HP%',sum.hpPct,true); add('All%',sum.allStatPct,true);
-    if (!wrap.childNodes.length){ var none=document.createElement('div'); none.style.cssText='opacity:.75'; none.textContent='（尚未設定）'; wrap.appendChild(none); }
+    if (!wrap.childNodes.length){ const none=document.createElement('div'); none.style.cssText='opacity:.75'; none.textContent='（尚未設定）'; wrap.appendChild(none); }
     return wrap;
   }
 
   function renderGlobalPotentialCard(root){
-    var st=Storage.read(); var gp=st.globalPotential||{lines:[],summary:emptySummary(),tier:'R'};
-    var topTier=tierMax(gp.lines); var tc=TIER_COLOR[topTier]||TIER_COLOR.R;
-    var sec=section('全域潛能（可用：一般 x'+invCount(ITEM.潛能方塊)+'｜高級 x'+invCount(ITEM.高級潛能方塊)+'）');
+    const st=Storage.read(); const gp=st.globalPotential||{lines:[],summary:emptySummary(),tier:'R'};
+    const topTier=tierMax(gp.lines); const tc=TIER_COLOR[topTier]||TIER_COLOR.R;
+    const sec=section('全域潛能（可用：一般 x'+invCount(ITEM.潛能方塊)+'｜高級 x'+invCount(ITEM.高級潛能方塊)+'）');
     sec.card.style.borderColor=tc.border; sec.card.style.boxShadow=(topTier==='SLR'? (TIER_COLOR.SLR.glow+', ') : (tc.glow+', '))+THEME.cardShadow;
 
     // 目前等級徽章
-    var badge=badgeForTier(gp.tier); badge.title='目前潛能等級（下次洗從此等級檢定升階）'; sec.head.appendChild(badge);
+    const badge=badgeForTier(gp.tier); badge.title='目前潛能等級（下次洗從此等級檢定升階）'; sec.head.appendChild(badge);
 
-    var toggle=btn(innerState.gpOpen?'收合':'展開', function(){ innerState.gpOpen=!innerState.gpOpen; global.EquipHub&&global.EquipHub.requestRerender&&global.EquipHub.requestRerender(); }, false);
+    const toggle=btn(innerState.gpOpen?'收合':'展開', () =>{ innerState.gpOpen=!innerState.gpOpen; global.EquipHub&&global.EquipHub.requestRerender&&global.EquipHub.requestRerender(); }, false);
     sec.head.appendChild(toggle);
 
     if(!innerState.gpOpen){
-      var brief=document.createElement('div'); brief.style.cssText='opacity:.9';
+      const brief=document.createElement('div'); brief.style.cssText='opacity:.9';
       if(!gp.lines||gp.lines.length===0){ brief.textContent='尚未設定（使用方塊抽取三條潛能）'; }
       else{
-        var list=[], i, ln, unit;
+        let list=[], i, ln, unit;
         for(i=0;i<gp.lines.length;i++){ ln=gp.lines[i]; unit=(ln.unit==='pct'||ln.unit==='allpct')?'%':''; list.push('['+ln.tier+'] '+ln.label+' +'+ln.value+unit); }
         brief.textContent=list.join(' ｜ ');
       }
       sec.card.appendChild(brief); root.appendChild(sec.card); return;
     }
 
-    var curBox=makeCard("10px"); curBox.style.marginTop='6px';
-    var head=document.createElement('div'); head.style.cssText='font-weight:900;margin-bottom:6px;display:flex;align-items:center;gap:8px'; head.textContent='目前三條 '; head.appendChild(badgeForTier(gp.tier)); curBox.appendChild(head);
-    if(!gp.lines||gp.lines.length===0){ var none=document.createElement('div'); none.style.cssText='opacity:.8'; none.textContent='尚未設定'; curBox.appendChild(none); }
+    const curBox=makeCard("10px"); curBox.style.marginTop='6px';
+    const head=document.createElement('div'); head.style.cssText='font-weight:900;margin-bottom:6px;display:flex;align-items:center;gap:8px'; head.textContent='目前三條 '; head.appendChild(badgeForTier(gp.tier)); curBox.appendChild(head);
+    if(!gp.lines||gp.lines.length===0){ const none=document.createElement('div'); none.style.cssText='opacity:.8'; none.textContent='尚未設定'; curBox.appendChild(none); }
     else{
-      var i, row, ln, unit;
+      let i, row, ln, unit;
       for(i=0;i<gp.lines.length;i++){
         row = document.createElement('div');
 row.style.cssText = 'display:grid;grid-template-columns:46px 1fr;align-items:center;gap:8px;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.03)';
         ln=gp.lines[i]; unit=(ln.unit==='pct'||ln.unit==='allpct')?'%':'';
-        var b=document.createElement('span'); b.className='tier-badge tier-'+ln.tier; b.textContent=ln.tier;
-        row.appendChild(b); var t=document.createElement('span'); t.textContent=ln.label+' +'+ln.value+unit; row.appendChild(t);
+        const b=document.createElement('span'); b.className='tier-badge tier-'+ln.tier; b.textContent=ln.tier;
+        row.appendChild(b); const t=document.createElement('span'); t.textContent=ln.label+' +'+ln.value+unit; row.appendChild(t);
         curBox.appendChild(row);
       }
     }
     curBox.appendChild(line());
-    var h2=document.createElement('div'); h2.style.cssText='font-weight:900;margin-bottom:6px'; h2.textContent='合計（套用到最終面板）'; curBox.appendChild(h2);
-    var chipsWrap = document.createElement('div');
+    const h2=document.createElement('div'); h2.style.cssText='font-weight:900;margin-bottom:6px'; h2.textContent='合計（套用到最終面板）'; curBox.appendChild(h2);
+    const chipsWrap = document.createElement('div');
 chipsWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:6px';
 chipsWrap.appendChild(summaryChips(gp.summary || emptySummary()));
 curBox.appendChild(chipsWrap);
     sec.card.appendChild(curBox);
 
-    var row = document.createElement('div');
+    const row = document.createElement('div');
 row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:10px';
-    var noCube = (invCount(ITEM.潛能方塊)<=0 && invCount(ITEM.高級潛能方塊)<=0);
-    row.appendChild(btn('洗潛能', function(){ global.Equip_showPotentialCubeModal && global.Equip_showPotentialCubeModal(); }, true, noCube));
-     
+    const noCube = (invCount(ITEM.潛能方塊)<=0 && invCount(ITEM.高級潛能方塊)<=0);
+    row.appendChild(btn('洗潛能', () =>{ global.Equip_showPotentialCubeModal && global.Equip_showPotentialCubeModal(); }, true, noCube));
+
     sec.card.appendChild(row);
 
     root.appendChild(sec.card);
@@ -2345,63 +2345,63 @@ row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;justify-content:center
 
   // ==== 單件卡 ====
   function renderEquipCard(type){
-    var st=Storage.read(), node=st.equips[type];
-    var box=makeCard("16px"); box.style.marginBottom="14px";
-    var __justUpgraded = (node.tier==='SLR' && __lastSlrUpgrade.type===type && (Date.now()-__lastSlrUpgrade.at)<1500);
+    const st=Storage.read(), node=st.equips[type];
+    const box=makeCard("16px"); box.style.marginBottom="14px";
+    const __justUpgraded = (node.tier==='SLR' && __lastSlrUpgrade.type===type && (Date.now()-__lastSlrUpgrade.at)<1500);
     applyTierVisual(box, String(node.tier||'N'), {justUpgraded: __justUpgraded});
     // 星數（移到名稱上方，字體放大＋依星數變色）
-    var starRow = document.createElement('div');
-    var sc = starColor(node.star);
+    const starRow = document.createElement('div');
+    const sc = starColor(node.star);
     starRow.style.cssText =
       'margin-top:6px;margin-bottom:2px;font-weight:900;font-size:18px;letter-spacing:.2px;' +
       ((node.star||0) >= 25 ? '' : ('color:' + sc + ';text-shadow:' + starGlow(node.star)));
-    var _sStar = (node.star||0)|0;
-    var _maxStar = Equip_getMaxStar();
+    const _sStar = (node.star||0)|0;
+    const _maxStar = Equip_getMaxStar();
     starRow.innerHTML = '★ ' + _sStar + (_sStar >= _maxStar ? '<span class="sf-crown">👑</span>' : '');
     Equip_applyStarFX(starRow, _sStar);
     box.appendChild(starRow);
 
-    var titleRow=document.createElement('div'); titleRow.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:8px';
-    var title=document.createElement('div'); title.style.cssText='font-weight:900;font-size:16px'; 
+    const titleRow=document.createElement('div'); titleRow.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:8px';
+    const title=document.createElement('div'); title.style.cssText='font-weight:900;font-size:16px';
     title.textContent='【'+node.name+'】 '+(node.locked?'🔒 未解鎖':'🔓 已解鎖');
-var tierBadge = document.createElement('span');
+const tierBadge = document.createElement('span');
 tierBadge.className='tier-badge tier-'+(node.tier||'R');
 tierBadge.style.marginLeft='8px';
 tierBadge.textContent=node.tier||'R';
 applyTierVisual(tierBadge, String(node.tier||'N'));
 title.appendChild(tierBadge);
-    var badge=document.createElement('div'); badge.style.cssText='background:'+THEME.pillActiveBg+';border:1px solid '+THEME.pillActiveBorder+';color:#fff;border-radius:999px;padding:6px 10px;font:900 12px/1 ui-monospace,monospace;'; badge.textContent='強化成功 +'+(toInt(node.enhanceSuccess)||0);
+    const badge=document.createElement('div'); badge.style.cssText='background:'+THEME.pillActiveBg+';border:1px solid '+THEME.pillActiveBorder+';color:#fff;border-radius:999px;padding:6px 10px;font:900 12px/1 ui-monospace,monospace;'; badge.textContent='強化成功 +'+(toInt(node.enhanceSuccess)||0);
     titleRow.appendChild(title); titleRow.appendChild(badge);
     box.appendChild(titleRow);
 // 卷軸資訊（保留在下方，小字）
-var meta=document.createElement('div');
+const meta=document.createElement('div');
 meta.style.cssText='font-size:12px;opacity:.9';
-var aug = node._slotAugSuccess|0;
-var sm = (node.slotsMax|0);
+const aug = node._slotAugSuccess|0;
+const sm = (node.slotsMax|0);
 if (sm>0) meta.textContent='卷軸：'+node.slotsUsed+'/'+sm+'（上限+'+aug+'/10）';
 else meta.textContent='卷軸：不可使用';
 box.appendChild(meta);
-    var p=(node.slotsMax|0)>0 ? Math.min(1,node.slotsUsed/Math.max(1,node.slotsMax)) : 1;
-    var bar=document.createElement('div'); bar.style.cssText='height:10px;background:#0a1220;border:1px solid '+THEME.cardBorder+';border-radius:999px;overflow:hidden;margin-top:8px'; var inr=document.createElement('div'); inr.style.cssText='height:100%;background:'+THEME.success+';width:'+(p*100).toFixed(1)+'%'; bar.appendChild(inr); box.appendChild(bar);
+    const p=(node.slotsMax|0)>0 ? Math.min(1,node.slotsUsed/Math.max(1,node.slotsMax)) : 1;
+    const bar=document.createElement('div'); bar.style.cssText='height:10px;background:#0a1220;border:1px solid '+THEME.cardBorder+';border-radius:999px;overflow:hidden;margin-top:8px'; const inr=document.createElement('div'); inr.style.cssText='height:100%;background:'+THEME.success+';width:'+(p*100).toFixed(1)+'%'; bar.appendChild(inr); box.appendChild(bar);
 
     if(!node.locked){
-      var s=calcFinalStats(node);
-      var sec=section('能力總覽'); sec.card.style.marginTop="12px";
-      var big=document.createElement('div'); big.style.cssText='font:900 18px ui-monospace,monospace;letter-spacing:.3px;margin-bottom:8px';
+      const s=calcFinalStats(node);
+      const sec=section('能力總覽'); sec.card.style.marginTop="12px";
+      const big=document.createElement('div'); big.style.cssText='font:900 18px ui-monospace,monospace;letter-spacing:.3px;margin-bottom:8px';
       big.innerHTML = '<span style="color:'+THEME.blue+'">ATK +'+fmt(s.atk)+'</span>　'+'<span style="color:'+THEME.success+'">DEF +'+fmt(s.def)+'</span>　'+'<span style="color:'+THEME.warn+'">HP +'+fmt(s.hp)+'</span>　'+'<span style="color:'+THEME.blue+'">MP +'+fmt(s.mp)+'</span>';
       sec.card.appendChild(big);
-      var wrap=document.createElement('div'); wrap.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
+      const wrap=document.createElement('div'); wrap.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
       wrap.appendChild(chip('STR',fmt(s.str))); wrap.appendChild(chip('DEX',fmt(s.dex))); wrap.appendChild(chip('INT',fmt(s.int))); wrap.appendChild(chip('LUK',fmt(s.luk)));
       wrap.appendChild(chip('星力%累積',(s.starAtkPctSum||0)+'%')); wrap.appendChild(chip('星力加攻',fmt(s.atkFromStar||0)));
       sec.card.appendChild(wrap); box.appendChild(sec.card);
     }else{
-      var hint=document.createElement('div'); hint.style.cssText='opacity:.85;margin-top:10px'; hint.textContent='（未解鎖，無能力）'; box.appendChild(hint);
+      const hint=document.createElement('div'); hint.style.cssText='opacity:.85;margin-top:10px'; hint.textContent='（未解鎖，無能力）'; box.appendChild(hint);
     }
 
     // —— 加一段樣式（只加一次）——
 (function injectEquipStyle(){
   if (document.getElementById('equip-style')) return;
-  var css = `
+  const css = `
   .equip-row{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
@@ -2441,12 +2441,12 @@ box.appendChild(meta);
     box-shadow:none; transform:none;
   }
   `;
-  var s=document.createElement('style'); s.id='equip-style'; s.textContent=css; document.head.appendChild(s);
+  const s=document.createElement('style'); s.id='equip-style'; s.textContent=css; document.head.appendChild(s);
 })();
 
 // —— 小工具：把你現有的 btn() 做外觀強化（不改它行為）——
 function prettyBtn(label, onclick, primary, disabled, variant){
-  var el = btn(label, onclick, primary, disabled);
+  const el = btn(label, onclick, primary, disabled);
   el.classList && el.classList.add('equip-btn', variant || (primary?'primary':'secondary'));
   if (disabled) el.classList && el.classList.add('disabled');
   return el;
@@ -2455,54 +2455,54 @@ function prettyBtn(label, onclick, primary, disabled, variant){
 /* 一次性樣式補充：讓兩顆按鈕排成一行 */
 (function injectEquipInlineStyle(){
   if (document.getElementById('equip-inline-style')) return;
-  var css = `
+  const css = `
   .equip-inline{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
   `;
-  var s=document.createElement('style'); s.id='equip-inline-style'; s.textContent=css; document.head.appendChild(s);
+  const s=document.createElement('style'); s.id='equip-inline-style'; s.textContent=css; document.head.appendChild(s);
 })();
 
 /* 群組工具：把兩顆按鈕裝成一行 */
 function groupTwo(a,b){
-  var g=document.createElement('div'); g.className='equip-inline';
+  const g=document.createElement('div'); g.className='equip-inline';
   g.appendChild(a); g.appendChild(b);
   return g;
 }
 
 /* —— 你的原本 row —— */
-var row=document.createElement('div');
+const row=document.createElement('div');
 row.classList.add('equip-row');
 
 if(node.locked){
-  var need=unlockCostByType(type);
+  const need=unlockCostByType(type);
   row.appendChild(
     prettyBtn('解鎖（'+invCount(ITEM.解放石)+'/'+need+'）',
-      function(){ var r=unlockEquip(type); alert(r.msg); try{ if(global.EquipHub && typeof global.EquipHub.requestRerender==='function') global.EquipHub.requestRerender(); }catch(_e){} },
+      () =>{ const r=unlockEquip(type); alert(r.msg); try{ if(global.EquipHub && typeof global.EquipHub.requestRerender==='function') global.EquipHub.requestRerender(); }catch(_e){} },
       true, invCount(ITEM.解放石)<need, 'primary')
   );
 }else{
   if (canUseScroll(type)){
   // 卷軸 UI 全部交給 ScrollForgeV2（彈窗），裝備頁只留一顆入口按鈕。
-  var hasModal = !!(global.ScrollForgeV2 && typeof global.ScrollForgeV2.openScrollModal === 'function');
+  const hasModal = !!(global.ScrollForgeV2 && typeof global.ScrollForgeV2.openScrollModal === 'function');
   row.appendChild(
     prettyBtn(hasModal ? '卷軸' : '卷軸（缺少 ScrollForgeV2）',
-      function(){
+      () =>{
         if(!hasModal){ alert('ScrollForgeV2.openScrollModal 不存在，請確認已載入 scroll_core_v2.js'); return; }
 
         // 這裡只負責：提供「讀取/寫回裝備」「讀取/消耗背包」「重渲染/提示」
         global.ScrollForgeV2.openScrollModal({
-          getNode: function(){
-            var st = Storage.read();
+          getNode(){
+            const st = Storage.read();
             return st && st.equips ? st.equips[type] : null;
           },
-          saveNode: function(nextNode){
-            var o = {}; o[type] = nextNode;
+          saveNode(nextNode){
+            const o = {}; o[type] = nextNode;
             Storage.write({ equips: o });
             syncAndPing();
           },
-          invCount: function(itemName){ return invCount(itemName); },
-          invUse: function(itemName, qty){ return invUse(itemName, qty|0); },
-          onMsg: function(t){ try{ alert(t); }catch(_){} },
-          onRerender: function(){
+          invCount(itemName){ return invCount(itemName); },
+          invUse(itemName, qty){ return invUse(itemName, qty|0); },
+          onMsg(t){ try{ alert(t); }catch(_){} },
+          onRerender(){
             try{
               if (global.EquipHub && typeof global.EquipHub.requestRerender === 'function') global.EquipHub.requestRerender();
             }catch(_){}
@@ -2518,75 +2518,75 @@ if(node.locked){
     prettyBtn('升星（'+invCount(ITEM.衝星石)+'）',
       ()=>{
         if (!global.StarforceTableV1 || typeof StarforceTableV1.openStarforceModal!=='function') { alert('未載入 StarforceTableV1'); return; }
-        var st=Storage.read();
-        var node=st.equips[type];
+        const st=Storage.read();
+        const node=st.equips[type];
         if(!node){ alert('裝備不存在'); return; }
         // 直接由星力核心驅動 UI 與邏輯
         StarforceTableV1.openStarforceModal(node, {
-          getStoneCount: function(){ return invCount(ITEM.衝星石); },
-          spendStone: function(n){ return invUse(ITEM.衝星石, n); },
-          onSave: function(updatedNode){ var o={}; o[type]=updatedNode; Storage.write({equips:o}); syncAndPing(); },
-          onRerender: function(){ global.EquipHub && global.EquipHub.requestRerender && global.EquipHub.requestRerender(); },
-          onMsg: function(t){ try{ toast(t); } catch(e){ /* fallback */ } }
+          getStoneCount(){ return invCount(ITEM.衝星石); },
+          spendStone(n){ return invUse(ITEM.衝星石, n); },
+          onSave(updatedNode){ const o={}; o[type]=updatedNode; Storage.write({equips:o}); syncAndPing(); },
+          onRerender(){ global.EquipHub && global.EquipHub.requestRerender && global.EquipHub.requestRerender(); },
+          onMsg(t){ try{ toast(t); } catch(e){ /* fallback */ } }
         }); },
       true, invCount(ITEM.衝星石)<=0, 'primary')
   );
 if ((node.tier||'R')!=='SLR') row.appendChild(prettyBtn('階級進化（'+(node.tier||'R')+'→下一階）',
-  function(){ var r=evolveEquipTier(type); alert(r.msg); try{ if(global.EquipHub && typeof global.EquipHub.requestRerender==='function') global.EquipHub.requestRerender(); }catch(_e){} },
+  () =>{ const r=evolveEquipTier(type); alert(r.msg); try{ if(global.EquipHub && typeof global.EquipHub.requestRerender==='function') global.EquipHub.requestRerender(); }catch(_e){} },
   false, invCount(ITEM.階級石)<=0, 'secondary'));
 
   // 星火：一行（普通/高級/永恆）— 完全交由 FlameCore 處理（UI/選擇/規則皆在星火檔案）
   (function(){
     if (!global.FlameCore || typeof global.FlameCore.applyToEquip !== 'function') return;
 
-    var normal = ITEM.星火, adv = ITEM.高級星火, et = ITEM.永恆星火;
+    const normal = ITEM.星火, adv = ITEM.高級星火, et = ITEM.永恆星火;
 
     function run(itemName){
       global.FlameCore.applyToEquip({
-        itemName: itemName,
+        itemName,
         equipType: type,
-        getNode: function(){
-          var st = Storage.read();
+        getNode(){
+          const st = Storage.read();
           return st && st.equips ? st.equips[type] : null;
         },
-        saveNode: function(node){
-          var o = {}; o[type] = node;
+        saveNode(node){
+          const o = {}; o[type] = node;
           Storage.write({ equips: o });
           syncAndPing();
           if (global.EquipHub && global.EquipHub.requestRerender) global.EquipHub.requestRerender();
         },
-        invCount: invCount,
-        invUse: invUse
+        invCount,
+        invUse
       });
     }
 
-    var b1 = prettyBtn('星火（'+invCount(normal)+'）', function(){ run(normal); }, false, invCount(normal)<=0, 'secondary');
-    var b2 = prettyBtn('高級星火（'+invCount(adv)+'）', function(){ run(adv); }, false, invCount(adv)<=0, 'secondary');
-    var b3 = prettyBtn('永恆星火（'+invCount(et)+'）', function(){ run(et); }, false, invCount(et)<=0, 'secondary');
+    const b1 = prettyBtn('星火（'+invCount(normal)+'）', () =>{ run(normal); }, false, invCount(normal)<=0, 'secondary');
+    const b2 = prettyBtn('高級星火（'+invCount(adv)+'）', () =>{ run(adv); }, false, invCount(adv)<=0, 'secondary');
+    const b3 = prettyBtn('永恆星火（'+invCount(et)+'）', () =>{ run(et); }, false, invCount(et)<=0, 'secondary');
 
     row.appendChild(groupTwo(b1,b2));
-    row.appendChild(groupTwo(b3, prettyBtn('', function(){}, false, true, 'ghost')));
+    row.appendChild(groupTwo(b3, prettyBtn('', () =>{}, false, true, 'ghost')));
   })();
 
 // 卷軸上限 +1：單獨一行一顆
   (function(){
-    var canApi=!!(global.ScrollForgeV2&&ScrollForgeV2.canAugmentSlots&&ScrollForgeV2.augmentSlots);
-    var chk=canApi?ScrollForgeV2.canAugmentSlots(node):{ok:false,reason:'no_api'};
-    var disabled=!canApi||!chk.ok||invCount(ITEM.上限卷)<=0;
+    const canApi=!!(global.ScrollForgeV2&&ScrollForgeV2.canAugmentSlots&&ScrollForgeV2.augmentSlots);
+    const chk=canApi?ScrollForgeV2.canAugmentSlots(node):{ok:false,reason:'no_api'};
+    const disabled=!canApi||!chk.ok||invCount(ITEM.上限卷)<=0;
 
     row.appendChild(
-      prettyBtn('卷軸上限+1（'+invCount(ITEM.上限卷)+'）', function(){
+      prettyBtn('卷軸上限+1（'+invCount(ITEM.上限卷)+'）', () =>{
         if (!canApi){ alert('缺少 ScrollForgeV2：無法使用上限提升'); return; }
-        var chk2=ScrollForgeV2.canAugmentSlots(node);
+        const chk2=ScrollForgeV2.canAugmentSlots(node);
         if (!chk2.ok){
-          var map={locked:'裝備未解鎖',not_scrollable:'此部位不支援卷軸',cap:'已達上限 +10',no_node:'裝備不存在'};
+          const map={locked:'裝備未解鎖',not_scrollable:'此部位不支援卷軸',cap:'已達上限 +10',no_node:'裝備不存在'};
           alert(map[chk2.reason]||'不可提升'); return;
         }
         if (invCount(ITEM.上限卷)<=0){ alert('缺少 '+ITEM.上限卷+' ×1'); return; }
         if (!invUse(ITEM.上限卷,1)){ alert('扣除道具失敗'); return; }
-        var rs=ScrollForgeV2.augmentSlots(node);
+        const rs=ScrollForgeV2.augmentSlots(node);
         if (rs.success){
-          var o={}; o[type]=rs.nextNode; Storage.write({equips:o}); syncAndPing();
+          const o={}; o[type]=rs.nextNode; Storage.write({equips:o}); syncAndPing();
           alert('成功！卷軸上限 +1（第 '+rs.step+' 次，成功率 '+Math.round(rs.chance*100)+'%）\n目前上限：'+rs.nextNode.slotsMax+'（已成功：'+(rs.nextNode._slotAugSuccess|0)+'/10）');
         } else {
           alert('失敗（第 '+rs.step+' 次，成功率 '+Math.round(rs.chance*100)+'%）');
@@ -2602,15 +2602,15 @@ box.appendChild(row);
 
     // 星火展示
     if (global.FlameCore){
-      var flameSec=section('星火'); flameSec.card.style.marginTop='6px';
+      const flameSec=section('星火'); flameSec.card.style.marginTop='6px';
       (function(){
         // 星火詞條（卡片化顯示）
-var lines = (node.flame && node.flame.lines) ? node.flame.lines : [];
-var wrapLines = document.createElement('div');
+const lines = (node.flame && node.flame.lines) ? node.flame.lines : [];
+const wrapLines = document.createElement('div');
 wrapLines.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:6px';
 
 function pill(text, tone){
-  var b = document.createElement('div');
+  const b = document.createElement('div');
   b.style.cssText =
     'border:1px solid '+THEME.cardBorder+';background:'+THEME.pillBg+';border-radius:999px;' +
     'padding:6px 10px;font:900 12px ui-monospace,monospace;letter-spacing:.2px;color:'+(tone||'#e5e7eb');
@@ -2621,13 +2621,13 @@ function pill(text, tone){
 if (!lines.length){
   wrapLines.appendChild(pill('（無）', 'rgba(229,231,235,.85)'));
 } else {
-  for (var i=0;i<lines.length;i++){
-    var L = lines[i] || {};
-    var v = Number(L.value||0)||0;
-    var tier = (L.tier!=null) ? ('T'+L.tier) : '';
-    var label = String(L.label||L.key||'');
-    var sign = (v>=0?'+':'');
-    var txt = label + ' ' + sign + v + (tier?(' ('+tier+')'):'');
+  for (let i=0;i<lines.length;i++){
+    const L = lines[i] || {};
+    const v = Number(L.value||0)||0;
+    const tier = (L.tier!=null) ? ('T'+L.tier) : '';
+    const label = String(L.label||L.key||'');
+    const sign = (v>=0?'+':'');
+    const txt = label + ' ' + sign + v + (tier?(' ('+tier+')'):'');
     wrapLines.appendChild(pill(txt, THEME.success));
   }
 }
@@ -2635,11 +2635,11 @@ flameSec.card.appendChild(wrapLines);
 
 // 平砍加成摘要（若有 flameFlat）
         if (node.flameFlat){
-          var f = node.flameFlat;
-          var wrap=document.createElement('div'); wrap.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:8px';
-          function small(label,val){ var n=Number(val||0); if(!n) return null; var col=n>0?THEME.success:(n<0?THEME.neg:THEME.zero); var b=document.createElement('div'); b.style.cssText='border:1px solid '+THEME.cardBorder+';background:'+THEME.pillBg+';border-radius:8px;padding:4px 8px;font:800 12px ui-monospace,monospace;color:'+col; b.textContent=label+(n>=0?'+':'')+n; return b; }
-          var arr=[small('STR',f.str), small('DEX',f.dex||f.agi), small('INT',f.int), small('LUK',f.luk), small('ATK',f.atk), small('DEF',f.def), small('HP',f.hp), small('MP',f.mp)];
-          for (var i=0;i<arr.length;i++) if (arr[i]) wrap.appendChild(arr[i]);
+          const f = node.flameFlat;
+          const wrap=document.createElement('div'); wrap.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:8px';
+          function small(label,val){ const n=Number(val||0); if(!n) return null; const col=n>0?THEME.success:(n<0?THEME.neg:THEME.zero); const b=document.createElement('div'); b.style.cssText='border:1px solid '+THEME.cardBorder+';background:'+THEME.pillBg+';border-radius:8px;padding:4px 8px;font:800 12px ui-monospace,monospace;color:'+col; b.textContent=label+(n>=0?'+':'')+n; return b; }
+          const arr=[small('STR',f.str), small('DEX',f.dex||f.agi), small('INT',f.int), small('LUK',f.luk), small('ATK',f.atk), small('DEF',f.def), small('HP',f.hp), small('MP',f.mp)];
+          for (let i=0;i<arr.length;i++) if (arr[i]) wrap.appendChild(arr[i]);
           flameSec.card.appendChild(wrap);
         }
       })();
@@ -2655,58 +2655,58 @@ flameSec.card.appendChild(wrapLines);
 
 // ===== 取代舊的規則卡：將按鈕事件指向 Equip_showUnifiedRatesModal =====
 function renderRuleCard(root){
-  var sec=section('規則摘要（v4.1）'); 
-  var b=document.createElement('div');
+  const sec=section('規則摘要（v4.1）');
+  const b=document.createElement('div');
   b.innerHTML=
       '• 潛能：每次從「目前等級」出發檢定升階（只升不降），一次抽三條並直接套用。<br>'
     + '• 混沌卷成功時，若持有「混沌選擇券」可選擇是否套用：套用扣 1 次；不套用不扣次；兩者皆消耗 1 張券。<br>'
     + '• 可卷部位需卷軸用盡才可升星；不可卷部位可直接升星。';
 
-  var row=document.createElement('div'); 
+  const row=document.createElement('div');
   row.style.cssText='display:flex;gap:10px;margin-top:8px';
 
-  var btnR=document.createElement('button'); 
+  const btnR=document.createElement('button');
   btnR.textContent='機率資訊';
   btnR.onclick=(window.Equip_showUnifiedRatesModal || function(){ alert('找不到 Equip_showUnifiedRatesModal'); });
   btnR.style.cssText='padding:8px 12px;border-radius:10px;border:1px solid '+THEME.pillBorder+';background:'+THEME.pillBg+';color:#fff;font-weight:900;cursor:pointer';
 
-  row.appendChild(btnR); 
-  sec.card.appendChild(b); 
-  sec.card.appendChild(row); 
+  row.appendChild(btnR);
+  sec.card.appendChild(b);
+  sec.card.appendChild(row);
   root.appendChild(sec.card);
 }
 
   // ==== Tab ====
   function renderTab(root){
-    var wrap=document.createElement('div');
+    const wrap=document.createElement('div');
     renderRuleCard(wrap);
     renderSummaryCard(wrap);
     renderGlobalPotentialCard(wrap);                // 潛能卡在整體能力下方
-    var sw=document.createElement('div'); renderSwitcher(sw); wrap.appendChild(sw);
+    const sw=document.createElement('div'); renderSwitcher(sw); wrap.appendChild(sw);
     wrap.appendChild(line());
     wrap.appendChild(renderEquipCard(innerState.current));
     root.appendChild(wrap);
   }
 
   if (global.EquipHub && typeof global.EquipHub.registerTab==='function'){
-    global.EquipHub.registerTab({ id:'equip_core_v4_1', title:'裝備系統 v4.1', render:function(root){ renderTab(root); }, tick:function(){}, onOpen:function(){ syncAndPing(); } });
+    global.EquipHub.registerTab({ id:'equip_core_v4_1', title:'裝備系統 v4.1', render(root){ renderTab(root); }, tick(){}, onOpen(){ syncAndPing(); } });
   }
-  (function ensureReady(){ var tries=0, t=setInterval(function(){ if(global.player && global.player.coreBonus && global.player.coreBonus.bonusData){ clearInterval(t); syncAndPing(); } else if(++tries>200){ clearInterval(t); } }, 50); })();
-  
+  (function ensureReady(){ let tries=0, t=setInterval(() =>{ if(global.player && global.player.coreBonus && global.player.coreBonus.bonusData){ clearInterval(t); syncAndPing(); } else if(++tries>200){ clearInterval(t); } }, 50); })();
+
 })(this);
 // ===== 統一機率總覽視窗（潛能 / 卷軸 / 混沌 / 星力 / 卷軸上限提升）=====
 (function(global){
   'use strict';
 
-  function div(s){ var d=document.createElement('div'); if(s) d.style.cssText=s; return d; }
+  function div(s){ const d=document.createElement('div'); if(s) d.style.cssText=s; return d; }
   function txt(t){ return document.createTextNode(t); }
   function table(rows){
-    var t=document.createElement('table');
+    const t=document.createElement('table');
     t.style.cssText='width:100%;border-collapse:collapse;font-size:12px;color:#e5e7eb';
-    for(var i=0;i<rows.length;i++){
-      var tr=document.createElement('tr'); if(i===0) tr.style.background='#0f172a';
-      for(var j=0;j<rows[i].length;j++){
-        var td=document.createElement(i?'td':'th');
+    for(let i=0;i<rows.length;i++){
+      const tr=document.createElement('tr'); if(i===0) tr.style.background='#0f172a';
+      for(let j=0;j<rows[i].length;j++){
+        const td=document.createElement(i?'td':'th');
         td.textContent=rows[i][j];
         td.style.cssText='border:1px solid #263247;padding:5px;text-align:center';
         tr.appendChild(td);
@@ -2715,28 +2715,28 @@ function renderRuleCard(root){
     }
     return t;
   }
-  function btn(txt,on){ var b=document.createElement('button'); b.textContent=txt; b.onclick=on;
+  function btn(txt,on){ const b=document.createElement('button'); b.textContent=txt; b.onclick=on;
     b.style.cssText='padding:6px 10px;border:1px solid #334155;border-radius:8px;background:#1f2937;color:#fff;cursor:pointer;font-weight:700'; return b; }
-  function h(title){ var x=div('margin:8px 0 6px 0;font-weight:800;color:#93c5fd'); x.appendChild(txt(title)); return x; }
+  function h(title){ const x=div('margin:8px 0 6px 0;font-weight:800;color:#93c5fd'); x.appendChild(txt(title)); return x; }
 
 // === 潛能（純展示：直接讀 PotentialCoreV21.effectTableForSession）===
 function renderPotentialPage(root){
-  var P = window.PotentialCoreV21;
+  const P = window.PotentialCoreV21;
   if(!P){ root.appendChild(document.createTextNode('⚠️ 潛能模組尚未載入')); return; }
 
   function h(title){
-    var d=document.createElement('div');
+    const d=document.createElement('div');
     d.textContent=title;
     d.style.cssText='margin:10px 0 6px;font-weight:800;color:#93c5fd';
     return d;
   }
   function tbl(rows){
-    var t=document.createElement('table');
+    const t=document.createElement('table');
     t.style.cssText='width:100%;border-collapse:collapse;font-size:12px;color:#e5e7eb;border:1px solid #263247;border-radius:8px;overflow:hidden';
-    for(var i=0;i<rows.length;i++){
-      var tr=document.createElement('tr'); if(i===0) tr.style.background='#0f172a';
-      for(var j=0;j<rows[i].length;j++){
-        var td=document.createElement(i?'td':'th');
+    for(let i=0;i<rows.length;i++){
+      const tr=document.createElement('tr'); if(i===0) tr.style.background='#0f172a';
+      for(let j=0;j<rows[i].length;j++){
+        const td=document.createElement(i?'td':'th');
         td.textContent=rows[i][j];
         td.style.cssText='border:1px solid #263247;padding:6px;text-align:center';
         tr.appendChild(td);
@@ -2747,33 +2747,33 @@ function renderPotentialPage(root){
   }
   function fmtPct(n){ n=Number(n)||0; return n.toFixed(2)+'%'; }
 
-  var TIERS = ['R','SR','SSR','UR','LR','SLR'];
+  const TIERS = ['R','SR','SSR','UR','LR','SLR'];
 
   // 升階機率（直接用 upgradeChanceFrom）
-  var upRows = [['等級','cube%','高級升階%']];
-  for (var i=0;i<TIERS.length;i++){
-    var t = TIERS[i];
+  const upRows = [['等級','cube%','高級升階%']];
+  for (let i=0;i<TIERS.length;i++){
+    const t = TIERS[i];
     if (t==='SLR'){ upRows.push([t,'—','—']); continue; }
-    var base = (P.upgradeChanceFrom(t,'cube')||0)*100;
-    var plus = (P.upgradeChanceFrom(t,'cube_plus')||0)*100;
+    const base = (P.upgradeChanceFrom(t,'cube')||0)*100;
+    const plus = (P.upgradeChanceFrom(t,'cube_plus')||0)*100;
     upRows.push([t, base.toFixed(2)+'%', plus.toFixed(2)+'%']);
   }
   root.appendChild(h('潛能升階機率（動態）'));
   root.appendChild(tbl(upRows));
 
   // 每個等級的詞條機率（直接用 effectTableForSession）
-  for (var k=0;k<TIERS.length;k++){
-    var tier = TIERS[k];
-    var list = (typeof P.effectTableForSession==='function') ? P.effectTableForSession(tier) : null;
+  for (let k=0;k<TIERS.length;k++){
+    const tier = TIERS[k];
+    const list = (typeof P.effectTableForSession==='function') ? P.effectTableForSession(tier) : null;
     if (!Array.isArray(list) || !list.length) continue;
 
     // 以 prob 總和正規化成百分比（你的 effectsR prob 代表權重）
-    var sum = 0; for (var x=0;x<list.length;x++) sum += Math.max(0, Number(list[x].prob)||0);
-    var rows = [['等級：'+tier,'詞條','數值','機率%']];
-    for (var m=0;m<list.length;m++){
-      var e = list[m];
-      var unit = e.unit || ''; // 已轉成 '%' 或 '' by effectTableForSession
-      var pct = sum>0 ? ( (Number(e.prob)||0) / sum * 100 ) : 0;
+    let sum = 0; for (let x=0;x<list.length;x++) sum += Math.max(0, Number(list[x].prob)||0);
+    const rows = [['等級：'+tier,'詞條','數值','機率%']];
+    for (let m=0;m<list.length;m++){
+      const e = list[m];
+      const unit = e.unit || ''; // 已轉成 '%' 或 '' by effectTableForSession
+      const pct = sum>0 ? ( (Number(e.prob)||0) / sum * 100 ) : 0;
       rows.push(['', e.label, (e.value + (unit||'')), fmtPct(pct)]);
     }
 
@@ -2782,7 +2782,7 @@ function renderPotentialPage(root){
   }
 
   // 第2/3條「依此類推分配」的規則提示（純文字）
-  var tip=document.createElement('div');
+  const tip=document.createElement('div');
   tip.style.cssText='margin-top:8px;opacity:.85';
   tip.innerHTML = '說明：單次抽三條；第1條固定為該回合等級。第2/3條依次級分配：'+
     ')。';
@@ -2791,30 +2791,30 @@ function renderPotentialPage(root){
 
   // === 卷軸（一般卷） ===
   function renderScrollBasics(root){
-    var S=global.ScrollForgeV2;
+    const S=global.ScrollForgeV2;
     if(!S){root.appendChild(txt('⚠️ 找不到卷軸模組'));return;}
-    var def=S.def||{};
-    var rows=[['卷軸名稱','成功率%','效果']];
-    for(var k in def){
+    const def=S.def||{};
+    const rows=[['卷軸名稱','成功率%','效果']];
+    for(const k in def){
       if(!def.hasOwnProperty(k))continue;
-      var d=def[k];
+      const d=def[k];
       if(d.effGen)continue; // 混沌卷由另一頁顯示
-      var effL=[],e=d.eff||{};for(var kk in e)if(e.hasOwnProperty(kk))effL.push(kk.toUpperCase()+'+'+e[kk]);
+      const effL=[],e=d.eff||{};for(const kk in e)if(e.hasOwnProperty(kk))effL.push(kk.toUpperCase()+'+'+e[kk]);
       rows.push([k,d.rate!=null?String(d.rate):'—',effL.join('、')||'—']);
     }
     root.appendChild(h('一般卷軸成功率 / 效果')); root.appendChild(table(rows));
   }
 
 function renderChaos(root){
-  var S=global.ScrollForgeV2;
+  const S=global.ScrollForgeV2;
   if(!S){root.appendChild(txt('⚠️ 找不到卷軸模組'));return;}
 
-  var def=S.def||{};
-  var list=[];
-  for(var k in def){
+  const def=S.def||{};
+  const list=[];
+  for(const k in def){
     if(!def.hasOwnProperty(k)) continue;
-    var d=def[k];
-    if(d && d.chaosView) list.push({ key:k, d:d, v:d.chaosView });
+    const d=def[k];
+    if(d && d.chaosView) list.push({ key:k, d, v:d.chaosView });
   }
 
   if(!list.length){
@@ -2823,45 +2823,45 @@ function renderChaos(root){
   }
 
   function toRowsSingle(v){
-    var fn = S[v.source];
-    var arr = (typeof fn==='function') ? fn.apply(S, v.args||[]) : [];
-    var rows=[v.header || ['數值','機率%']];
-    for(var i=0;i<arr.length;i++){
+    const fn = S[v.source];
+    const arr = (typeof fn==='function') ? fn.apply(S, v.args||[]) : [];
+    const rows=[v.header || ['數值','機率%']];
+    for(let i=0;i<arr.length;i++){
       rows.push([String(arr[i].v), (arr[i].p*100).toFixed(2)]);
     }
     if(v.notes && v.notes.length){
-      for(var n=0;n<v.notes.length;n++) rows.push(v.notes[n]);
+      for(let n=0;n<v.notes.length;n++) rows.push(v.notes[n]);
     }
     return rows;
   }
 
   function toRowsDual(v){
-    var mainFn=S[v.mainSource], atkFn=S[v.atkSource];
-    var main=(typeof mainFn==='function')? mainFn.call(S): [];
-    var atk =(typeof atkFn==='function')?  atkFn.call(S):  [];
+    const mainFn=S[v.mainSource], atkFn=S[v.atkSource];
+    const main=(typeof mainFn==='function')? mainFn.call(S): [];
+    const atk =(typeof atkFn==='function')?  atkFn.call(S):  [];
 
-    var mm={}, aa={}, minV=9999, maxV=-9999, i;
+    let mm={}, aa={}, minV=9999, maxV=-9999, i;
     for(i=0;i<main.length;i++){ mm[main[i].v]=main[i].p*100; minV=Math.min(minV, main[i].v); maxV=Math.max(maxV, main[i].v); }
     for(i=0;i<atk.length;i++){  aa[atk[i].v] =atk[i].p*100;  minV=Math.min(minV, atk[i].v);  maxV=Math.max(maxV, atk[i].v);  }
     if(minV===9999){ minV=0; maxV=0; }
 
-    var rows=[v.header || ['數值','主屬%','ATK%']];
-    for(var val=minV; val<=maxV; val++){
-      var mp=(mm[val]!=null)? mm[val].toFixed(2): '—';
-      var ap=(aa[val]!=null)? aa[val].toFixed(2): '—';
+    const rows=[v.header || ['數值','主屬%','ATK%']];
+    for(let val=minV; val<=maxV; val++){
+      const mp=(mm[val]!=null)? mm[val].toFixed(2): '—';
+      const ap=(aa[val]!=null)? aa[val].toFixed(2): '—';
       rows.push([String(val), String(mp), String(ap)]);
     }
     if(v.footer && v.footer.length) rows.push(v.footer);
     return rows;
   }
 
-  var tabs=div('display:flex;gap:8px;margin:6px 0;flex-wrap:wrap');
-  var content=div();
+  const tabs=div('display:flex;gap:8px;margin:6px 0;flex-wrap:wrap');
+  const content=div();
 
   function show(item){
     content.innerHTML='';
-    var v=item.v;
-    var rows = (v.type==='dual') ? toRowsDual(v) : toRowsSingle(v);
+    const v=item.v;
+    const rows = (v.type==='dual') ? toRowsDual(v) : toRowsSingle(v);
     content.appendChild(table(rows));
   }
 
@@ -2869,10 +2869,10 @@ function renderChaos(root){
   root.appendChild(tabs);
   root.appendChild(content);
 
-  for(var i=0;i<list.length;i++){
+  for(let i=0;i<list.length;i++){
     (function(item){
-      var title = (item.v && item.v.title) ? item.v.title : (item.d && item.d.name) ? item.d.name : item.key;
-      var b=btn(title, function(){ show(item); });
+      const title = (item.v && item.v.title) ? item.v.title : (item.d && item.d.name) ? item.d.name : item.key;
+      const b=btn(title, () =>{ show(item); });
       tabs.appendChild(b);
     })(list[i]);
   }
@@ -2882,12 +2882,12 @@ function renderChaos(root){
 
   // === 星力 ===
   function renderStar(root){
-    var SF=global.StarforceTableV1;
+    const SF=global.StarforceTableV1;
     if(!SF){root.appendChild(txt('⚠️ 找不到星力模組'));return;}
-    var rows=[['星數','成功率%','破壞率%']];
-    for(var i=1;i<=30;i++){
-      var s=SF.successRate?SF.successRate(i):0;
-      var b=SF.boomRate?SF.boomRate(i):0;
+    const rows=[['星數','成功率%','破壞率%']];
+    for(let i=1;i<=30;i++){
+      const s=SF.successRate?SF.successRate(i):0;
+      const b=SF.boomRate?SF.boomRate(i):0;
       rows.push([i,String(s.toFixed?s.toFixed(1):s),String(b.toFixed?b.toFixed(1):b)]);
     }
     root.appendChild(h('星力成功/破壞率')); root.appendChild(table(rows));
@@ -2895,9 +2895,9 @@ function renderChaos(root){
 
   // === 卷軸上限提升（讀取 ScrollForgeV2.getAugmentChances ） ===
   function renderAugment(root){
-    var S=global.ScrollForgeV2;
+    const S=global.ScrollForgeV2;
     if(!S){root.appendChild(txt('⚠️ 找不到卷軸模組'));return;}
-    var steps=[];
+    let steps=[];
     if (typeof S.getAugmentChances === 'function') steps = S.getAugmentChances();
     else if (S.augmentChances && S.augmentChances.slice) steps = S.augmentChances.slice();
     else if (S.config && S.config.augmentChances && S.config.augmentChances.slice) steps = S.config.augmentChances.slice();
@@ -2906,27 +2906,27 @@ function renderChaos(root){
       root.appendChild(txt('⚠️ 尚未提供卷軸上限提升機率（請在 scroll_core_v2.js 暴露 getAugmentChances）'));
       return;
     }
-    var rows=[['第幾次成功','成功率%']];
-    for(var i=0;i<steps.length;i++){
+    const rows=[['第幾次成功','成功率%']];
+    for(let i=0;i<steps.length;i++){
       rows.push([String(i+1), String(steps[i])]);
     }
     root.appendChild(h('卷軸上限提升（成功率表）'));
     root.appendChild(table(rows));
-    var note=div('opacity:.8;margin-top:6px;font-size:12px;');
+    const note=div('opacity:.8;margin-top:6px;font-size:12px;');
     note.appendChild(txt('說明：成功後裝備可使用的卷軸次數 +1；最多 +'+steps.length+' 次（不能對不可卷的部位使用）。'));
     root.appendChild(note);
   }
 
   // === 主窗口 ===
   function Equip_showUnifiedRatesModal(){
-    var bd=div('position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:10000;padding:12px;');
-    var w =div('width:min(960px,96vw);max-height:92vh;overflow:auto;background:#111827;color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:12px;box-shadow:0 12px 36px rgba(0,0,0,.5)');
-    var head=div('display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-weight:900');
+    const bd=div('position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:10000;padding:12px;');
+    const w =div('width:min(960px,96vw);max-height:92vh;overflow:auto;background:#111827;color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:12px;box-shadow:0 12px 36px rgba(0,0,0,.5)');
+    const head=div('display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-weight:900');
     head.appendChild(txt('📊 機率總覽'));
-    var close=btn('關閉',function(){ bd.remove(); }); close.style.background='#334155';
+    const close=btn('關閉',() =>{ bd.remove(); }); close.style.background='#334155';
     head.appendChild(close); w.appendChild(head);
 
-    var tabs=div('display:flex;gap:8px;margin-bottom:8px'); var content=div();
+    const tabs=div('display:flex;gap:8px;margin-bottom:8px'); const content=div();
     function show(which){
       content.innerHTML='';
       if(which==='pot')  renderPotentialPage(content);
@@ -2935,17 +2935,17 @@ function renderChaos(root){
       else if(which==='star')  renderStar(content);
       else if(which==='aug')   renderAugment(content);
     }
-    var b1=btn('潛能',function(){show('pot');});
-    var b2=btn('卷軸',function(){show('scr');});
-    var b3=btn('混沌',function(){show('chaos');});
-    var b4=btn('星力',function(){show('star');});
-    var b5=btn('卷軸上限提升',function(){show('aug');});
+    const b1=btn('潛能',() =>{show('pot');});
+    const b2=btn('卷軸',() =>{show('scr');});
+    const b3=btn('混沌',() =>{show('chaos');});
+    const b4=btn('星力',() =>{show('star');});
+    const b5=btn('卷軸上限提升',() =>{show('aug');});
     tabs.appendChild(b1); tabs.appendChild(b2); tabs.appendChild(b3); tabs.appendChild(b4); tabs.appendChild(b5);
     w.appendChild(tabs); w.appendChild(content);
     show('pot');
 
     bd.appendChild(w);
-    bd.addEventListener('click',function(e){ if(e.target===bd) bd.remove(); });
+    bd.addEventListener('click',(e) =>{ if(e.target===bd) bd.remove(); });
     document.body.appendChild(bd);
   }
 
