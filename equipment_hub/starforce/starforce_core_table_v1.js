@@ -1,5 +1,5 @@
 /*!
- * starforce_core_table_v1.js — 星力規則（表格版 ES5/UMD）
+ * starforce_core_table_v1.js — 星力規則（表格版 ES2020+/UMD）
  * - 機率：沿用既有 STAR_TABLE（不變）
  * - 武器：
  *   · 1~15 星：每星增加「攻擊平值」與「全屬平值」
@@ -11,11 +11,11 @@
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) { module.exports = factory(); }
   else { root.StarforceTableV1 = factory(); }
-})(this, function () {
+})(this, () => {
   'use strict';
 
   /* ===== 成功率／爆率（原樣） ===== */
-  var STAR_TABLE = {
+  const STAR_TABLE = {
     1:{succ:95,  boom:0},   2:{succ:90,  boom:0},   3:{succ:85,  boom:0},
     4:{succ:85,  boom:0},   5:{succ:80,  boom:0},   6:{succ:75,  boom:0},
     7:{succ:70,  boom:0},   8:{succ:65,  boom:0},   9:{succ:60,  boom:0},
@@ -27,8 +27,8 @@
     25:{succ:8.5, boom:18.0},26:{succ:8.0, boom:18.0},27:{succ:7.0, boom:18.6},
     28:{succ:5.0, boom:19.0},29:{succ:3.0, boom:19.4},30:{succ:1.0, boom:19.8}
   };
-  function successRate(nextStar){ var t=STAR_TABLE[nextStar]; return t ? t.succ : 0; }
-  function boomRate(nextStar){ var t=STAR_TABLE[nextStar]; return t ? (t.boom||0) : 0; }
+  function successRate(nextStar){ const t=STAR_TABLE[nextStar]; return t ? t.succ : 0; }
+  function boomRate(nextStar){ const t=STAR_TABLE[nextStar]; return t ? (t.boom||0) : 0; }
 
   // 武器類判定（武器/補助武器/能源 都視為武器星力）
   function isWeaponType(t){
@@ -43,13 +43,13 @@
    * - 6~10 ：全屬+4 / ATK+7
    * - 11~15：全屬+5 / ATK+8
    */
-  var WPN_ALLSTAT_PER_STAR = [
+  const WPN_ALLSTAT_PER_STAR = [
     0,
     2,2,2,2,2,
     4,4,4,4,4,
     5,5,5,5,5
   ];
-  var WPN_ATK_FLAT_PER_STAR = [
+  const WPN_ATK_FLAT_PER_STAR = [
     0,
     4,4,4,4,4,
     7,7,7,7,7,
@@ -63,9 +63,9 @@
     star = star|0;
     if (star < 16) return 0;
     if (star > 30) star = 30;
-    var n = (star - 16 + 1);
-    var first = 15;
-    var last  = 15 + 2*(n-1);
+    const n = (star - 16 + 1);
+    const first = 15;
+    const last  = 15 + 2*(n-1);
     return ((n * (first + last)) / 2) | 0;
   }
 
@@ -90,7 +90,7 @@
     return 0;
   }
   function starAtkPctSum(star){
-    var i, s=0;
+    let i, s=0;
     if (star<=0) return 0;
     if (star>30) star=30;
     for(i=1;i<=star;i++) s += starAtkPctPerStar(i);
@@ -102,14 +102,14 @@
    * - ALLSTAT_PER_STAR：全屬（STR/DEX/INT/LUK）平值
    * - ATK_PER_STAR    ：攻擊平值
    */
-  var ALLSTAT_PER_STAR = [
+  const ALLSTAT_PER_STAR = [
     0, // 0 unused
     2,2,2,2,2,  // 1~5
     3,3,3,3,3,3,3,3,3,3, // 6~15
     17,17,17,17,17,17,17, // 16~22
     0,0,0,0,0,0,0,0       // 23~30
   ];
-  var ATK_PER_STAR = [
+  const ATK_PER_STAR = [
     0, // 0 unused
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 1~15
     14,15,16,17,18,19,21,23,25,27,28,29,30,31,32 // 16~30
@@ -118,7 +118,7 @@
   // 1-10星 每星 +2 DEF / +30 HP
   // 11-15星 每星 +3 DEF / +40 HP
   // 16-22星 每星 +6 DEF / +70 HP
-  var DEF_PER_STAR = [
+  const DEF_PER_STAR = [
     0, // 0 unused
     2,2,2,2,2,2,2,2,2,2,   // 1~10
     3,3,3,3,3,              // 11~15
@@ -126,7 +126,7 @@
     0,0,0,0,0,0,0,0         // 23~30（目前不加）
   ];
 
-  var HP_PER_STAR = [
+  const HP_PER_STAR = [
     0, // 0 unused
     30,30,30,30,30,30,30,30,30,30,  // 1~10
     40,40,40,40,40,                 // 11~15
@@ -134,7 +134,7 @@
     0,0,0,0,0,0,0,0                 // 23~30
   ];
   function sumFrom(arr, star){
-    var i, s=0; if (star<=0) return 0; if (star>30) star=30;
+    let i, s=0; if (star<=0) return 0; if (star>30) star=30;
     for(i=1;i<=star && i<arr.length;i++) s += (arr[i]|0);
     return s;
   }
@@ -150,62 +150,62 @@ function calcStarBonus(equipType, star, baseAtkPlusScroll){
     star = star|0;
     if (isWeaponType(equipType)){
       // 武器：1~15 平值（全屬/攻擊）；16~30：全屬/攻擊平值（等差級數累加） + 攻擊%
-      var wAll = sumFrom(WPN_ALLSTAT_PER_STAR, Math.min(star,15));
-      var wAtk = sumFrom(WPN_ATK_FLAT_PER_STAR, Math.min(star,15));
+      let wAll = sumFrom(WPN_ALLSTAT_PER_STAR, Math.min(star,15));
+      let wAtk = sumFrom(WPN_ATK_FLAT_PER_STAR, Math.min(star,15));
 
       // 16★開始：全屬/攻擊平值（等差級數累加：15,17,19...）
-      var all16Flat = weapon16PlusFlatSum(star);
-      var atk16Flat = weapon16PlusFlatSum(star);
+      const all16Flat = weapon16PlusFlatSum(star);
+      const atk16Flat = weapon16PlusFlatSum(star);
       wAll += all16Flat;
       wAtk += atk16Flat;
 
-      var pct = starAtkPctSum(star); // 只會累加 16~30（1~15 回傳 0）
-      var fromPct = Math.floor((baseAtkPlusScroll|0) * (pct/100));
+      const pct = starAtkPctSum(star); // 只會累加 16~30（1~15 回傳 0）
+      const fromPct = Math.floor((baseAtkPlusScroll|0) * (pct/100));
 
       return { allStat:wAll, atkPctSum:pct, atkFromStar:fromPct, atkFlat:wAtk, defFlat:0, hpFlat:0 };
     } else {
-      var allStat = sumFrom(ALLSTAT_PER_STAR, star);
-      var atkFlat = sumFrom(ATK_PER_STAR,     star);
-      var defFlat = sumFrom(DEF_PER_STAR,     star);  // ✅ 新增
-      var hpFlat  = sumFrom(HP_PER_STAR,      star);  // ✅ 新增
-      return { allStat:allStat, atkPctSum:0, atkFromStar:0, atkFlat:atkFlat, defFlat:defFlat, hpFlat:hpFlat };
+      const allStat = sumFrom(ALLSTAT_PER_STAR, star);
+      const atkFlat = sumFrom(ATK_PER_STAR,     star);
+      const defFlat = sumFrom(DEF_PER_STAR,     star);  // ✅ 新增
+      const hpFlat  = sumFrom(HP_PER_STAR,      star);  // ✅ 新增
+      return { allStat, atkPctSum:0, atkFromStar:0, atkFlat, defFlat, hpFlat };
     }
   }
   /* ===== 升星模擬（沿用） ===== */
   // options: { rng:fn()->0~1, maxStar:30, boomReset:{locked:true,pendingStar:12} }
   function attempt(currentStar, options){
     options = options || {};
-    var rng = typeof options.rng==='function' ? options.rng : Math.random;
-    var maxStar = options.maxStar || 30;
+    const rng = typeof options.rng==='function' ? options.rng : Math.random;
+    const maxStar = options.maxStar || 30;
 
     if (currentStar >= maxStar) {
       return { ok:false, success:false, boom:false, keep:true, next:currentStar, reason:'cap' };
     }
-    var next = currentStar + 1;
-    var succ = rng() < (successRate(next)/100);
-    if (succ) return { ok:true, success:true, boom:false, keep:false, next:next };
+    const next = currentStar + 1;
+    const succ = rng() < (successRate(next)/100);
+    if (succ) return { ok:true, success:true, boom:false, keep:false, next };
 
-    var boomP = (options.boomRateOverride!=null ? (options.boomRateOverride) : boomRate(next));
-    var boom = rng() < (boomP/100);
+    const boomP = (options.boomRateOverride!=null ? (options.boomRateOverride) : boomRate(next));
+    const boom = rng() < (boomP/100);
     if (boom){
-      var br = options.boomReset || { locked:true, pendingStar:12 };
+      const br = options.boomReset || { locked:true, pendingStar:12 };
       return { ok:false, success:false, boom:true, keep:false, next:0, boomReset:br };
     }
     return { ok:true, success:false, boom:false, keep:true, next:currentStar };
   }
 
-  
+
   /* ===== 成本 / 防爆規則（核心驅動） ===== */
   // 需求：每次強化素材 = 下一星數量（+1），防爆 ×3
   function stoneCost(currentStar, safeguard){
-    var next = (currentStar|0) + 1;
-    var cost = next; // 0→1:1, 1→2:2 ...
+    const next = (currentStar|0) + 1;
+    let cost = next; // 0→1:1, 1→2:2 ...
     if (safeguard) cost = cost * 3;
     return cost|0;
   }
   // 20★以前可防爆；且僅限「會爆」的星段才可啟用
   function canSafeguard(currentStar){
-    var next = (currentStar|0) + 1;
+    const next = (currentStar|0) + 1;
     if (next > 20) return false;
     return boomRate(next) > 0;
   }
@@ -213,8 +213,8 @@ function calcStarBonus(equipType, star, baseAtkPlusScroll){
 
   /* ===== 新增：爆炸保護道具（核心驅動，可接背包） ===== */
   // 道具名稱
-  var ITEM_BOOM_CHARM = '緩爆護符';
-  var ITEM_PROTECT_TICKET = '保護券';
+  const ITEM_BOOM_CHARM = '緩爆護符';
+  const ITEM_PROTECT_TICKET = '保護券';
 
   // 緩爆護符：依你指定
   // - 16~23：爆炸率降低 70%（只剩 30%）
@@ -229,11 +229,11 @@ function calcStarBonus(equipType, star, baseAtkPlusScroll){
       return baseBoom * 0.30; // -70%
     }
     // 24~30
-    var cut;
+    let cut;
     if (nextStar >= 29) cut = 0.25;
     else {
       // 24..29 : 0.50 -> 0.25 線性
-      var t = (nextStar - 24) / 5; // 0..1
+      const t = (nextStar - 24) / 5; // 0..1
       cut = 0.50 + (0.25 - 0.50) * t;
     }
     return baseBoom * (1 - cut);
@@ -269,7 +269,7 @@ function calcStarBonus(equipType, star, baseAtkPlusScroll){
     // 兼容 inventory.js：removeItem 不回傳 boolean，所以要先檢查數量
     if (typeof window !== 'undefined'){
       if (typeof window.getItemQuantity === 'function' && typeof window.removeItem === 'function'){
-        var have = window.getItemQuantity(name)|0;
+        const have = window.getItemQuantity(name)|0;
         if (have < qty) return false;
         try{ window.removeItem(name, qty); }catch(e){ return false; }
         return true;
@@ -289,13 +289,13 @@ function calcStarBonus(equipType, star, baseAtkPlusScroll){
   // 回傳：{ ok, success, boom, safeguarded, nextStar }
   function attemptEquipStar(equipNode, options){
     options = options || {};
-    var rng = typeof options.rng==='function' ? options.rng : Math.random;
-    var maxStar = options.maxStar || 30;
-    var cur = equipNode.star|0;
+    const rng = typeof options.rng==='function' ? options.rng : Math.random;
+    const maxStar = options.maxStar || 30;
+    const cur = equipNode.star|0;
     if (cur >= maxStar) return { ok:false, success:false, boom:false, safeguarded:false, nextStar:cur, reason:'cap' };
 
-    var next = cur + 1;
-    var succ = rng() < (successRate(next)/100);
+    const next = cur + 1;
+    const succ = rng() < (successRate(next)/100);
     if (succ){
       equipNode.star = next;
       // IMPORTANT: Starforce must NOT share counters with scroll/enhance.
@@ -304,10 +304,10 @@ function calcStarBonus(equipType, star, baseAtkPlusScroll){
       return { ok:true, success:true, boom:false, safeguarded:false, nextStar:next };
     }
 
-    var boomP = (options.boomRateOverride!=null ? (options.boomRateOverride) : boomRate(next));
-    var boom = rng() < (boomP/100);
+    const boomP = (options.boomRateOverride!=null ? (options.boomRateOverride) : boomRate(next));
+    const boom = rng() < (boomP/100);
     if (boom){
-      var sg = !!options.safeguard;
+      const sg = !!options.safeguard;
       if (sg){
         // 防爆：把爆炸視為一般失敗（星數不變、不鎖）
         return { ok:true, success:false, boom:true, safeguarded:true, nextStar:cur };
@@ -322,7 +322,7 @@ function calcStarBonus(equipType, star, baseAtkPlusScroll){
 
   /* ===== UI：彈窗（核心內建） ===== */
   function el(tag, cls, txt){
-    var d = document.createElement(tag);
+    const d = document.createElement(tag);
     if (cls) d.className = cls;
     if (txt != null) d.textContent = txt;
     return d;
@@ -343,15 +343,15 @@ function calcStarBonus(equipType, star, baseAtkPlusScroll){
 
   // 取得「本次升星增加的能力」（差值）
   function calcGainForNext(equipNode){
-    var cur = equipNode.star|0;
-    var type = equipNode.type || '';
-    var baseAtkPlusScroll =
+    const cur = equipNode.star|0;
+    const type = equipNode.type || '';
+    const baseAtkPlusScroll =
       n(equipNode.base && equipNode.base.atk) +
       n(equipNode.enhance && equipNode.enhance.atk) +
       n(equipNode.flameFlat && equipNode.flameFlat.atk);
 
-    var a = calcStarBonus(type, cur, baseAtkPlusScroll) || {};
-    var b = calcStarBonus(type, cur+1, baseAtkPlusScroll) || {};
+    const a = calcStarBonus(type, cur, baseAtkPlusScroll) || {};
+    const b = calcStarBonus(type, cur+1, baseAtkPlusScroll) || {};
     return {
       allStat: n(b.allStat) - n(a.allStat),
       atkFlat: n(b.atkFlat) - n(a.atkFlat),
@@ -373,30 +373,30 @@ function calcStarBonus(equipType, star, baseAtkPlusScroll){
       return;
     }
 
-    var bd = el('div','sf-mask');
-    var card = el('div','sf-card');
-    var header = el('div','sf-head');
-    var title = el('div','sf-title','星力強化');
-    var close = el('button','sf-close','×');
+    const bd = el('div','sf-mask');
+    const card = el('div','sf-card');
+    const header = el('div','sf-head');
+    const title = el('div','sf-title','星力強化');
+    const close = el('button','sf-close','×');
     close.onclick = function(){ bd.remove(); };
     header.appendChild(title); header.appendChild(close);
 
-    var top = el('div','sf-top');
-    var left = el('div','sf-starbox');
-    var right = el('div','sf-starbox');
+    const top = el('div','sf-top');
+    const left = el('div','sf-starbox');
+    const right = el('div','sf-starbox');
     top.appendChild(left); top.appendChild(right);
 
-    var mid = el('div','sf-mid');
+    const mid = el('div','sf-mid');
 
     // FX layer
-    var fx = el('div','sf-fx');
+    const fx = el('div','sf-fx');
     card.appendChild(fx);
 
-    var lineSucc = el('div','sf-line');
-    var lineFail = el('div','sf-line');
-    var lineBoom = el('div','sf-line');
-    var lineGain = el('div','sf-line sf-gain');
-    var lineProt = el('div','sf-hint');
+    const lineSucc = el('div','sf-line');
+    const lineFail = el('div','sf-line');
+    const lineBoom = el('div','sf-line');
+    const lineGain = el('div','sf-line sf-gain');
+    const lineProt = el('div','sf-hint');
 
     mid.appendChild(lineSucc);
     mid.appendChild(lineFail);
@@ -404,25 +404,25 @@ function calcStarBonus(equipType, star, baseAtkPlusScroll){
     mid.appendChild(lineGain);
     mid.appendChild(lineProt);
 
-    var foot = el('div','sf-foot');
-    var sgWrap = el('label','sf-sg');
-    var sg = document.createElement('input'); sg.type='checkbox';
-    var sgTxt = el('span',null,'防爆（素材×3）');
+    const foot = el('div','sf-foot');
+    const sgWrap = el('label','sf-sg');
+    const sg = document.createElement('input'); sg.type='checkbox';
+    const sgTxt = el('span',null,'防爆（素材×3）');
     sgWrap.appendChild(sg); sgWrap.appendChild(sgTxt);
 
     // 追加：爆炸保護道具（互斥）
-    var itemWrap = el('div','sf-items');
+    const itemWrap = el('div','sf-items');
 
-    var charmWrap = el('label','sf-item');
-    var charm = document.createElement('input'); charm.type='checkbox';
-    var charmTxt = el('span',null, ITEM_BOOM_CHARM + '（降低爆炸率）');
-    var charmCnt = el('span','sf-cnt','');
+    const charmWrap = el('label','sf-item');
+    const charm = document.createElement('input'); charm.type='checkbox';
+    const charmTxt = el('span',null, ITEM_BOOM_CHARM + '（降低爆炸率）');
+    const charmCnt = el('span','sf-cnt','');
     charmWrap.appendChild(charm); charmWrap.appendChild(charmTxt); charmWrap.appendChild(charmCnt);
 
-    var ticketWrap = el('label','sf-item');
-    var ticket = document.createElement('input'); ticket.type='checkbox';
-    var ticketTxt = el('span',null, ITEM_PROTECT_TICKET + '（16~25★ 固定爆率）');
-    var ticketCnt = el('span','sf-cnt','');
+    const ticketWrap = el('label','sf-item');
+    const ticket = document.createElement('input'); ticket.type='checkbox';
+    const ticketTxt = el('span',null, ITEM_PROTECT_TICKET + '（16~25★ 固定爆率）');
+    const ticketCnt = el('span','sf-cnt','');
     ticketWrap.appendChild(ticket); ticketWrap.appendChild(ticketTxt); ticketWrap.appendChild(ticketCnt);
 
     // 互斥：保護券優先
@@ -433,13 +433,13 @@ function calcStarBonus(equipType, star, baseAtkPlusScroll){
     itemWrap.appendChild(ticketWrap);
 
     // 放到中下方（與成功率/失敗率/提升能力同區塊）
-    var itemBox = el('div','sf-itembox');
-    var itemTitle = el('div','sf-itembox-title','爆炸保護');
+    const itemBox = el('div','sf-itembox');
+    const itemTitle = el('div','sf-itembox-title','爆炸保護');
     itemBox.appendChild(itemTitle);
     itemBox.appendChild(itemWrap);
     mid.appendChild(itemBox);
 
-    var btn = el('button','sf-go','衝星');
+    const btn = el('button','sf-go','衝星');
     foot.appendChild(sgWrap);
         foot.appendChild(btn);
 
@@ -452,17 +452,17 @@ function calcStarBonus(equipType, star, baseAtkPlusScroll){
     bd.addEventListener('click', onMaskClick);
     document.body.appendChild(bd);
 
-    
+
     function playBoomSfx(){
       try{
-        var AC = window.AudioContext || window.webkitAudioContext;
+        const AC = window.AudioContext || window.webkitAudioContext;
         if(!AC) return;
-        var ctx = playBoomSfx._ctx || (playBoomSfx._ctx = new AC());
+        const ctx = playBoomSfx._ctx || (playBoomSfx._ctx = new AC());
         // iOS/Chrome 需要在使用者互動後才可播放；按鈕點擊已算互動
-        var t0 = ctx.currentTime;
-        var o1 = ctx.createOscillator();
-        var o2 = ctx.createOscillator();
-        var g = ctx.createGain();
+        const t0 = ctx.currentTime;
+        const o1 = ctx.createOscillator();
+        const o2 = ctx.createOscillator();
+        const g = ctx.createGain();
         // 低沉爆破 + 高頻破裂
         o1.type='sawtooth'; o2.type='square';
         o1.frequency.setValueAtTime(140, t0);
@@ -487,21 +487,21 @@ function playFx(kind){
         fx.innerHTML = '';
       }catch(e){}
 
-      var text = '';
-      var cls = '';
+      let text = '';
+      let cls = '';
       if (kind === 'success') { text = '強化成功'; cls = 'sf-result-ok'; }
       else if (kind === 'fail') { text = '強化失敗'; cls = 'sf-result-bad'; }
       else if (kind === 'safeguard') { text = '防爆啟動'; cls = 'sf-result-sg'; }
       else { return; }
 
       // 建立/更新文字層
-      var wrap = card.querySelector('.sf-result-wrap');
+      let wrap = card.querySelector('.sf-result-wrap');
       if (!wrap){
         wrap = document.createElement('div');
         wrap.className = 'sf-result-wrap';
         card.appendChild(wrap);
       }
-      var elx = card._sfResultEl;
+      let elx = card._sfResultEl;
       if (!elx){
         elx = document.createElement('div');
         elx.className = 'sf-result-text';
@@ -517,7 +517,7 @@ function playFx(kind){
 
       // 動畫結束後自動移除（保留一點時間給人看到）
       clearTimeout(card._sfResultTimer);
-      card._sfResultTimer = setTimeout(function(){
+      card._sfResultTimer = setTimeout(() =>{
         try{
           if (card && card._sfResultEl){
             // 只清掉動畫 class，保留節點以便重用
@@ -528,7 +528,7 @@ function playFx(kind){
       }, 1200);
     }
 
-    
+
     function setStarBox(box, label, star){
       box.classList.remove('sf-star20','sf-star25');
       box.style.color = starColor(star);
@@ -558,12 +558,12 @@ function showDestroyed(){
       mid.style.display = 'none';
       foot.style.display = 'none';
 
-      var msgWrap = card.querySelector('.sf-destroyed');
+      let msgWrap = card.querySelector('.sf-destroyed');
       if(!msgWrap){
         msgWrap = el('div','sf-destroyed');
-        var h = el('div','sf-destroyed-title','裝備已損毀請重新解放');
-        var p = el('div','sf-destroyed-desc','裝備已經變成痕跡請重新解放');
-        var ok = el('button','sf-btn-ok','確定');
+        const h = el('div','sf-destroyed-title','裝備已損毀請重新解放');
+        const p = el('div','sf-destroyed-desc','裝備已經變成痕跡請重新解放');
+        const ok = el('button','sf-btn-ok','確定');
         ok.onclick = function(){
           // 關閉前才觸發外層重繪（避免外層把彈窗清掉）
           if (typeof hooks.onRerender==='function') hooks.onRerender();
@@ -579,23 +579,23 @@ function showDestroyed(){
     }
 
     function render(){
-      var cur = equipNode.star|0;
-      var next = cur+1;
+      const cur = equipNode.star|0;
+      const next = cur+1;
       setStarBox(left, '目前', cur);
       setStarBox(right, '目標', next);
 
-      var s = successRate(next);
-      var b0 = boomRate(next);
+      const s = successRate(next);
+      const b0 = boomRate(next);
 
       // 道具數量顯示 + 可用性
-      var charmHave = getItemCount(hooks, ITEM_BOOM_CHARM);
-      var ticketHave = getItemCount(hooks, ITEM_PROTECT_TICKET);
+      const charmHave = getItemCount(hooks, ITEM_BOOM_CHARM);
+      const ticketHave = getItemCount(hooks, ITEM_PROTECT_TICKET);
       charmCnt.textContent = '×' + charmHave;
       ticketCnt.textContent = '×' + ticketHave;
 
       // 僅在「原本會爆」且 16★以上才有意義；不會爆就禁用避免浪費
-      var charmEffective = (b0 > 0) && (next >= 16) && (next <= 30);
-      var ticketEffective = (b0 > 0) && (next >= 16) && (next <= 25);
+      const charmEffective = (b0 > 0) && (next >= 16) && (next <= 30);
+      const ticketEffective = (b0 > 0) && (next >= 16) && (next <= 25);
 
       charm.disabled = !(charmHave > 0 && charmEffective);
       ticket.disabled = !(ticketHave > 0 && ticketEffective);
@@ -606,18 +606,18 @@ function showDestroyed(){
       if (charm.disabled) charm.checked = false;
       if (ticket.disabled) ticket.checked = false;
 
-      var b = b0;
+      let b = b0;
       if (ticket.checked) b = ticketBoomRate(next, b0);
       else if (charm.checked) b = charmBoomRate(next, b0);
 
-      var f = Math.max(0, 100 - s - b);
+      const f = Math.max(0, 100 - s - b);
 
       lineSucc.textContent = '本次成功率：' + pct(s);
       lineFail.textContent = '失敗率：' + pct(f);
       lineBoom.textContent = '爆炸機率：' + pct(b) + (b !== b0 ? ('（原 ' + pct(b0) + '）') : '');
 
       // 小提示：目前套用的保護效果
-      var tag = '';
+      let tag = '';
       if (!ticket.disabled && ticket.checked) tag = ITEM_PROTECT_TICKET;
       else if (!charm.disabled && charm.checked) tag = ITEM_BOOM_CHARM;
 
@@ -639,9 +639,9 @@ function showDestroyed(){
         lineBoom.classList.add('sf-boom-bad');
       }
 
-      var g = calcGainForNext(equipNode);
+      const g = calcGainForNext(equipNode);
       // 讓顯示簡潔：全屬/攻擊/防/HP/武器%攻換算
-      var parts = [];
+      const parts = [];
       if (g.allStat) parts.push('全屬 ' + fmtPlus(g.allStat));
       if (g.atkFlat) parts.push('ATK ' + fmtPlus(g.atkFlat));
       if (g.atkFromStar) parts.push('ATK(%) ' + fmtPlus(g.atkFromStar));
@@ -649,30 +649,30 @@ function showDestroyed(){
       if (g.hpFlat) parts.push('HP ' + fmtPlus(g.hpFlat));
       lineGain.textContent = '增加能力：' + (parts.length?parts.join('、'):'（無）');
 
-      var allowSg = canSafeguard(cur);
+      const allowSg = canSafeguard(cur);
       sg.disabled = !allowSg;
       sgWrap.style.opacity = allowSg ? '1' : '0.45';
 
       // 成本顯示在按鈕上（簡潔）
-      var useSg = allowSg && sg.checked;
-      var cost = stoneCost(cur, useSg);
-      var have = (typeof hooks.getStoneCount==='function') ? (hooks.getStoneCount()|0) : 0;
+      const useSg = allowSg && sg.checked;
+      const cost = stoneCost(cur, useSg);
+      const have = (typeof hooks.getStoneCount==='function') ? (hooks.getStoneCount()|0) : 0;
       btn.textContent = '衝星（' + cost + '）  現有：' + have;
       btn.disabled = have < cost;
       btn.style.opacity = btn.disabled ? '0.55' : '1';
     }
 
     function doAttempt(){
-      var cur = equipNode.star|0;
-      var allowSg = canSafeguard(cur);
-      var useSg = allowSg && sg.checked;
-      var cost = stoneCost(cur, useSg);
+      const cur = equipNode.star|0;
+      const allowSg = canSafeguard(cur);
+      const useSg = allowSg && sg.checked;
+      const cost = stoneCost(cur, useSg);
 
       // 道具：保護券 / 緩爆護符（互斥；保護券優先）
-      var next = cur + 1;
-      var b0 = boomRate(next);
-      var boomOverride = null;
-      var useItemName = null;
+      const next = cur + 1;
+      const b0 = boomRate(next);
+      let boomOverride = null;
+      let useItemName = null;
 
       if (ticket.checked){
         boomOverride = ticketBoomRate(next, b0);
@@ -704,7 +704,7 @@ function showDestroyed(){
         }
       }
 
-      var r = attemptEquipStar(equipNode, { safeguard: useSg, maxStar: 30, boomRateOverride: boomOverride });
+      const r = attemptEquipStar(equipNode, { safeguard: useSg, maxStar: 30, boomRateOverride: boomOverride });
       if (typeof hooks.onSave==='function') hooks.onSave(equipNode, r);
 
       if (r.success){
@@ -747,7 +747,7 @@ function showDestroyed(){
   function ensureStyle(){
     if (ensureStyle._done) return;
     ensureStyle._done = true;
-    var css = ''
+    const css = ''
       + '.sf-mask{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:99999;}'
       + '.sf-card{width:min(520px,92vw);background:rgba(15,20,30,.98);border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 18px 60px rgba(0,0,0,.55);padding:14px;color:#eaf2ff;font-family:system-ui,-apple-system,Segoe UI,Roboto;position:relative;overflow:hidden;}'
       + '.sf-card{position:relative;overflow:hidden;}'      + '.sf-fx{position:absolute;inset:0;pointer-events:none;}'
@@ -767,8 +767,8 @@ function showDestroyed(){
       + '.sf-gain{margin-top:6px;font-weight:700;color:rgba(170,220,255,.95);} '
       + '.sf-foot{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:12px;}'
       + '.sf-sg{display:flex;align-items:center;gap:8px;font-size:14px;color:rgba(235,245,255,.9);} '
-      + '.sf-itembox{margin-top:10px;padding:10px 10px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);} ' 
-      + '.sf-itembox-title{font-size:13px;opacity:.85;margin-bottom:8px;letter-spacing:.5px;} ' 
+      + '.sf-itembox{margin-top:10px;padding:10px 10px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);} '
+      + '.sf-itembox-title{font-size:13px;opacity:.85;margin-bottom:8px;letter-spacing:.5px;} '
       + '.sf-items{display:grid;grid-template-columns:1fr 1fr;gap:8px;} '
       + '.sf-item{display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(235,245,255,.88);padding:6px 8px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);} '
       + '.sf-item input{transform:translateY(0.5px);} '
@@ -787,24 +787,24 @@ function showDestroyed(){
       + '.sf-tag.protect{border-color:rgba(255,160,80,.35);background:rgba(255,120,40,.12);}'
       + '.sf-tag.charm{border-color:rgba(120,255,200,.30);background:rgba(40,170,120,.12);}'
       + '.sf-tag.none{border-color:rgba(200,200,200,.18);background:rgba(200,200,200,.06);}';
-    var style = document.createElement('style');
+    const style = document.createElement('style');
     style.textContent = css;
     document.head.appendChild(style);
   }
 
   return {
     table: STAR_TABLE,
-    successRate: successRate,
-    boomRate: boomRate,
-    starAtkPctSum: starAtkPctSum,       // 方便查
-    calcStarBonus: calcStarBonus,       // ★ 新規則出口
-    attempt: attempt,
-    stoneCost: stoneCost,
-    canSafeguard: canSafeguard,
-    attemptEquipStar: attemptEquipStar,
-    openStarforceModal: openStarforceModal,
-    ITEM_BOOM_CHARM: ITEM_BOOM_CHARM,
-    ITEM_PROTECT_TICKET: ITEM_PROTECT_TICKET,
+    successRate,
+    boomRate,
+    starAtkPctSum,       // 方便查
+    calcStarBonus,       // ★ 新規則出口
+    attempt,
+    stoneCost,
+    canSafeguard,
+    attemptEquipStar,
+    openStarforceModal,
+    ITEM_BOOM_CHARM,
+    ITEM_PROTECT_TICKET,
     // 也把表輸出，方便你之後改
     __ALLSTAT_PER_STAR: ALLSTAT_PER_STAR,
     __ATK_PER_STAR: ATK_PER_STAR,

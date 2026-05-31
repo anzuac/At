@@ -17,7 +17,7 @@
     BONUS_MAX_LEVEL: 10
   };
 
-  var Utils = {
+  const Utils = {
     now: () => Math.floor(Date.now() / 1000),
     fmt: (n) => (n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
     fmtRate: (n) => n >= 1 ? Math.floor(n).toLocaleString() : n.toFixed(2),
@@ -107,26 +107,26 @@
   }
   // =========================================================
 
-  var Mod = {
-    getState: function () {
-      var def = {
+  const Mod = {
+    getState () {
+      const def = {
         resLv: 1, resUpStart: 0,
         enhLv: 1, enhUpStart: 0,
         campLv: 1, campUpStart: 0,
         offlineBonusLv: 0, lastUpdate: Utils.now(),
         _pendingG: 0, _pendingS: 0, _pendingE: 0, _pendingT: 0
       };
-      var s = Object.assign(def, w.SaveHub ? w.SaveHub.get(NS, {}) : {});
+      const s = Object.assign(def, w.SaveHub ? w.SaveHub.get(NS, {}) : {});
       this.calculateOffline(s);
       return s;
     },
-    save: function (s) {
+    save (s) {
       s.lastUpdate = Utils.now();
       if (w.SaveHub) w.SaveHub.set(NS, s);
     },
-    calculateOffline: function (s) {
+    calculateOffline (s) {
       const now = Utils.now();
-      let offlineSec = now - s.lastUpdate;
+      const offlineSec = now - s.lastUpdate;
       if (offlineSec <= 60) return;
 
       const maxSec = (CONFIG.OFFLINE_BASE_HR + (s.offlineBonusLv * 2)) * 3600;
@@ -144,7 +144,7 @@
         setTimeout(() => this.showModal(actualSec, rate, s), 500);
       }
     },
-    showModal: function (sec, rate, s) {
+    showModal (sec, rate, s) {
       const div = document.createElement('div');
       div.style = "position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;font-family:sans-serif;padding:20px;";
       div.innerHTML = `
@@ -258,7 +258,7 @@
 
   // --- 邏輯介面 ---
   w.TownResMod = {
-    startUpgrade: function (type) {
+    startUpgrade (type) {
       const s = Mod.getState();
       if (s[type + 'UpStart'] > 0) return this.skip(type);
       if (s[type + 'Lv'] >= CONFIG.MAX_LEVEL) return;
@@ -272,7 +272,7 @@
       s[type + 'UpStart'] = Utils.now();
       Mod.save(s); w.TownHub.requestRerender();
     },
-    upgradeOffline: function () {
+    upgradeOffline () {
       const s = Mod.getState();
       if (s.offlineBonusLv >= CONFIG.BONUS_MAX_LEVEL) return alert("已達技術巔峰");
 
@@ -285,7 +285,7 @@
       s.offlineBonusLv++;
       Mod.save(s); w.TownHub.requestRerender();
     },
-    skip: function (type) {
+    skip (type) {
       const s = Mod.getState();
       const remSec = Utils.getRemain(s[type + 'UpStart'], s[type + 'Lv'] + 1);
       const cost = Math.ceil(remSec / 60) * CONFIG.SKIP_GEM_PER_MIN;
@@ -296,7 +296,7 @@
         Mod.save(s); w.TownHub.requestRerender();
       }
     },
-    collect: function () {
+    collect () {
       const s = Mod.getState();
       const g = Math.floor(s._pendingG), st = Math.floor(s._pendingS);
       const e = Math.floor(s._pendingE), t = Math.floor(s._pendingT);

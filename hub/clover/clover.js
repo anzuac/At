@@ -125,7 +125,7 @@
       id: "clover",
       title: "幸運草",
       render: renderClover,
-      tick: function() {}
+      tick() {}
     });
   }
 

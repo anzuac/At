@@ -28,7 +28,7 @@
     if (typeof w.removeItem === "function") return w.removeItem(name, n);
     w.player = w.player || {};
     w.player._bag = w.player._bag || {};
-    var cur = w.player._bag[name] || 0;
+    const cur = w.player._bag[name] || 0;
     w.player._bag[name] = Math.max(0, cur - n);
   }
 
@@ -53,7 +53,7 @@
     if (!n) return true;
     if (typeof w.spendGold === "function") return w.spendGold(n);
     if (typeof w.spendMoney === "function") return w.spendMoney(n);
-    var cur = getGold();
+    const cur = getGold();
     if (cur < n) return false;
     w.player = w.player || {};
     w.player.gold = cur - n;
@@ -364,8 +364,8 @@
     w.ShopHub.registerTab({
       id: "shop_exchange",
       title: "素材兌換",
-      render: function(container){ renderMaterialExchange(container); },
-      tick: function(){}
+      render(container){ renderMaterialExchange(container); },
+      tick(){}
     });
   }
   if (document.readyState === "loading") {

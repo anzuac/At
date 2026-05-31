@@ -49,7 +49,7 @@
 
   // 數字格式化（3 位一撇）
   function _fmtNum(n) {
-    var x = Number(n) || 0;
+    const x = Number(n) || 0;
     try {
       return x.toLocaleString();
     } catch (e) {
@@ -59,10 +59,10 @@
 
   // 建立一筆 block log（最新在最上面）
   function _appendBlock(html) {
-    var box = _getContainer();
+    const box = _getContainer();
     if (!box) return;
 
-    var wrap = document.createElement("div");
+    const wrap = document.createElement("div");
     wrap.className = "battle-log-block skill-detail-block";
     wrap.innerHTML = html;
 
@@ -74,7 +74,7 @@
     }
 
     // 限制最多幾筆 block，避免無限膨脹
-    var maxBlocks = 50;
+    const maxBlocks = 50;
     while (box.childElementCount > maxBlocks) {
       box.removeChild(box.lastChild);
     }
@@ -82,34 +82,34 @@
 
   // 清除全部紀錄（給按鈕用）
   function clearSkillDetailLog() {
-    var box = _getContainer();
+    const box = _getContainer();
     if (!box) return;
     box.innerHTML = "";
   }
 
   // === 主入口：顯示一次群體技能的詳細資訊 ===
   function onMultiSkill(payload) {
-    var box = _getContainer();
+    const box = _getContainer();
     if (!box) return; // UI 沒載入就直接略過
 
     if (!payload || !Array.isArray(payload.targets) || !payload.targets.length) {
       return;
     }
 
-    var skillName  = _escape(payload.skillName || "技能");
-    var maxTargets = Number(payload.maxTargets || payload.targets.length || 1);
-    var targets    = payload.targets;
+    const skillName  = _escape(payload.skillName || "技能");
+    const maxTargets = Number(payload.maxTargets || payload.targets.length || 1);
+    const targets    = payload.targets;
 
     // ⭐ 完全信任 Rpg_玩家：damage 就是要顯示的最終傷害，不做任何再計算
-    var totalDamage = 0;
-    for (var i = 0; i < targets.length; i++) {
+    let totalDamage = 0;
+    for (let i = 0; i < targets.length; i++) {
       totalDamage += Number(targets[i].damage || 0);
     }
-    var hitCount   = targets.length;
-    var avgDamage  = hitCount > 0 ? Math.round(totalDamage / hitCount) : 0;
+    const hitCount   = targets.length;
+    const avgDamage  = hitCount > 0 ? Math.round(totalDamage / hitCount) : 0;
 
     // ===== 頭一行：技能總覽 =====
-    var headHtml =
+    const headHtml =
       "<div class=\"skill-detail-head\">" +
         "【" + skillName + "】" +
         " 命中 " + hitCount + " / " + maxTargets + " 個目標" +
@@ -117,25 +117,25 @@
         "｜平均 " + _fmtNum(avgDamage) +
       "</div>";
 
-    var detailHtml = [headHtml];
+    const detailHtml = [headHtml];
 
     // ===== 逐一目標 =====
-    for (var j = 0; j < targets.length; j++) {
-      var t = targets[j];
+    for (let j = 0; j < targets.length; j++) {
+      const t = targets[j];
 
-      var name      = _escape(t.name || ("目標" + (j + 1)));
-      var dmg       = Number(t.damage || 0);      // 顯示用傷害（Rpg 已決定好）
-      var hpBefore  = Number(t.hpBefore || 0);
-      var hpAfter   = Number(t.hpAfter  || 0);
+      const name      = _escape(t.name || ("目標" + (j + 1)));
+      const dmg       = Number(t.damage || 0);      // 顯示用傷害（Rpg 已決定好）
+      const hpBefore  = Number(t.hpBefore || 0);
+      const hpAfter   = Number(t.hpAfter  || 0);
 
       // 是否秒殺：優先用 Rpg 傳來的 isKill；沒有就用 hpAfter 判斷
-      var isKill = (t.isKill === true) || (t.isKill === undefined && hpAfter <= 0 && hpBefore > 0);
+      const isKill = (t.isKill === true) || (t.isKill === undefined && hpAfter <= 0 && hpBefore > 0);
 
       // 是否爆擊：完全由 Rpg 決定要不要標
-      var isCrit = (t.isCrit === true);
+      const isCrit = (t.isCrit === true);
 
       // 標籤 HTML
-      var tags = "";
+      let tags = "";
       if (isKill) {
         tags += "<span class=\"skill-tag skill-tag-kill\">秒殺</span>";
       }
@@ -143,7 +143,7 @@
         tags += "<span class=\"skill-tag skill-tag-crit\">爆擊</span>";
       }
 
-      var lineHtml =
+      const lineHtml =
         "<div class=\"skill-detail-item\">" +
           "<span class=\"skill-target-name\">• " + name + "：</span>" +
           "<span class=\"skill-detail-dmg\">" + _fmtNum(dmg) + "</span> 傷害" +
@@ -159,7 +159,7 @@
 
   // 綁到全域
   global.SkillDetailLog = {
-    onMultiSkill: onMultiSkill,
+    onMultiSkill,
     clear: clearSkillDetailLog
   };
 

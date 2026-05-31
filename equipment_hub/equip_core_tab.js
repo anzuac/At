@@ -1,5 +1,5 @@
 // =======================
-// equip_core_tab.js — 核心系統分頁（攻擊/生命/傷害）ES5（只用 SaveHub 存檔，不再使用 localStorage）
+// equip_core_tab.js — 核心系統分頁（攻擊/生命/傷害）ES2020+（只用 SaveHub 存檔，不再使用 localStorage）
 // 依賴：equipment_hub.js（EquipHub）、window.player
 // 背包：getItemQuantity(name) / removeItem(name, count)
 // =======================
@@ -8,8 +8,8 @@
   if (!w.EquipHub || typeof w.EquipHub.registerTab !== "function") return;
 
   // ====== SaveHub（統一存檔）======
-  var SAVEHUB_NS = "core_sys_v1";
-  var SH = w.SaveHub || null;
+  const SAVEHUB_NS = "core_sys_v1";
+  const SH = w.SaveHub || null;
 
   function freshCore(){ return { unlocked:false, gradeIdx:0, feed:0, enhanceLv:0, starLv:0 }; }
   function freshState(){
@@ -22,15 +22,15 @@
   function nz(x){ return (typeof x==="number" && !isNaN(x)) ? x : 0; }
 
   function normalizeState(s){
-    var out = freshState();
+    const out = freshState();
     try{
       if (!s || typeof s!=="object") return out;
       out.current = (s.current==="atk"||s.current==="life"||s.current==="dmg") ? s.current : "atk";
       out.cores = out.cores || {};
-      var keys = ["atk","life","dmg"];
-      for (var i=0;i<keys.length;i++){
-        var k = keys[i];
-        var c = (s.cores && s.cores[k]) ? s.cores[k] : freshCore();
+      const keys = ["atk","life","dmg"];
+      for (let i=0;i<keys.length;i++){
+        const k = keys[i];
+        const c = (s.cores && s.cores[k]) ? s.cores[k] : freshCore();
         out.cores[k] = {
           unlocked: !!c.unlocked,
           gradeIdx: toInt(c.gradeIdx||0),
@@ -47,9 +47,9 @@
   (function registerSaveHub(){
     if (!SH) return;
     try{
-      var schema = { version: 1, migrate: function(old){ return normalizeState(old||{}); } };
+      const schema = { version: 1, migrate(old){ return normalizeState(old||{}); } };
       if (typeof SH.registerNamespaces === "function"){
-        var pack={}; pack[SAVEHUB_NS]=schema; SH.registerNamespaces(pack);
+        const pack={}; pack[SAVEHUB_NS]=schema; SH.registerNamespaces(pack);
       }
       else if (typeof SH.registerNamespace === "function"){
         SH.registerNamespace(SAVEHUB_NS, schema);
@@ -74,9 +74,9 @@
   }
 
   // ===== 載入（只從 SaveHub；沒有就用全新預設）=====
-  var state = (function load(){
+  let state = (function load(){
     try{
-      var data = shRead(null);
+      const data = shRead(null);
       return normalizeState(data || freshState());
     }catch(_){ return freshState(); }
   })();
@@ -91,33 +91,33 @@
   }
 
   // ---- 可調參與道具名稱 ----
-  var ITEM_CORE_STONE    = "核心強化石";
-  var ITEM_AWAKEN_STONE  = "核心覺醒石";
-  var ITEM_STAR_STONE    = "核心星力石";
+  const ITEM_CORE_STONE    = "核心強化石";
+  const ITEM_AWAKEN_STONE  = "核心覺醒石";
+  const ITEM_STAR_STONE    = "核心星力石";
 
   // 解鎖需求
-  var UNLOCK_COST_CORE_STONE = 30;
-  var UNLOCK_COST_AWAKEN     = 15;
+  const UNLOCK_COST_CORE_STONE = 30;
+  const UNLOCK_COST_AWAKEN     = 15;
 
   // 強化
-  var ENHANCE_BASE_REQ = 5;
-  var ENHANCE_SUCC_PCT = 0.35;
+  const ENHANCE_BASE_REQ = 5;
+  const ENHANCE_SUCC_PCT = 0.35;
   function enhanceCostForLevel(curLv){ return ENHANCE_BASE_REQ + Math.floor(curLv/10)*5; }
 
   // 星力
-  var STAR_SUCC_BY_OFFER = { 1:0.05, 5:0.12, 10:0.28 };
-  var STAR_FAIL_DOWN_PCT = 0.35;
-  var STAR_PER_SUCCESS   = 1;
+  const STAR_SUCC_BY_OFFER = { 1:0.05, 5:0.12, 10:0.28 };
+  const STAR_FAIL_DOWN_PCT = 0.35;
+  const STAR_PER_SUCCESS   = 1;
   function starPerStarByEnh(enhLv){ return 0.02 + Math.floor(Math.max(0, enhLv||0)/5) * 0.01; }
   function starTotalBonusPct(starLv, enhLv){ return Math.max(0, starLv||0) * starPerStarByEnh(enhLv||0); }
   function starMul(starLv, enhLv){ return 1 + starTotalBonusPct(starLv, enhLv); }
   function starIsProtected(starLv){ return starLv % 5 === 0; }
 
   // 品階與上限
-  var GRADES = ["R","SR","SSR","UR","UR+","LR","LR+"];
-  var GRADE_FEED_REQ = [150, 300, 600, 1200, 2400, 4800];
-  var BASE_ENH_CAP  = 10;
-  var BASE_STAR_CAP = 15;
+  const GRADES = ["R","SR","SSR","UR","UR+","LR","LR+"];
+  const GRADE_FEED_REQ = [150, 300, 600, 1200, 2400, 4800];
+  const BASE_ENH_CAP  = 10;
+  const BASE_STAR_CAP = 15;
 
   // 套裝倍率（最低品階）
   function setMultiplierByMinGrade(minGradeIdx){
@@ -129,8 +129,8 @@
     return 0;
   }
   function nextSetStageInfo(minGradeIdx){
-    var targets = [2,3,4,5,6]; // SSR..LR+
-    for (var i=0;i<targets.length;i++){
+    const targets = [2,3,4,5,6]; // SSR..LR+
+    for (let i=0;i<targets.length;i++){
       if (minGradeIdx < targets[i]){
         return { needIdx: targets[i], needLabel: GRADES[targets[i]], mul: setMultiplierByMinGrade(targets[i]) };
       }
@@ -140,9 +140,9 @@
 
   // SR 以上階級的「獨立能力」（累積）
   function gradeIndependentBonus(coreKind, gradeIdx){
-    var out = {};
+    const out = {};
     if (gradeIdx <= 0) return out; // R 無
-    var tierCount = gradeIdx; // SR=1, SSR=2, ...
+    const tierCount = gradeIdx; // SR=1, SSR=2, ...
     if (coreKind === "atk") {
       out.atk  = 100 * tierCount;
       out.def  = 50  * tierCount;
@@ -160,7 +160,7 @@
   }
 
   // 三核心：初始能力＆強化每級能力
-  var CORE_DEF = {
+  const CORE_DEF = {
     atk:  { title: "攻擊核心", base: { atk:20, def:3, attackSpeedPct:0.05 },             perEnh: { atk:10, def:5, attackSpeedPct:0.003 } },
     life: { title: "生命核心", base: { hp:200, recoverPercent:0.01 },                     perEnh: { hp:100, recoverPercent:0.003 } },
     dmg:  { title: "傷害核心", base: { totalDamage:0.05, skillDamage:0.05 },              perEnh: { totalDamage:0.003, skillDamage:0.003 } }
@@ -199,33 +199,33 @@
 
   // ===== 參數工具 =====
   function capsFor(core){
-    var g=core.gradeIdx||0;
+    const g=core.gradeIdx||0;
     return { enhCap: BASE_ENH_CAP + g*5, starCap: BASE_STAR_CAP + g*5 };
   }
   function feedNeedForNext(core){
-    var g=core.gradeIdx||0;
+    const g=core.gradeIdx||0;
     if (g>=GRADES.length-1) return null;
     return GRADE_FEED_REQ[Math.max(0,g)];
   }
 
   // 單顆核心的最終能力
   function computeCoreFinalBonus(kind, core){
-    var def = CORE_DEF[kind];
-    var base = {};
-    var k;
+    const def = CORE_DEF[kind];
+    const base = {};
+    let k;
     for (k in def.base) base[k] = nz(def.base[k]);
-    var enh = core.enhanceLv||0;
+    const enh = core.enhanceLv||0;
     for (k in def.perEnh) base[k] = nz(base[k]) + nz(def.perEnh[k]) * enh;
-    var ind = gradeIndependentBonus(kind, core.gradeIdx);
+    const ind = gradeIndependentBonus(kind, core.gradeIdx);
     for (k in ind) base[k] = nz(base[k]) + nz(ind[k]);
-    var mul = starMul(core.starLv||0, enh);
+    const mul = starMul(core.starLv||0, enh);
     for (k in base) base[k] = nz(base[k]) * mul;
     return base;
   }
 
   function sumStats(a, b){
-    var out = {}; a=a||{}; b=b||{};
-    var keys = {}; var k;
+    const out = {}; a=a||{}; b=b||{};
+    const keys = {}; let k;
     for (k in a) keys[k]=1;
     for (k in b) keys[k]=1;
     for (k in keys) out[k] = nz(a[k]) + nz(b[k]);
@@ -236,14 +236,14 @@
   function applyToPlayer(){
     if (!w.player || !player.coreBonus) return;
 
-    var B = {};
-    var kinds = ["atk","life","dmg"];
-    for (var i=0;i<kinds.length;i++){
-      var kind = kinds[i];
-      var c = state.cores[kind];
+    const B = {};
+    const kinds = ["atk","life","dmg"];
+    for (let i=0;i<kinds.length;i++){
+      const kind = kinds[i];
+      const c = state.cores[kind];
       if (!c || !c.unlocked) continue;
-      var fin = computeCoreFinalBonus(kind, c);
-      var bucketName = (kind==="atk") ? "coreAttack" : (kind==="life" ? "coreLife" : "coreDamage");
+      const fin = computeCoreFinalBonus(kind, c);
+      const bucketName = (kind==="atk") ? "coreAttack" : (kind==="life" ? "coreLife" : "coreDamage");
       B[bucketName] = fin;
     }
 
@@ -252,15 +252,15 @@
     delete player.coreBonus.bonusData.coreLife;
     delete player.coreBonus.bonusData.coreDamage;
     delete player.coreBonus.bonusData.coreSet;
-    for (var k in B) player.coreBonus.bonusData[k] = B[k];
+    for (const k in B) player.coreBonus.bonusData[k] = B[k];
 
     // 套裝
-    var minIdx = Math.min(state.cores.atk.gradeIdx, state.cores.life.gradeIdx, state.cores.dmg.gradeIdx);
-    var setMul = setMultiplierByMinGrade(minIdx);
+    const minIdx = Math.min(state.cores.atk.gradeIdx, state.cores.life.gradeIdx, state.cores.dmg.gradeIdx);
+    const setMul = setMultiplierByMinGrade(minIdx);
     if (setMul > 0){
-      var baseSet = { atk:200, def:100, hp:4000, totalDamage:0.05, ignoreDefPct:0.05 };
-      var finalSet = {};
-      for (var k2 in baseSet) finalSet[k2] = baseSet[k2] * setMul;
+      const baseSet = { atk:200, def:100, hp:4000, totalDamage:0.05, ignoreDefPct:0.05 };
+      const finalSet = {};
+      for (const k2 in baseSet) finalSet[k2] = baseSet[k2] * setMul;
       player.coreBonus.bonusData.coreSet = finalSet;
     }
 
@@ -282,33 +282,33 @@
   }
 
   function doEnhance(cur){
-    var caps = capsFor(cur);
+    const caps = capsFor(cur);
     if (!cur.unlocked) return alert("尚未解鎖");
     if (cur.enhanceLv >= caps.enhCap) return alert("已達強化上限！");
-    var need = enhanceCostForLevel(cur.enhanceLv);
+    const need = enhanceCostForLevel(cur.enhanceLv);
     if (q(ITEM_CORE_STONE) < need) return alert(ITEM_CORE_STONE+" 不足，需 "+need+" 顆");
     if (!rm(ITEM_CORE_STONE, need)) return;
 
-    var ok = Math.random() < ENHANCE_SUCC_PCT;
+    const ok = Math.random() < ENHANCE_SUCC_PCT;
     if (ok){ cur.enhanceLv += 1; w.logPrepend && w.logPrepend("✨ 強化成功（+"+cur.enhanceLv+"）"); alert("✅ 強化成功！"); }
     else { w.logPrepend && w.logPrepend("❌ 強化失敗（等級不變）"); alert("❌ 強化失敗（等級不變）"); }
     saveLocal(); applyToPlayer(); EquipHub.requestRerender();
   }
 
   function doStarforce(cur, offer){
-    var caps = capsFor(cur);
+    const caps = capsFor(cur);
     if (!cur.unlocked) return alert("尚未解鎖");
     if (cur.starLv >= caps.starCap) return alert("已達星力上限！");
     offer = (offer===5||offer===10) ? offer : 1;
     if (q(ITEM_STAR_STONE) < offer) return alert(ITEM_STAR_STONE+" 不足，需 "+offer+" 顆");
     if (!rm(ITEM_STAR_STONE, offer)) return;
 
-    var succ = Math.random() < (STAR_SUCC_BY_OFFER[offer]||0.05);
+    const succ = Math.random() < (STAR_SUCC_BY_OFFER[offer]||0.05);
     if (succ){
       cur.starLv = Math.min(cur.starLv + STAR_PER_SUCCESS, caps.starCap);
       w.logPrepend && w.logPrepend("🌟 星力成功（目前 "+cur.starLv+"★）"); alert("✅ 星力成功！（目前 "+cur.starLv+"★）");
     } else {
-      var down = (!starIsProtected(cur.starLv)) && (Math.random() < STAR_FAIL_DOWN_PCT);
+      const down = (!starIsProtected(cur.starLv)) && (Math.random() < STAR_FAIL_DOWN_PCT);
       if (down && cur.starLv>0) { cur.starLv -= 1; w.logPrepend && w.logPrepend("💥 星力失敗並降星 → "+cur.starLv+"★"); alert("❌ 星力失敗（降為 "+cur.starLv+"★）"); }
       else { w.logPrepend && w.logPrepend("❌ 星力失敗（等級不變）"); alert("❌ 星力失敗（等級不變）"); }
     }
@@ -317,18 +317,18 @@
 
   function doFeed(cur, amount){
     if (!cur.unlocked) return alert("尚未解鎖");
-    var need = feedNeedForNext(cur);
+    const need = feedNeedForNext(cur);
     if (need == null) return alert("已達最高品階（"+GRADES[cur.gradeIdx]+")");
-    var have = q(ITEM_AWAKEN_STONE);
+    const have = q(ITEM_AWAKEN_STONE);
     if (have<=0) return alert(ITEM_AWAKEN_STONE+" 不足");
-    var take = Math.min(toInt(amount||0), have);
+    const take = Math.min(toInt(amount||0), have);
     if (!take) return;
     if (!rm(ITEM_AWAKEN_STONE, take)) return;
 
     cur.feed += take;
-    var up = 0;
+    let up = 0;
     while (true){
-      var req = feedNeedForNext(cur);
+      const req = feedNeedForNext(cur);
       if (req == null) break;
       if (cur.feed >= req){
         cur.feed -= req;
@@ -342,23 +342,23 @@
   }
 
   // ===== UI =====
-  function el(tag, css, html){ var d=document.createElement(tag); if(css) d.style.cssText=css; if(html!=null) d.innerHTML=html; return d; }
+  function el(tag, css, html){ const d=document.createElement(tag); if(css) d.style.cssText=css; if(html!=null) d.innerHTML=html; return d; }
   function bar(pct){
     pct=Math.max(0,Math.min(1,pct||0));
-    var w1=el("div","height:10px;background:#1f2937;border-radius:9999px;overflow:hidden;border:1px solid #334155;");
-    var inr=el("div","height:100%;background:#22c55e;width:"+(pct*100).toFixed(1)+"%;transition:width .2s;");
+    const w1=el("div","height:10px;background:#1f2937;border-radius:9999px;overflow:hidden;border:1px solid #334155;");
+    const inr=el("div","height:100%;background:#22c55e;width:"+(pct*100).toFixed(1)+"%;transition:width .2s;");
     w1.appendChild(inr);
     return w1;
   }
 
   function renderTopSummary(container){
-    var atkFin  = state.cores.atk.unlocked  ? computeCoreFinalBonus("atk",  state.cores.atk)  : {};
-    var lifeFin = state.cores.life.unlocked ? computeCoreFinalBonus("life", state.cores.life) : {};
-    var dmgFin  = state.cores.dmg.unlocked  ? computeCoreFinalBonus("dmg",  state.cores.dmg)  : {};
-    var totalFin = sumStats(sumStats(atkFin, lifeFin), dmgFin);
+    const atkFin  = state.cores.atk.unlocked  ? computeCoreFinalBonus("atk",  state.cores.atk)  : {};
+    const lifeFin = state.cores.life.unlocked ? computeCoreFinalBonus("life", state.cores.life) : {};
+    const dmgFin  = state.cores.dmg.unlocked  ? computeCoreFinalBonus("dmg",  state.cores.dmg)  : {};
+    const totalFin = sumStats(sumStats(atkFin, lifeFin), dmgFin);
 
     function statLines(obj){
-      var parts = [];
+      const parts = [];
       if (obj.atk != null) parts.push("攻擊力：<b>"+fmt(obj.atk)+"</b>");
       if (obj.def != null) parts.push("防禦力：<b>"+fmt(obj.def)+"</b>");
       if (obj.hp  != null) parts.push("生命：<b>"+fmt(obj.hp)+"</b>");
@@ -371,69 +371,69 @@
       return parts.join("　");
     }
 
-    var minIdx = Math.min(state.cores.atk.gradeIdx, state.cores.life.gradeIdx, state.cores.dmg.gradeIdx);
-    var curMul = setMultiplierByMinGrade(minIdx);
-    var setBase = { atk:200, def:100, hp:4000, totalDamage:0.05, ignoreDefPct:0.05 };
-    var curSet = {};
-    if (curMul>0){ for (var k in setBase) curSet[k] = setBase[k]*curMul; }
+    const minIdx = Math.min(state.cores.atk.gradeIdx, state.cores.life.gradeIdx, state.cores.dmg.gradeIdx);
+    const curMul = setMultiplierByMinGrade(minIdx);
+    const setBase = { atk:200, def:100, hp:4000, totalDamage:0.05, ignoreDefPct:0.05 };
+    const curSet = {};
+    if (curMul>0){ for (const k in setBase) curSet[k] = setBase[k]*curMul; }
 
-    var nextInfo = nextSetStageInfo(minIdx);
-    var nextSet = null;
+    const nextInfo = nextSetStageInfo(minIdx);
+    let nextSet = null;
     if (nextInfo){
       nextSet = {};
-      for (var k2 in setBase) nextSet[k2] = setBase[k2] * nextInfo.mul;
+      for (const k2 in setBase) nextSet[k2] = setBase[k2] * nextInfo.mul;
     }
 
-    var cardSet = el("div","padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:10px;");
-    var title = "<b>套裝效果</b>（以三件最低品階計）";
-    var curLine = (curMul>0)
+    const cardSet = el("div","padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:10px;");
+    const title = "<b>套裝效果</b>（以三件最低品階計）";
+    const curLine = (curMul>0)
       ? "<div style='margin-top:4px'>目前階段：<b>"+GRADES[minIdx]+"</b>　倍率 x"+curMul+"<br>"+statLines(curSet)+"</div>"
       : "<div style='margin-top:4px'>目前未達 <b>SSR</b>，無套裝加成</div>";
-    var nextLine = nextInfo
+    const nextLine = nextInfo
       ? "<div style='margin-top:6px;opacity:.9'>下一階段目標：三件達到 <b>"+nextInfo.needLabel+"</b>　倍率 x"+nextInfo.mul+"<br>"+statLines(nextSet)+"</div>"
       : "<div style='margin-top:6px;opacity:.9'>已達最高階段</div>";
     cardSet.innerHTML = title + curLine + nextLine;
     container.appendChild(cardSet);
 
-    var cardTotal = el("div","padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:10px;");
+    const cardTotal = el("div","padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:10px;");
     cardTotal.innerHTML = "<b>整體裝備能力</b>（三核心合計，不含套裝）<br>"+statLines(totalFin);
     container.appendChild(cardTotal);
   }
 
   function renderCorePanel(container, kind){
-    var cur = state.cores[kind];
-    var def = CORE_DEF[kind];
-    var caps = capsFor(cur);
-    var grade = GRADES[cur.gradeIdx];
-    var nextNeed = feedNeedForNext(cur);
+    const cur = state.cores[kind];
+    const def = CORE_DEF[kind];
+    const caps = capsFor(cur);
+    const grade = GRADES[cur.gradeIdx];
+    const nextNeed = feedNeedForNext(cur);
 
     container.appendChild(el("div","font-weight:800;font-size:18px;margin-bottom:8px;",
       "核心類型：<span style='color:#93c5fd'>"+def.title+"</span>　品階：<span style='color:#fbbf24'>"+grade+"</span>"));
 
-    var invLine = el("div","margin-bottom:8px;opacity:.9;font-size:12px;",
+    const invLine = el("div","margin-bottom:8px;opacity:.9;font-size:12px;",
       "背包｜"+ITEM_CORE_STONE+"："+q(ITEM_CORE_STONE)+"　"+ITEM_AWAKEN_STONE+"："+q(ITEM_AWAKEN_STONE)+"　"+ITEM_STAR_STONE+"："+q(ITEM_STAR_STONE));
     container.appendChild(invLine);
 
     if (!cur.unlocked){
-      var box = el("div","padding:12px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:10px;",
+      const box = el("div","padding:12px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:10px;",
         "<b>尚未解鎖</b><br>需要："
         + ITEM_CORE_STONE+" x "+(UNLOCK_COST_CORE_STONE)+" ＋ "
         + ITEM_AWAKEN_STONE+" x "+UNLOCK_COST_AWAKEN);
-      var btn = el("button","margin-top:8px;background:#1d4ed8;color:#fff;border:0;padding:8px 12px;border-radius:10px;cursor:pointer;","解鎖");
+      const btn = el("button","margin-top:8px;background:#1d4ed8;color:#fff;border:0;padding:8px 12px;border-radius:10px;cursor:pointer;","解鎖");
       btn.onclick = function(){ doUnlock(cur); };
       box.appendChild(btn);
       container.appendChild(box);
       return;
     }
 
-    var info = el("div","display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;");
+    const info = el("div","display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;");
     info.appendChild(el("div","","強化等級：<b>+"+cur.enhanceLv+"</b> / "+caps.enhCap));
     info.appendChild(el("div","","星力等級：<b>"+cur.starLv+"★</b> / "+caps.starCap));
     container.appendChild(info);
 
-    var fin = computeCoreFinalBonus(kind, cur);
-    var accBox = el("div","padding:10px;border:1px dashed #374151;border-radius:10px;background:#0b1220;margin-bottom:10px;opacity:.95;");
-    var lines = [];
+    const fin = computeCoreFinalBonus(kind, cur);
+    const accBox = el("div","padding:10px;border:1px dashed #374151;border-radius:10px;background:#0b1220;margin-bottom:10px;opacity:.95;");
+    const lines = [];
     if (fin.atk != null) lines.push("攻擊力 <b>"+fmt(fin.atk)+"</b>");
     if (fin.def != null) lines.push("防禦力 <b>"+fmt(fin.def)+"</b>");
     if (fin.hp  != null) lines.push("生命 <b>"+fmt(fin.hp)+"</b>");
@@ -446,49 +446,49 @@
     accBox.innerHTML = "<b>目前累計能力</b>（已含強化與階級獨立、乘上星力）<br>"+(lines.length?lines.join("　"):"—");
     container.appendChild(accBox);
 
-    var need = enhanceCostForLevel(cur.enhanceLv);
-    var enhBox = el("div","padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:10px;");
+    const need = enhanceCostForLevel(cur.enhanceLv);
+    const enhBox = el("div","padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:10px;");
     enhBox.innerHTML = "<b>強化</b>（成功率 <b>35%</b>）<br>下一次需要 "+ITEM_CORE_STONE+"：<b>"+need+"</b>";
-    var eBtn = el("button","margin-top:6px;background:#22c55e;color:#111;border:0;padding:6px 10px;border-radius:8px;cursor:pointer;","執行強化");
+    const eBtn = el("button","margin-top:6px;background:#22c55e;color:#111;border:0;padding:6px 10px;border-radius:8px;cursor:pointer;","執行強化");
     eBtn.onclick = function(){ doEnhance(cur); };
     enhBox.appendChild(eBtn);
     container.appendChild(enhBox);
 
-    var totalStarPct = starTotalBonusPct(cur.starLv, cur.enhanceLv);
-    var starBox = el("div","padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:10px;");
+    const totalStarPct = starTotalBonusPct(cur.starLv, cur.enhanceLv);
+    const starBox = el("div","padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:10px;");
     starBox.innerHTML =
       "<b>星力</b>（目前星力總加成：<b>+"+fmtPct(totalStarPct)+"</b>）<br>"
       + "成功率：<span style='opacity:.9'>1顆→5%｜5顆→12%｜10顆→28%（失敗 35% 機率降星；5/10/15…保底不降）</span>";
-    var sRow = el("div","display:flex;gap:8px;margin-top:6px;");
-    [1,5,10].forEach(function(n){
-      var b = el("button","background:#6366f1;color:#fff;border:0;padding:6px 10px;border-radius:8px;cursor:pointer;","嘗試（"+n+"顆）");
+    const sRow = el("div","display:flex;gap:8px;margin-top:6px;");
+    [1,5,10].forEach((n) =>{
+      const b = el("button","background:#6366f1;color:#fff;border:0;padding:6px 10px;border-radius:8px;cursor:pointer;","嘗試（"+n+"顆）");
       b.onclick = function(){ doStarforce(cur, n); };
       sRow.appendChild(b);
     });
     starBox.appendChild(sRow);
     container.appendChild(starBox);
 
-    var feedBox = el("div","padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:10px;");
+    const feedBox = el("div","padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:10px;");
     if (nextNeed == null){
       feedBox.innerHTML = "<b>餵養 / 覺醒</b><br>已達最高品階 <b>"+grade+"</b>";
     } else {
-      var pct = (cur.feed || 0) / nextNeed;
+      const pct = (cur.feed || 0) / nextNeed;
       feedBox.innerHTML =
         "<b>餵養 / 覺醒</b>（使用 "+ITEM_AWAKEN_STONE+"）<br>"
         + "下一階需求：<b>"+nextNeed+"</b>　目前：<b>"+(cur.feed||0)+"</b>";
       feedBox.appendChild(bar(pct));
-      var fRow = el("div","display:flex;gap:8px;margin-top:6px;");
-      var b1 = el("button","background:#334155;color:#fff;border:0;padding:6px 10px;border-radius:8px;cursor:pointer;","餵 1 顆");
+      const fRow = el("div","display:flex;gap:8px;margin-top:6px;");
+      const b1 = el("button","background:#334155;color:#fff;border:0;padding:6px 10px;border-radius:8px;cursor:pointer;","餵 1 顆");
       b1.onclick = function(){ doFeed(cur, 1); };
-      var b10= el("button","background:#334155;color:#fff;border:0;padding:6px 10px;border-radius:8px;cursor:pointer;","餵 10 顆");
+      const b10= el("button","background:#334155;color:#fff;border:0;padding:6px 10px;border-radius:8px;cursor:pointer;","餵 10 顆");
       b10.onclick= function(){ doFeed(cur, 10); };
-      var bAll= el("button","background:#334155;color:#fff;border:0;padding:6px 10px;border-radius:8px;cursor:pointer;","全部餵入");
+      const bAll= el("button","background:#334155;color:#fff;border:0;padding:6px 10px;border-radius:8px;cursor:pointer;","全部餵入");
       bAll.onclick = function() {
-        var need2 = feedNeedForNext(cur);
+        const need2 = feedNeedForNext(cur);
         if (need2 == null) return;
-        var remain = Math.max(0, need2 - (cur.feed || 0));
-        var have = q(ITEM_AWAKEN_STONE);
-        var offer = Math.min(remain, have);
+        const remain = Math.max(0, need2 - (cur.feed || 0));
+        const have = q(ITEM_AWAKEN_STONE);
+        const offer = Math.min(remain, have);
         if (offer <= 0) return;
         doFeed(cur, offer);
       };
@@ -498,10 +498,10 @@
     }
     container.appendChild(feedBox);
 
-    var ind = gradeIndependentBonus(kind, cur.gradeIdx);
-    var indHtml = (function(obj){
+    const ind = gradeIndependentBonus(kind, cur.gradeIdx);
+    const indHtml = (function(obj){
       if (!obj) return "";
-      var parts = [];
+      const parts = [];
       if (obj.atk            != null) parts.push("攻擊力 <b>+"+fmt(obj.atk)+"</b>");
       if (obj.def            != null) parts.push("防禦力 <b>+"+fmt(obj.def)+"</b>");
       if (obj.hp             != null) parts.push("生命 <b>+"+fmt(obj.hp)+"</b>");
@@ -513,7 +513,7 @@
       if (obj.ignoreDefPct   != null) parts.push("穿透防 <b>+"+fmtPct(obj.ignoreDefPct)+"</b>");
       return parts.join("　");
     })(ind);
-    var desc = el("div","padding:10px;border:1px dashed #374151;border-radius:10px;background:#0b1220;opacity:.95;",
+    const desc = el("div","padding:10px;border:1px dashed #374151;border-radius:10px;background:#0b1220;opacity:.95;",
       "<b>階級獨立能力（SR 起始，每階累積；不受星力/強化影響）</b><br>"+(indHtml||"目前無（R 階段）"));
     container.appendChild(desc);
   }
@@ -531,12 +531,12 @@
   w.EquipHub.registerTab({
     id: "coreTab",
     title: "核心",
-    render: function(container){
+    render(container){
       renderTopSummary(container);
-      var switcher = (function(){
-        var d = el("div","display:flex;gap:8px;margin-bottom:8px;");
-        [["atk","攻擊核心"],["life","生命核心"],["dmg","傷害核心"]].forEach(function(kv){
-          var btn = el("button",
+      const switcher = (function(){
+        const d = el("div","display:flex;gap:8px;margin-bottom:8px;");
+        [["atk","攻擊核心"],["life","生命核心"],["dmg","傷害核心"]].forEach((kv) =>{
+          const btn = el("button",
             "background:"+(state.current===kv[0]?"#1d4ed8":"#1f2937")+";color:#fff;border:0;padding:6px 10px;border-radius:8px;cursor:pointer;",
             kv[1]);
           btn.onclick = function(){ state.current=kv[0]; saveLocal(); w.EquipHub.requestRerender(); };
@@ -547,13 +547,13 @@
       container.appendChild(switcher);
       renderCorePanel(container, state.current);
     },
-    tick: function(){},
-    onOpen: function(){ applyToPlayer(); }
+    tick(){},
+    onOpen(){ applyToPlayer(); }
   });
 
   // 初次套用
   (function ensureReady(){
-    var tries = 0, t = setInterval(function(){
+    let tries = 0, t = setInterval(() =>{
       if (w.player && w.player.coreBonus && w.player.coreBonus.bonusData){
         clearInterval(t); applyToPlayer();
       } else if (++tries > 200){ clearInterval(t); }

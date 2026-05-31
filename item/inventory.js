@@ -98,7 +98,7 @@ function normalizeInventory(raw) {
   }
 
   // ===== 背包本體：先從 SaveHub 讀，沒有就用預設 =====
-  let inventory = (() => {
+  const inventory = (() => {
     const base = freshInventory();
     const loaded = shReadInventory();
     if (!loaded) return { ...base };

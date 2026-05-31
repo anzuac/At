@@ -1,5 +1,5 @@
 /*!
- * scroll_core_v2.js — 卷軸強化（ES5/UMD）
+ * scroll_core_v2.js — 卷軸強化（ES2020+/UMD）
  * - 純規則/純函式：不碰存檔、不接背包、不做 UI
  *
  * 本版重點（重新規劃）：
@@ -34,7 +34,7 @@
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) { module.exports = factory(); }
   else { root.ScrollForgeV2 = factory(); }
-})(this, function () {
+})(this, () => {
   'use strict';
 
   function clone(o){ try{return JSON.parse(JSON.stringify(o||{}));}catch(_){return {}; } }
@@ -51,7 +51,7 @@
 
   function equipIsUnified(node){
     if (!hasScrollSlots(node)) return false;
-    var t = node.type;
+    const t = node.type;
     if (t === 'glove') return false;
     if (isWeaponLikeType(t)) return false;
     return true;
@@ -73,7 +73,7 @@
   //   - 45%：全屬+3、攻擊力+6
   //   -  7%：全屬+5、攻擊力+12
   // 若你要改數值，只需改下面兩行 eff。
-  var DEF = {
+  const DEF = {
     // 統一卷軸（除手套/武器外）
     '屬性強化卷60%': { equip:equipIsUnified, rate:60, eff:{ str:3, dex:3, int:3, luk:3, atk:2, def:5,  hp:75  } },
     '屬性強化卷10%': { equip:equipIsUnified, rate:10, eff:{ str:5, dex:5, int:5, luk:5, atk:4, def:15, hp:175 } },
@@ -95,7 +95,7 @@
     '混沌卷軸60%': {
       equip: equipIsAnyScrollable,
       rate: 60,
-      effGen: function (node, rng) { return chaosRollBundle('std', rng); },
+      effGen (node, rng) { return chaosRollBundle('std', rng); },
       // UI：機率總覽可自動抓取
       chaosView: {
         title: '標準混沌',
@@ -113,7 +113,7 @@
     '高級混沌卷軸60%': {
       equip: equipIsAnyScrollable,
       rate: 60,
-      effGen: function (node, rng) { return chaosRollBundle('adv', rng); },
+      effGen (node, rng) { return chaosRollBundle('adv', rng); },
       chaosView: {
         title: '高級混沌',
         type: 'single',
@@ -134,7 +134,7 @@
       // 主屬：-5 ~ +20（toward zero）
       // ATK： -8 ~ +25（toward zero）
       // DEF/HP/MP：維持均勻（可再改成 toward zero）
-      effGen: function (node, rng) { return superChaosRollBundle(rng); },
+      effGen (node, rng) { return superChaosRollBundle(rng); },
       chaosView: {
         title: '超級混沌',
         type: 'dual',
@@ -148,41 +148,41 @@
 
   // ===== 機率工具 =====
   function pickWeighted(weights, rng){
-    var i, total=0; for(i=0;i<weights.length;i++) total += (weights[i].w||0);
+    let i, total=0; for(i=0;i<weights.length;i++) total += (weights[i].w||0);
     if (total<=0) return weights[0] ? weights[0].v : 0;
-    var r=(rng() * total), acc=0;
+    let r=(rng() * total), acc=0;
     for(i=0;i<weights.length;i++){ acc += (weights[i].w||0); if (r <= acc) return weights[i].v; }
     return weights[weights.length-1].v;
   }
   function rollFromPctTable(objPct, rng){
     // objPct: { value -> percent(0..100 任意總和) }
-    var arr=[], k; for(k in objPct) if (objPct.hasOwnProperty(k)){
+    let arr=[], k; for(k in objPct) if (objPct.hasOwnProperty(k)){
       arr.push({ v: parseInt(k,10), w: Number(objPct[k])||0 });
     }
-    arr.sort(function(a,b){ return a.v - b.v; });
+    arr.sort((a,b) =>{ return a.v - b.v; });
     return pickWeighted(arr, rng);
   }
 
   // ===== 主屬/ATK 每點機率表 =====
   // 1) 標準混沌（允許負數，-5..+15）— +3 固定 8%，其餘 0..12(不含3) 等比縮
-  var CHAOS_STD_MAIN_PCT = (function(){
-    var base = {
+  const CHAOS_STD_MAIN_PCT = (function(){
+    const base = {
       "-5":1.5, "-4":2, "-3":2.5, "-2":3, "-1":5,
        "0":7, "1":8, "2":8, /*"3":—*/ "4":9, "5":8, "6":8, "7":7,
        "8":6.5, "9":5.5, "10":5, "11":4, "12":3.5, "13":3, "14":2, "15":1
     };
-    var poolKeys = ["0","1","2","4","5","6","7","8","9","10","11","12"];
-    var i, poolSum = 0;
+    const poolKeys = ["0","1","2","4","5","6","7","8","9","10","11","12"];
+    let i, poolSum = 0;
     for(i=0;i<poolKeys.length;i++) poolSum += (Number(base[poolKeys[i]])||0); // 79.5
-    var need = 8.0;
-    var f = (poolSum - need) / (poolSum || 1);
-    for(i=0;i<poolKeys.length;i++){ var k = poolKeys[i]; base[k] = +(Number(base[k]) * f); }
+    const need = 8.0;
+    const f = (poolSum - need) / (poolSum || 1);
+    for(i=0;i<poolKeys.length;i++){ const k = poolKeys[i]; base[k] = +(Number(base[k]) * f); }
     base["3"] = 8.0;
     return base; // 總和 ~99.5%
   })();
 
   // 2) 高級混沌（0..12）
-  var CHAOS_ADV_MAIN_PCT = {
+  const CHAOS_ADV_MAIN_PCT = {
     "0":10,"1":12.5,"2":13,"3":12,"4":10,"5":9,"6":8.5,"7":7.5,"8":6.5,"9":5,"10":3,"11":2,"12":1
   };
 
@@ -192,63 +192,63 @@
   function buildTowardZeroPct(minV, maxV, alpha){
     alpha = (alpha==null) ? 1.25 : Number(alpha);
     if (!(alpha>0)) alpha = 1.25;
-    var v, sum=0, weights=[];
+    let v, sum=0, weights=[];
     for(v=minV; v<=maxV; v++){
-      var w = 1 / Math.pow(Math.abs(v)+1, alpha);
-      weights.push({ v:v, w:w });
+      const w = 1 / Math.pow(Math.abs(v)+1, alpha);
+      weights.push({ v, w });
       sum += w;
     }
-    var pct = {};
-    for (var i=0;i<weights.length;i++){
-      var p = (sum>0) ? (weights[i].w / sum * 100) : 0;
+    const pct = {};
+    for (let i=0;i<weights.length;i++){
+      const p = (sum>0) ? (weights[i].w / sum * 100) : 0;
       pct[String(weights[i].v)] = p;
     }
     return pct;
   }
 
-  var SUPER_CHAOS_ALPHA = 1;
-  var SUPER_CHAOS_MAIN_PCT = buildTowardZeroPct(-5, 20, SUPER_CHAOS_ALPHA);
-  var SUPER_CHAOS_ATK_PCT  = buildTowardZeroPct(-8, 25, SUPER_CHAOS_ALPHA);
+  const SUPER_CHAOS_ALPHA = 1;
+  const SUPER_CHAOS_MAIN_PCT = buildTowardZeroPct(-5, 20, SUPER_CHAOS_ALPHA);
+  const SUPER_CHAOS_ATK_PCT  = buildTowardZeroPct(-8, 25, SUPER_CHAOS_ALPHA);
 
   // HP/DEF：分段遞減分配
-  var CHAOS_HP_RANGE = { negMin:-50, posMidMax:40, posHighMax:99, posTop:100 };
-  var CHAOS_DEF_RANGE= { negMin:-30, posMidMax:15, posHighMax:29, posTop:30 };
+  const CHAOS_HP_RANGE = { negMin:-50, posMidMax:40, posHighMax:99, posTop:100 };
+  const CHAOS_DEF_RANGE= { negMin:-30, posMidMax:15, posHighMax:29, posTop:30 };
   function decreasingWeights(from, to){
-    var arr=[], i; for(i=from;i<=to;i++){ arr.push({ v:i, w:(to - i + 1) }); } return arr;
+    let arr=[], i; for(i=from;i<=to;i++){ arr.push({ v:i, w:(to - i + 1) }); } return arr;
   }
   function towardZeroWeights(min, max){
-    var arr=[], i; for(i=min;i<=max;i++){ var d=Math.abs(i); arr.push({ v:i, w:(d===0)? (max-min+2) : (1/(d+0.5)) }); } return arr;
+    let arr=[], i; for(i=min;i<=max;i++){ const d=Math.abs(i); arr.push({ v:i, w:(d===0)? (max-min+2) : (1/(d+0.5)) }); } return arr;
   }
   function chaosHP(allowNegative, rng){
-    var buckets=[], P_NEG=allowNegative?0.15:0, P_TOP=0.01, P_HIGH=allowNegative?0.14:0.19, P_MID=1-(P_NEG+P_HIGH+P_TOP);
-    if (P_NEG>0) buckets.push({p:P_NEG, gen:function(){ return pickWeighted(towardZeroWeights(CHAOS_HP_RANGE.negMin,-1), rng); }});
-    buckets.push({p:P_MID, gen:function(){ return pickWeighted(decreasingWeights(0, CHAOS_HP_RANGE.posMidMax), rng); }});
-    buckets.push({p:P_HIGH,gen:function(){ return pickWeighted(decreasingWeights(CHAOS_HP_RANGE.posMidMax+1, CHAOS_HP_RANGE.posHighMax), rng); }});
-    buckets.push({p:P_TOP, gen:function(){ return CHAOS_HP_RANGE.posTop; }});
-    var ws=[], i; for(i=0;i<buckets.length;i++) ws.push({ v:i, w:buckets[i].p });
+    const buckets=[], P_NEG=allowNegative?0.15:0, P_TOP=0.01, P_HIGH=allowNegative?0.14:0.19, P_MID=1-(P_NEG+P_HIGH+P_TOP);
+    if (P_NEG>0) buckets.push({p:P_NEG, gen(){ return pickWeighted(towardZeroWeights(CHAOS_HP_RANGE.negMin,-1), rng); }});
+    buckets.push({p:P_MID, gen(){ return pickWeighted(decreasingWeights(0, CHAOS_HP_RANGE.posMidMax), rng); }});
+    buckets.push({p:P_HIGH,gen(){ return pickWeighted(decreasingWeights(CHAOS_HP_RANGE.posMidMax+1, CHAOS_HP_RANGE.posHighMax), rng); }});
+    buckets.push({p:P_TOP, gen(){ return CHAOS_HP_RANGE.posTop; }});
+    let ws=[], i; for(i=0;i<buckets.length;i++) ws.push({ v:i, w:buckets[i].p });
     return buckets[pickWeighted(ws, rng)].gen();
   }
   function chaosDEF(allowNegative, rng){
-    var buckets=[], P_NEG=allowNegative?0.15:0, P_TOP=0.01, P_HIGH=allowNegative?0.14:0.19, P_MID=1-(P_NEG+P_HIGH+P_TOP);
-    if (P_NEG>0) buckets.push({p:P_NEG, gen:function(){ return pickWeighted(towardZeroWeights(CHAOS_DEF_RANGE.negMin,-1), rng); }});
-    buckets.push({p:P_MID, gen:function(){ return pickWeighted(decreasingWeights(0, CHAOS_DEF_RANGE.posMidMax), rng); }});
-    buckets.push({p:P_HIGH,gen:function(){ return pickWeighted(decreasingWeights(CHAOS_DEF_RANGE.posMidMax+1, CHAOS_DEF_RANGE.posHighMax), rng); }});
-    buckets.push({p:P_TOP, gen:function(){ return CHAOS_DEF_RANGE.posTop; }});
-    var ws=[], i; for(i=0;i<buckets.length;i++) ws.push({ v:i, w:buckets[i].p });
+    const buckets=[], P_NEG=allowNegative?0.15:0, P_TOP=0.01, P_HIGH=allowNegative?0.14:0.19, P_MID=1-(P_NEG+P_HIGH+P_TOP);
+    if (P_NEG>0) buckets.push({p:P_NEG, gen(){ return pickWeighted(towardZeroWeights(CHAOS_DEF_RANGE.negMin,-1), rng); }});
+    buckets.push({p:P_MID, gen(){ return pickWeighted(decreasingWeights(0, CHAOS_DEF_RANGE.posMidMax), rng); }});
+    buckets.push({p:P_HIGH,gen(){ return pickWeighted(decreasingWeights(CHAOS_DEF_RANGE.posMidMax+1, CHAOS_DEF_RANGE.posHighMax), rng); }});
+    buckets.push({p:P_TOP, gen(){ return CHAOS_DEF_RANGE.posTop; }});
+    let ws=[], i; for(i=0;i<buckets.length;i++) ws.push({ v:i, w:buckets[i].p });
     return buckets[pickWeighted(ws, rng)].gen();
   }
 
   // 分流：主屬/ATK 用表；HP/DEF 用階梯
   function chaosRollBundle(mode, rng){
     rng = rng || Math.random;
-    var eff = {};
-    var table = (mode==='std') ? CHAOS_STD_MAIN_PCT : CHAOS_ADV_MAIN_PCT;
+    const eff = {};
+    const table = (mode==='std') ? CHAOS_STD_MAIN_PCT : CHAOS_ADV_MAIN_PCT;
     eff.str = rollFromPctTable(table, rng);
     eff.dex = rollFromPctTable(table, rng);
     eff.int = rollFromPctTable(table, rng);
     eff.luk = rollFromPctTable(table, rng);
     eff.atk = rollFromPctTable(table, rng);
-    var allowNeg = (mode==='std');
+    const allowNeg = (mode==='std');
     eff.hp  = chaosHP(allowNeg, rng);
     eff.def = chaosDEF(allowNeg, rng);
     return eff;
@@ -256,7 +256,7 @@
 
   function superChaosRollBundle(rng){
     rng = rng || Math.random;
-    var eff = {};
+    const eff = {};
     eff.str = rollFromPctTable(SUPER_CHAOS_MAIN_PCT, rng);
     eff.dex = rollFromPctTable(SUPER_CHAOS_MAIN_PCT, rng);
     eff.int = rollFromPctTable(SUPER_CHAOS_MAIN_PCT, rng);
@@ -274,23 +274,23 @@
 
   // 導出：主屬/ATK 每點機率表（供 UI 顯示；轉成 0..1）
   function chaosMainProb(allowNegative){
-    var src = allowNegative ? CHAOS_STD_MAIN_PCT : CHAOS_ADV_MAIN_PCT;
-    var keys = Object.keys(src).map(function(k){return parseInt(k,10);}).sort(function(a,b){return a-b;});
-    var arr=[], i; for(i=0;i<keys.length;i++){ var v=keys[i]; arr.push({ v:v, p: (Number(src[String(v)])||0)/100 }); }
+    const src = allowNegative ? CHAOS_STD_MAIN_PCT : CHAOS_ADV_MAIN_PCT;
+    const keys = Object.keys(src).map((k) =>{return parseInt(k,10);}).sort((a,b) =>{return a-b;});
+    let arr=[], i; for(i=0;i<keys.length;i++){ const v=keys[i]; arr.push({ v, p: (Number(src[String(v)])||0)/100 }); }
     return arr;
   }
 
   // 導出：超級混沌 主屬/ATK 每點機率表（供 UI 顯示；轉成 0..1）
   function chaosSuperMainProb(){
-    var src = SUPER_CHAOS_MAIN_PCT;
-    var keys = Object.keys(src).map(function(k){return parseInt(k,10);}).sort(function(a,b){return a-b;});
-    var arr=[], i; for(i=0;i<keys.length;i++){ var v=keys[i]; arr.push({ v:v, p: (Number(src[String(v)])||0)/100 }); }
+    const src = SUPER_CHAOS_MAIN_PCT;
+    const keys = Object.keys(src).map((k) =>{return parseInt(k,10);}).sort((a,b) =>{return a-b;});
+    let arr=[], i; for(i=0;i<keys.length;i++){ const v=keys[i]; arr.push({ v, p: (Number(src[String(v)])||0)/100 }); }
     return arr;
   }
   function chaosSuperAtkProb(){
-    var src = SUPER_CHAOS_ATK_PCT;
-    var keys = Object.keys(src).map(function(k){return parseInt(k,10);}).sort(function(a,b){return a-b;});
-    var arr=[], i; for(i=0;i<keys.length;i++){ var v=keys[i]; arr.push({ v:v, p: (Number(src[String(v)])||0)/100 }); }
+    const src = SUPER_CHAOS_ATK_PCT;
+    const keys = Object.keys(src).map((k) =>{return parseInt(k,10);}).sort((a,b) =>{return a-b;});
+    let arr=[], i; for(i=0;i<keys.length;i++){ const v=keys[i]; arr.push({ v, p: (Number(src[String(v)])||0)/100 }); }
     return arr;
   }
 
@@ -298,15 +298,15 @@
   function equipMatch(required, node){
     if (!required) return false;
     if (typeof required === 'function') return !!required(node);
-    var type = node ? node.type : undefined;
+    const type = node ? node.type : undefined;
     if (typeof required === 'string') return required === type;
     if (required && required.length){
-      for (var i=0;i<required.length;i++) if (required[i]===type) return true;
+      for (let i=0;i<required.length;i++) if (required[i]===type) return true;
     }
     return false;
   }
   function canUse(node, name){
-    var sd = DEF[name];
+    const sd = DEF[name];
     if (!node || !sd) return { ok:false, reason:'not_found' };
     if (node.locked) return { ok:false, reason:'locked' };
     if (!equipMatch(sd.equip, node)) return { ok:false, reason:'wrong_type' };
@@ -316,42 +316,42 @@
 
   // options: { rng:fn()->0~1 }
   function apply(node, name, options){
-    var chk = canUse(node, name);
+    const chk = canUse(node, name);
     if (!chk.ok) return { ok:false, usedSlot:false, success:false, reason:chk.reason };
     options = options||{};
-    var rng = (typeof options.rng === 'function') ? options.rng : Math.random;
+    const rng = (typeof options.rng === 'function') ? options.rng : Math.random;
 
-    var success = rng() < ((chk.rate|0)/100);
-    var next = clone(node||{});
+    const success = rng() < ((chk.rate|0)/100);
+    const next = clone(node||{});
     next.slotsUsed = (next.slotsUsed|0) + 1; // 失敗也扣次
-    var effApplied = null;
+    let effApplied = null;
 
     if (success){
-      var eff = chk.isDynamic ? (DEF[name].effGen(next, rng)||{}) : (chk.eff||{});
+      const eff = chk.isDynamic ? (DEF[name].effGen(next, rng)||{}) : (chk.eff||{});
       effApplied = clone(eff);
-      var k; next.enhance = next.enhance||{};
+      let k; next.enhance = next.enhance||{};
       for (k in eff) if (eff.hasOwnProperty(k)) next.enhance[k] = (nz(next.enhance[k]) + (eff[k]|0));
       next.enhanceSuccess = (next.enhanceSuccess|0) + 1;
     }
-    return { ok:true, usedSlot:true, success:success, nextNode:next, rate:chk.rate, effApplied:effApplied };
+    return { ok:true, usedSlot:true, success, nextNode:next, rate:chk.rate, effApplied };
   }
 
   // ===== 二段式（混沌選擇券用） =====
   function chaosPreview(node, name, options){
-    var chk = canUse(node, name);
+    const chk = canUse(node, name);
     if (!chk.ok) return { ok:false, can:false, reason:chk.reason, rate:0, success:false };
     if (!DEF[name] || !DEF[name].effGen) return { ok:false, can:false, reason:'not_chaos', rate:chk.rate, success:false };
     options = options||{};
-    var rng = (typeof options.rng === 'function') ? options.rng : Math.random;
-    var success = (rng() < ((chk.rate|0)/100));
-    var effPreview = success ? (DEF[name].effGen(node, rng)||{}) : null;
-    return { ok:true, can:true, rate:chk.rate, success:success, effPreview:effPreview };
+    const rng = (typeof options.rng === 'function') ? options.rng : Math.random;
+    const success = (rng() < ((chk.rate|0)/100));
+    const effPreview = success ? (DEF[name].effGen(node, rng)||{}) : null;
+    return { ok:true, can:true, rate:chk.rate, success, effPreview };
   }
   function chaosCommit(node, name, effPreview, applyIt){
-    var next = clone(node||{});
+    const next = clone(node||{});
     if (applyIt){
       next.slotsUsed = (next.slotsUsed|0) + 1;
-      var k; next.enhance = next.enhance||{};
+      let k; next.enhance = next.enhance||{};
       for (k in effPreview) if (effPreview.hasOwnProperty(k)) next.enhance[k] = (nz(next.enhance[k]) + (effPreview[k]|0));
       next.enhanceSuccess = (next.enhanceSuccess|0) + 1;
     }
@@ -360,12 +360,12 @@
 
   // ===== 其他工具 =====
   function recoverFailedOnce(node, options){
-    var n=clone(node||{}), slotsUsed=n.slotsUsed|0, succ=n.enhanceSuccess|0, failed=Math.max(0, slotsUsed - succ);
+    const n=clone(node||{}), slotsUsed=n.slotsUsed|0, succ=n.enhanceSuccess|0, failed=Math.max(0, slotsUsed - succ);
     if (n.locked) return { ok:false, success:false, reason:'locked' };
     if (failed<=0) return { ok:false, success:false, reason:'no_failed_slots' };
     options=options||{};
-    var rng=(typeof options.rng==='function')?options.rng:Math.random;
-    var success=(rng()<0.5);
+    const rng=(typeof options.rng==='function')?options.rng:Math.random;
+    const success=(rng()<0.5);
     if (success){ n.slotsUsed=Math.max(succ, slotsUsed-1); return { ok:true, success:true, nextNode:n }; }
     return { ok:true, success:false, nextNode:n };
   }
@@ -375,10 +375,10 @@
   //   - keepPendingStar (default: true) : 是否保留 n._pendingStar
   function perfectReset(node, options){
     options = options || {};
-    var keepStar = (options.keepStar !== false);
-    var keepPendingStar = (options.keepPendingStar !== false);
+    const keepStar = (options.keepStar !== false);
+    const keepPendingStar = (options.keepPendingStar !== false);
 
-    var n = clone(node||{});
+    const n = clone(node||{});
     n.enhance = {str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0};
     n.slotsUsed = 0;
     n.enhanceSuccess = 0;
@@ -390,9 +390,9 @@
   }
 
   // ===== ★卷軸上限提升（最多 +10 格）=====
-  var SLOT_AUGMENT_MAX   = 10;
+  const SLOT_AUGMENT_MAX   = 10;
   // 0~1 機率：100%, 70%, 40%, 25%, 10%, 5%, 4%, 2%, 1%, 0.5%
-  var SLOT_AUGMENT_STEPS = [1.00,0.70,0.40,0.25,0.10,0.05,0.04,0.02,0.01,0.005];
+  let SLOT_AUGMENT_STEPS = [1.00,0.70,0.40,0.25,0.10,0.05,0.04,0.02,0.01,0.005];
 
   function isScrollableTypeNode(node){
     // 自動化：只要該裝備本來就有卷軸格（slotsMax>0）就允許做「上限提升」
@@ -403,22 +403,22 @@
     if (!node) return { ok:false, reason:'no_node' };
     if (node.locked) return { ok:false, reason:'locked' };
     if (!isScrollableTypeNode(node)) return { ok:false, reason:'not_scrollable' };
-    var succ = (node._slotAugSuccess|0);
+    const succ = (node._slotAugSuccess|0);
     if (succ >= SLOT_AUGMENT_MAX) return { ok:false, reason:'cap' };
-    var step = succ; // 0-based
-    var chance = SLOT_AUGMENT_STEPS[step]||0;
-    return { ok:true, chance: chance, step: step+1, left: (SLOT_AUGMENT_MAX - succ) };
+    const step = succ; // 0-based
+    const chance = SLOT_AUGMENT_STEPS[step]||0;
+    return { ok:true, chance, step: step+1, left: (SLOT_AUGMENT_MAX - succ) };
   }
 
   // options: { rng:fn()->0~1 }
   function augmentSlots(node, options){
-    var chk = canAugmentSlots(node);
+    const chk = canAugmentSlots(node);
     if (!chk.ok) return { ok:false, success:false, reason:chk.reason };
     options = options||{};
-    var rng = (typeof options.rng === 'function') ? options.rng : Math.random;
+    const rng = (typeof options.rng === 'function') ? options.rng : Math.random;
 
-    var pass = rng() < (chk.chance);
-    var next = clone(node||{});
+    const pass = rng() < (chk.chance);
+    const next = clone(node||{});
     if (pass){
       next.slotsMax = (next.slotsMax|0) + 1;                 // 上限 +1
       next._slotAugSuccess = (next._slotAugSuccess|0) + 1;   // 成功次數 +1
@@ -427,7 +427,7 @@
   }
 
   // ===== 對外 =====
-  
+
   // =========================
   // ★資料驅動 UI Actions（由卷軸檔案決定顯示哪些按鈕）
   //  - equip_system 只要呼叫 getUIActions(ctx) 並把按鈕畫出來即可
@@ -436,69 +436,69 @@
   // 回傳: [{ id, label, itemName, itemCount, style, disabledReason, run(ctx)->{ok,msg,nextNode} }]
   function getUIActions(ctx){
     ctx = ctx||{};
-    var node = ctx.node;
-    var G = (typeof window!=='undefined')?window:((typeof globalThis!=='undefined')?globalThis:this);
-    var invCount = (typeof ctx.invCount==='function') ? ctx.invCount : function(){return 0;};
-    var invUse   = (typeof ctx.invUse==='function')   ? ctx.invUse   : function(){return false;};
-    var out = [];
+    const node = ctx.node;
+    const G = (typeof window!=='undefined')?window:((typeof globalThis!=='undefined')?globalThis:this);
+    const invCount = (typeof ctx.invCount==='function') ? ctx.invCount : function(){return 0;};
+    const invUse   = (typeof ctx.invUse==='function')   ? ctx.invUse   : function(){return false;};
+    const out = [];
     if (!node) return out;
 
-    var type = node.type;
-    var isWeapon = equipIsWeaponLike(node);
-    var isGlove  = (type==='glove');
+    const type = node.type;
+    const isWeapon = equipIsWeaponLike(node);
+    const isGlove  = (type==='glove');
 
     // 顯示順序：統一 / 手套 / 武器（依裝備類型）
-    var ORDER_UNIFIED = ['屬性強化卷60%','屬性強化卷10%','屬性攻擊強化卷45%','屬性攻擊強化卷7%'];
-    var ORDER_GLOVE   = ['手套強化卷60%','手套強化卷30%','手套強化卷7%'];
-    var ORDER_WEAPON  = ['武器強化卷70%','武器強化卷30%','武器強化卷10%','武器強化卷1%'];
-    var ORDER_CHAOS   = ['混沌卷軸60%','高級混沌卷軸60%','超級混沌卷5%'];
+    const ORDER_UNIFIED = ['屬性強化卷60%','屬性強化卷10%','屬性攻擊強化卷45%','屬性攻擊強化卷7%'];
+    const ORDER_GLOVE   = ['手套強化卷60%','手套強化卷30%','手套強化卷7%'];
+    const ORDER_WEAPON  = ['武器強化卷70%','武器強化卷30%','武器強化卷10%','武器強化卷1%'];
+    const ORDER_CHAOS   = ['混沌卷軸60%','高級混沌卷軸60%','超級混沌卷5%'];
 
-    var baseOrder = (!isWeapon && !isGlove) ? ORDER_UNIFIED : (isGlove ? ORDER_GLOVE : ORDER_WEAPON);
+    const baseOrder = (!isWeapon && !isGlove) ? ORDER_UNIFIED : (isGlove ? ORDER_GLOVE : ORDER_WEAPON);
 
     function pushScroll(name){
-      var chk = canUse(node, name);
-      var d = DEF[name];
-      var need = 1;
-      var cnt = invCount(name)|0;
+      const chk = canUse(node, name);
+      const d = DEF[name];
+      const need = 1;
+      const cnt = invCount(name)|0;
 
-      var label = name.replace('強化','');
+      const label = name.replace('強化','');
 
       out.push({
         id: 'scroll:' + name,
-        label: label,
+        label,
         itemName: name,
         itemCount: need,
         style: 'secondary',
         disabledReason: (!chk.ok ? chk.reason : (cnt<need ? 'no_item' : '')),
-        run: function(runCtx){
+        run(runCtx){
           runCtx = runCtx||{};
-          var n = runCtx.node || node;
+          const n = runCtx.node || node;
           if (!n) return { ok:false, msg:'裝備不存在' };
           if (!invUse(name, need)) return { ok:false, msg:'缺少：' + name + ' ×' + need };
 
           // 混沌卷：成功時支援混沌選擇券（若有）
           if (DEF[name] && DEF[name].effGen){
-            var pv = chaosPreview(n, name);
+            const pv = chaosPreview(n, name);
             if (!pv.ok) return { ok:false, msg:'混沌檢定失敗（狀態不符）' };
 
             // 失敗：照原本邏輯扣 1 次
             if (!pv.success){
-              var nf = clone(n);
+              const nf = clone(n);
               nf.slotsUsed = (nf.slotsUsed|0) + 1;
               return { ok:true, msg: name + ' 失敗（卷軸次數 +1）｜已用 ' + nf.slotsUsed + '/' + (nf.slotsMax|0), nextNode: nf };
             }
 
             // 成功：若有混沌選擇券，改用彈窗內選擇（避免 confirm 在手機不彈）
-            var ticketName = '混沌選擇券';
-            var hasTicket = (invCount(ticketName)|0) > 0;
+            const ticketName = '混沌選擇券';
+            const hasTicket = (invCount(ticketName)|0) > 0;
 
             if (hasTicket){
               // 先讓 UI 顯示選擇面板；選擇後才決定是否套用與是否扣次
-              return { ok:true, msg:'混沌成功：請選擇是否套用', pending:{ kind:'chaos_choice', scrollName:name, ticketName:ticketName, effPreview:(pv.effPreview||{}), nodeSnapshot: clone(n) } };
+              return { ok:true, msg:'混沌成功：請選擇是否套用', pending:{ kind:'chaos_choice', scrollName:name, ticketName, effPreview:(pv.effPreview||{}), nodeSnapshot: clone(n) } };
             }
 
-            var cm = chaosCommit(n, name, pv.effPreview, true);
-            var next = cm.nextNode;
+            const cm = chaosCommit(n, name, pv.effPreview, true);
+            const next = cm.nextNode;
 
             next._lastChaosEff = pv.effPreview || null;
             next._lastChaosName = name;
@@ -508,23 +508,23 @@
           }
 
           // 一般卷
-          var res = apply(n, name);
+          const res = apply(n, name);
           if (!res.ok){
             return { ok:false, msg:'不可使用：' + name + '（' + res.reason + '）' };
           }
-          var nextNode = res.nextNode;
+          const nextNode = res.nextNode;
           // 統計成功/失敗次數（用於 UI 顯示）
           nextNode._scrollSuccessCount = (nextNode._scrollSuccessCount|0) + (res.success?1:0);
           nextNode._scrollFailCount = (nextNode._scrollFailCount|0) + (res.success?0:1);
-          var tip = (res.success ? '卷軸強化成功' : '卷軸強化失敗');
+          let tip = (res.success ? '卷軸強化成功' : '卷軸強化失敗');
           tip += '（成功率 ' + (res.rate|0) + '%｜已用 ' + (nextNode.slotsUsed|0) + '/' + (nextNode.slotsMax|0) + '）';
-          return { ok:true, msg: tip, nextNode: nextNode };
+          return { ok:true, msg: tip, nextNode };
         }
       });
     }
 
     // 主卷軸（依類型）
-    for (var i=0;i<baseOrder.length;i++){
+    for (let i=0;i<baseOrder.length;i++){
       if (DEF[baseOrder[i]]) pushScroll(baseOrder[i]);
     }
 
@@ -532,7 +532,7 @@
     for (i=0;i<ORDER_CHAOS.length;i++){
       if (DEF[ORDER_CHAOS[i]]){
         // 混沌卷也要 slot 可用才顯示（可用則 push）
-        var chk2 = canUse(node, ORDER_CHAOS[i]);
+        const chk2 = canUse(node, ORDER_CHAOS[i]);
         if (chk2.ok || (node && (node.slotsMax|0)>0)) pushScroll(ORDER_CHAOS[i]);
       }
     }
@@ -545,12 +545,12 @@
       itemCount:1,
       style:'danger',
       disabledReason: ((invCount('恢復卷軸')|0)<=0 ? 'no_item' : ''),
-      run:function(runCtx){
+      run(runCtx){
         runCtx=runCtx||{};
-        var n=runCtx.node||node;
+        const n=runCtx.node||node;
         if(!n) return {ok:false,msg:'裝備不存在'};
         if(!invUse('恢復卷軸',1)) return {ok:false,msg:'缺少：恢復卷軸 ×1'};
-        var r=recoverFailedOnce(n);
+        const r=recoverFailedOnce(n);
         if(!r.ok) return {ok:false,msg:(r.reason==='locked'?'裝備未解鎖':'沒有可恢復的失敗次數')};
         return {ok:true,msg:(r.success?'恢復成功（-1 失敗次數）':'恢復失敗（機率 50%）'),nextNode:r.nextNode, countSucc: 0};
       }
@@ -564,12 +564,12 @@
       itemCount:1,
       style:'ghost',
       disabledReason: ((invCount('完美重置卷軸')|0)<=0 ? 'no_item' : ''),
-      run:function(runCtx){
+      run(runCtx){
         runCtx=runCtx||{};
-        var n=runCtx.node||node;
+        const n=runCtx.node||node;
         if(!n) return {ok:false,msg:'裝備不存在'};
         if(!invUse('完美重置卷軸',1)) return {ok:false,msg:'缺少：完美重置卷軸 ×1'};
-        var r=perfectReset(n);
+        const r=perfectReset(n);
         if(!r.ok) return {ok:false,msg:'重置失敗（狀態不符）'};
         return {ok:true,msg:'重置完成',nextNode:r.nextNode, resetSucc: true};
       }
@@ -583,13 +583,13 @@
       itemCount:1,
       style:'secondary',
       disabledReason: (!canAugmentSlots(node).ok ? 'cant' : ((invCount('卷軸上限提升')|0)<=0 ? 'no_item' : '')),
-      run:function(runCtx){
+      run(runCtx){
         runCtx=runCtx||{};
-        var n=runCtx.node||node;
-        var chk=canAugmentSlots(n);
+        const n=runCtx.node||node;
+        const chk=canAugmentSlots(n);
         if(!chk.ok) return {ok:false,msg:'不可提升（已達上限或狀態不符）'};
         if(!invUse('卷軸上限提升',1)) return {ok:false,msg:'缺少：卷軸上限提升 ×1'};
-        var r=augmentSlots(n);
+        const r=augmentSlots(n);
         if(!r.ok) return {ok:false,msg:'提升失敗'};
         // 注意：提升失敗也是 ok:true（表示已消耗道具並完成一次嘗試）
         if(!r.success){
@@ -611,19 +611,19 @@
   // =========================
   function openScrollModal(ctx){
     ctx = ctx || {};
-    var getNode = (typeof ctx.getNode === 'function') ? ctx.getNode : function(){ return ctx.node || null; };
-    var saveNode = (typeof ctx.saveNode === 'function') ? ctx.saveNode : function(){};
-    var G = (typeof window!=='undefined')?window:((typeof globalThis!=='undefined')?globalThis:this);
-    var invCount = (typeof ctx.invCount === 'function') ? ctx.invCount : function(name){
+    const getNode = (typeof ctx.getNode === 'function') ? ctx.getNode : function(){ return ctx.node || null; };
+    const saveNode = (typeof ctx.saveNode === 'function') ? ctx.saveNode : function(){};
+    const G = (typeof window!=='undefined')?window:((typeof globalThis!=='undefined')?globalThis:this);
+    const invCount = (typeof ctx.invCount === 'function') ? ctx.invCount : function(name){
       try{
         if (G && typeof G.getItemQuantity==='function') return (G.getItemQuantity(name)|0);
         if (G && G.Inventory && typeof G.Inventory.get==='function') return (G.Inventory.get(name)|0);
       }catch(_){ }
       return 0;
     };
-    var invUse = (typeof ctx.invUse === 'function') ? ctx.invUse : function(name, qty){
+    const invUse = (typeof ctx.invUse === 'function') ? ctx.invUse : function(name, qty){
       qty = qty|0; if(qty<=0) qty=1;
-      var have = invCount(name)|0;
+      const have = invCount(name)|0;
       if (have < qty) return false;
       try{
         if (G && typeof G.removeItem==='function'){ G.removeItem(name, qty); return true; }
@@ -633,28 +633,28 @@
     };
     // 不再依賴 alert/confirm（手機 WebView 常被擋），改用「混沌紀錄」上方的 log 顯示。
     // 若外部仍提供 onMsg，會一併呼叫（例如你想顯示 toast）。
-    var onMsg = function(_t){}; // UI 以 modal 內的操作紀錄為主，不再使用外部 alert/toast
-    var onRerender = (typeof ctx.onRerender === 'function') ? ctx.onRerender : function(){};
+    const onMsg = function(_t){}; // UI 以 modal 內的操作紀錄為主，不再使用外部 alert/toast
+    const onRerender = (typeof ctx.onRerender === 'function') ? ctx.onRerender : function(){};
 
-    var node = getNode();
+    let node = getNode();
     if(!node){ onMsg('裝備不存在'); return; }
 
     // ===== 本地持久化索引（以裝備 id/key/uid 當索引）=====
-var equipKey = String((node && (node.id || node.key || node.uid || node.uuid || node.name)) || 'equip');
-var LOG_KEY  = '__SF_SCROLL_UI_LOG__:' + equipKey;
-var SUCC_KEY = '__SF_SCROLL_UI_SUCC__:' + equipKey;
+const equipKey = String((node && (node.id || node.key || node.uid || node.uuid || node.name)) || 'equip');
+const LOG_KEY  = '__SF_SCROLL_UI_LOG__:' + equipKey;
+const SUCC_KEY = '__SF_SCROLL_UI_SUCC__:' + equipKey;
 
 // 載入本地持久化的操作紀錄（最多 20 筆）
 try{
-  var raw0 = localStorage.getItem(LOG_KEY);
+  const raw0 = localStorage.getItem(LOG_KEY);
   if(raw0){
-    var arr0 = JSON.parse(raw0);
+    const arr0 = JSON.parse(raw0);
     if(Array.isArray(arr0)){
       // 舊版可能是 string[]，這裡統一轉成 {msg,type,ts}
-      uiLogs = arr0.map(function(x){
+      uiLogs = arr0.map((x) =>{
         if(x && typeof x === 'object' && x.msg) return x;
         return { msg: String(x||''), type: 'info', ts: Date.now() };
-      }).filter(function(x){ return x && x.msg; }).slice(0,20);
+      }).filter((x) =>{ return x && x.msg; }).slice(0,20);
     }
   }
 }catch(_){}
@@ -669,9 +669,9 @@ try{
   if(node && node._scrollSuccApplied!=null){
     uiSucc = node._scrollSuccApplied|0;
   }else if(Array.isArray(uiLogs) && uiLogs.length){
-    var c=0;
-    for(var i=0;i<uiLogs.length;i++){
-      var mm=String(uiLogs[i] && uiLogs[i].msg || '');
+    let c=0;
+    for(let i=0;i<uiLogs.length;i++){
+      const mm=String(uiLogs[i] && uiLogs[i].msg || '');
       if(mm.indexOf('卷軸強化成功')===0) c++;
       else if(mm.indexOf('混沌成功並套用')===0) c++;
     }
@@ -682,16 +682,16 @@ try{
 
 // ===== UI 狀態 =====
 
-    var pendingChaosChoice = null; // { panel, payload }
-    var uiLogs = []; // modal-local logs (persist via localStorage)
-    var uiSucc = 0; // 成功次數（持久化）
+    let pendingChaosChoice = null; // { panel, payload }
+    let uiLogs = []; // modal-local logs (persist via localStorage)
+    let uiSucc = 0; // 成功次數（持久化）
 
     function addLog(msg, type){
   try{
     msg = String(msg||'');
     if(!msg) return;
     type = String(type||'info');
-    var item = { msg: msg, type: type, ts: Date.now() };
+    const item = { msg, type, ts: Date.now() };
 
     uiLogs.unshift(item);
     if(uiLogs.length > 20) uiLogs.length = 20;
@@ -703,7 +703,7 @@ try{
 
     // 同步回 node（若外部保存不會丟欄位則也能保留）
     try{
-      var n = getNode() || node;
+      const n = getNode() || node;
       if(n){
         n._scrollLog = uiLogs.slice(0);
         saveNode(n);
@@ -714,10 +714,10 @@ try{
 }
 
     // overlay
-    var ov = document.createElement('div');
+    const ov = document.createElement('div');
     ov.className = 'sfv2-ov';
     ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:12px;';
-    var md = document.createElement('div');
+    const md = document.createElement('div');
     md.className = 'sfv2-md';
     md.style.cssText = 'width:min(520px,96vw);max-height:86vh;overflow:auto;background:rgba(10,16,30,.96);border:1px solid rgba(255,255,255,.10);border-radius:16px;box-shadow:0 20px 80px rgba(0,0,0,.45);padding:12px 12px 14px;color:rgba(235,245,255,.92);';
     ov.appendChild(md);
@@ -726,7 +726,7 @@ try{
     (function(){
       try{
         if(document.getElementById('sfv2-scroll-style')) return;
-        var st = document.createElement('style');
+        const st = document.createElement('style');
         st.id = 'sfv2-scroll-style';
         st.textContent =
           '.sfv2-md{font-size:13px;}' +
@@ -747,18 +747,18 @@ try{
 
 
     function h(tag, txt, css){
-      var el = document.createElement(tag);
+      const el = document.createElement(tag);
       if (txt!=null) el.textContent = txt;
       if (css) el.style.cssText = css;
       return el;
     }
     function pill(txt){
-      var el=h('div', txt, '');
+      const el=h('div', txt, '');
       el.className='sfv2-pill';
       return el;
     }
     function btn(txt, fn, disabled){
-      var b = document.createElement('button');
+      const b = document.createElement('button');
       b.type='button';
       b.textContent = txt;
       b.disabled = !!disabled;
@@ -768,10 +768,10 @@ try{
     }
 
     // header
-    var top = document.createElement('div');
+    const top = document.createElement('div');
     top.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;';
     top.appendChild(h('div','卷軸','font-weight:900;font-size:16px;letter-spacing:.5px;'));
-    var x = document.createElement('button');
+    const x = document.createElement('button');
     x.type='button';
     x.textContent='✕';
     x.style.cssText='width:36px;height:36px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eaf2ff;font-weight:900;cursor:pointer;';
@@ -793,12 +793,12 @@ try{
     md.appendChild(top);
 
     // info lines
-    var info = document.createElement('div');
+    const info = document.createElement('div');
     info.style.cssText='margin-top:10px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);border-radius:14px;padding:10px;';
     md.appendChild(info);
 
     // log box (卷軸使用記錄)
-    var logBox = document.createElement('div');
+    const logBox = document.createElement('div');
     logBox.style.cssText='margin-top:10px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);border-radius:14px;padding:10px;';
     md.appendChild(logBox);
 
@@ -813,25 +813,25 @@ try{
       return label+' '+baseVal+' '+fmtSigned(scrollVal);
     }
     function pillRich(html){
-      var el = document.createElement('div');
+      const el = document.createElement('div');
       el.style.cssText='border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);border-radius:999px;padding:6px 10px;font:900 12px ui-monospace,monospace;letter-spacing:.2px;';
       el.innerHTML = html;
       return el;
     }
     function statHtml(label, baseVal, scrollVal){
       baseVal = baseVal|0; scrollVal = scrollVal|0;
-      var total = (baseVal + scrollVal)|0;
+      const total = (baseVal + scrollVal)|0;
 
       // 括號內顯示「卷軸提升」：正數金色、負數紅色、0 灰色
-      var deltaTxt = (scrollVal>0?('+'+scrollVal):String(scrollVal));
-      var deltaColor = (scrollVal>0)?'#FFD36A':(scrollVal<0?'#FF6B6B':'rgba(229,231,235,.55)');
+      const deltaTxt = (scrollVal>0?('+'+scrollVal):String(scrollVal));
+      const deltaColor = (scrollVal>0)?'#FFD36A':(scrollVal<0?'#FF6B6B':'rgba(229,231,235,.55)');
 
       return '<span style="opacity:.85;margin-right:6px;">'+label+'</span>' +
              '<span style="font-weight:900;color:rgba(234,242,255,.95);">'+total+'</span>' +
              '<span style="margin-left:6px;font-weight:900;color:'+deltaColor+';">(' + deltaTxt + ')</span>';
     }
 
-    
+
     function safeJson(o){
       try{ return JSON.stringify(o); }catch(_){ return String(o); }
     }
@@ -846,16 +846,16 @@ try{
           addLog('尚未選擇混沌套用，請先套用或取消');
           return;
         }
-        var panel = document.createElement('div');
+        const panel = document.createElement('div');
         panel.style.cssText='margin-top:10px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);';
-        var title = document.createElement('div');
+        const title = document.createElement('div');
         title.style.cssText='font-weight:900;font-size:14px;letter-spacing:.5px;margin-bottom:8px;';
         title.textContent='混沌成功！是否套用結果？';
         panel.appendChild(title);
 
-        var pre = document.createElement('div');
+        const pre = document.createElement('div');
         pre.style.cssText='margin-bottom:10px;';
-        var preTitle = document.createElement('div');
+        const preTitle = document.createElement('div');
         preTitle.style.cssText='font-weight:900;font-size:12px;opacity:.9;margin-bottom:6px;';
         preTitle.textContent='結果預覽';
         pre.appendChild(preTitle);
@@ -866,30 +866,30 @@ try{
           if(scrollName==='超級混沌卷5%')    return { main:20, atk:25, hp:100, def:30 };
           return { main:15, atk:15, hp:100, def:30 }; // 標準混沌
         }
-        var maxMap = chaosMaxMap(p.scrollName);
+        const maxMap = chaosMaxMap(p.scrollName);
         function chip(label, v){
           v = Number(v||0);
-          var max = null;
+          let max = null;
           if(label==='ATK') max = maxMap.atk;
           else if(label==='HP') max = maxMap.hp;
           else if(label==='DEF') max = maxMap.def;
           else max = maxMap.main; // STR/DEX/INT/LUK
-          var col = (v>0)?'#7CFFB2':(v<0?'#FF6B6B':'rgba(229,231,235,.75)');
+          let col = (v>0)?'#7CFFB2':(v<0?'#FF6B6B':'rgba(229,231,235,.75)');
           if(max!=null && v===max) col = '#FFD36A';
-          var d = document.createElement('div');
+          const d = document.createElement('div');
           d.style.cssText='border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);border-radius:10px;padding:6px 10px;font:900 12px ui-monospace,monospace;color:'+col+';display:flex;gap:8px;align-items:center;';
-          var k = document.createElement('span'); k.textContent = label;
+          const k = document.createElement('span'); k.textContent = label;
           k.style.opacity='.9';
-          var vv = document.createElement('span');
+          const vv = document.createElement('span');
           vv.textContent = (v>=0?'+':'') + v;
           vv.style.marginLeft='auto';
           d.appendChild(k); d.appendChild(vv);
           return d;
         }
 
-        var gridPrev = document.createElement('div');
+        const gridPrev = document.createElement('div');
         gridPrev.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;';
-        var effp = p.effPreview||{};
+        const effp = p.effPreview||{};
         gridPrev.appendChild(chip('STR', effp.str));
         gridPrev.appendChild(chip('DEX', effp.dex));
         gridPrev.appendChild(chip('INT', effp.int));
@@ -901,25 +901,25 @@ try{
         pre.appendChild(gridPrev);
         panel.appendChild(pre);
 
-        var tn2 = p.ticketName||'混沌選擇券';
-        var note = document.createElement('div');
+        const tn2 = p.ticketName||'混沌選擇券';
+        const note = document.createElement('div');
         note.style.cssText='font-size:12px;opacity:.8;margin-bottom:10px;';
         note.textContent='（選擇後會消耗 ' + tn2 + ' ×1） 目前持有：' + (invCount(tn2)|0);
         panel.appendChild(note);
 
-        var row = document.createElement('div');
+        const row = document.createElement('div');
         row.style.cssText='display:flex;gap:10px;';
-        var bApply = btn('套用（+1 次）', function(){
+        const bApply = btn('套用（+1 次）', () =>{
           if((invCount(tn2)|0) > 0) invUse(tn2, 1);
-          var base = getNode() || p.nodeSnapshot;
-          var cm = chaosCommit(base, p.scrollName, p.effPreview, true);
-          var next = cm.nextNode;
+          const base = getNode() || p.nodeSnapshot;
+          const cm = chaosCommit(base, p.scrollName, p.effPreview, true);
+          const next = cm.nextNode;
           next._lastChaosEff = p.effPreview || null;
           next._lastChaosName = p.scrollName;
           saveNode(next);
           addLog('混沌成功並套用（+1 次）');
           try{ uiSucc=(uiSucc|0)+1; localStorage.setItem(SUCC_KEY, String(uiSucc)); }catch(_){ }
-          
+
           if(panel && panel.parentNode) panel.parentNode.removeChild(panel);
           pendingChaosChoice = null;
           node = getNode() || node;
@@ -927,10 +927,10 @@ try{
           onRerender();
         }, false);
 
-        var bSkip = btn('不套用（不扣次）', function(){
+        const bSkip = btn('不套用（不扣次）', () =>{
           if((invCount(tn2)|0) > 0) invUse(tn2, 1);
           addLog('混沌成功但未套用（不扣次）');
-          
+
           if(panel && panel.parentNode) panel.parentNode.removeChild(panel);
           pendingChaosChoice = null;
           node = getNode() || node;
@@ -946,11 +946,11 @@ try{
 
         // 插到 actions 區塊最上方
         act.insertBefore(panel, act.firstChild ? act.firstChild.nextSibling : null);
-        pendingChaosChoice = { panel: panel, payload: p };
+        pendingChaosChoice = { panel, payload: p };
         // 有 pending 時，立即把現有卷軸按鈕鎖住（避免使用者繼續衝卷）
         try{
-          var btns = act.querySelectorAll('button');
-          for(var bi=0; bi<btns.length; bi++){
+          const btns = act.querySelectorAll('button');
+          for(let bi=0; bi<btns.length; bi++){
             // 保留 panel 內的兩顆選擇按鈕可按
             if(panel.contains(btns[bi])) continue;
             btns[bi].disabled = true;
@@ -960,7 +960,7 @@ try{
         }catch(_){ }
       }catch(e){
         try{ addLog('混沌選擇介面建立失敗'); }catch(_){}
-        
+
         console.error(e);
       }
     }
@@ -968,36 +968,36 @@ function renderInfo(){
   info.innerHTML='';
   node = getNode() || node;
 
-  var base = node.base || {};
-  var enh  = node.enhance || {};
+  const base = node.base || {};
+  const enh  = node.enhance || {};
 
   // ===== 頂端摘要 =====
-  var row1 = document.createElement('div');
+  const row1 = document.createElement('div');
   row1.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;';
-  var row1L = document.createElement('div');
+  const row1L = document.createElement('div');
   row1L.style.cssText='display:flex;flex-wrap:wrap;gap:8px;';
   row1L.appendChild(pill('卷軸 ' + (node.slotsUsed|0) + '/' + (node.slotsMax|0)));
   row1L.appendChild(pill('擴充 ' + (node._slotAugSuccess|0) + '/' + (SLOT_AUGMENT_MAX|0)));
   row1.appendChild(row1L);
 
-  var succCnt = (node && node._scrollSuccApplied!=null) ? (node._scrollSuccApplied|0) : (uiSucc|0);
+  const succCnt = (node && node._scrollSuccApplied!=null) ? (node._scrollSuccApplied|0) : (uiSucc|0);
   // 同步到 uiSucc，避免顯示不一致
   uiSucc = succCnt|0;
   row1.appendChild(pill('成功 ' + succCnt));
   info.appendChild(row1);
 
-  var hint = document.createElement('div');
+  const hint = document.createElement('div');
   hint.className='sfv2-hint';
   hint.textContent='提示：此視窗僅顯示「裝備基礎（不含星力 / 星火 / 潛能）＋卷軸」的變化。若你在裝備總覽看到的數值不同，通常是因為星力、星火或其他系統加成。';
   info.appendChild(hint);
 
   // ===== 能力：固定格子（兩行各 4 格）=====
-  var grid = document.createElement('div');
+  const grid = document.createElement('div');
   grid.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px;';
   info.appendChild(grid);
 
   function addStat(label, b, e){
-    var el = pillRich(statHtml(label, b||0, e||0));
+    const el = pillRich(statHtml(label, b||0, e||0));
     el.style.minHeight = '34px';
     el.style.display = 'flex';
     el.style.alignItems = 'center';
@@ -1024,24 +1024,24 @@ function renderLog(){
 
       logBox.appendChild(h('div','卷軸使用記錄','font-weight:900;font-size:13px;opacity:.9;'));
 
-      var logTitleRow = document.createElement('div');
+      const logTitleRow = document.createElement('div');
       logTitleRow.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;';
-      var lt = document.createElement('div');
+      const lt = document.createElement('div');
       lt.style.cssText='font-size:12px;opacity:.8;';
       lt.textContent='操作紀錄';
       logTitleRow.appendChild(lt);
 
-      var logToggle = document.createElement('button');
+      const logToggle = document.createElement('button');
       logToggle.type='button';
       logToggle.style.cssText='border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eaf2ff;font-weight:900;border-radius:10px;padding:6px 10px;cursor:pointer;font-size:12px;';
       logToggle.textContent='展開';
       logTitleRow.appendChild(logToggle);
       logBox.appendChild(logTitleRow);
 
-      var logList = document.createElement('div');
+      const logList = document.createElement('div');
       // 預設只顯示約 4 行
       logList.style.cssText='display:flex;flex-direction:column;gap:6px;max-height:92px;overflow:hidden;margin-top:8px;';
-      var isOpen = false;
+      let isOpen = false;
       logToggle.onclick=function(e){
         e.preventDefault();
         isOpen = !isOpen;
@@ -1050,26 +1050,26 @@ function renderLog(){
         logList.style.overflow = isOpen ? 'auto' : 'hidden';
       };
 
-      var logs = Array.isArray(uiLogs) ? uiLogs : [];
+      const logs = Array.isArray(uiLogs) ? uiLogs : [];
 if(!logs.length){
   logList.appendChild(h('div','尚無操作紀錄','opacity:.75;font-size:12px;'));
   logToggle.disabled = true;
   logToggle.style.opacity = '.45';
   logToggle.style.cursor = 'default';
 } else {
-  for(var li=0; li<logs.length && li<20; li++){
-    var it = logs[li];
-    var msg = (it && typeof it === 'object') ? String(it.msg||'') : String(it||'');
-    var tp  = (it && typeof it === 'object') ? String(it.type||'info') : 'info';
+  for(let li=0; li<logs.length && li<20; li++){
+    const it = logs[li];
+    const msg = (it && typeof it === 'object') ? String(it.msg||'') : String(it||'');
+    const tp  = (it && typeof it === 'object') ? String(it.type||'info') : 'info';
     if(!msg) continue;
 
-    var bg = 'rgba(255,255,255,.04)';
-    var bd = 'rgba(255,255,255,.10)';
-    var col = 'rgba(235,245,255,.90)';
+    let bg = 'rgba(255,255,255,.04)';
+    let bd = 'rgba(255,255,255,.10)';
+    let col = 'rgba(235,245,255,.90)';
     if(tp==='ok'){ bg='rgba(70,255,170,.10)'; bd='rgba(120,255,200,.22)'; col='#DFFFEF'; }
     else if(tp==='bad'){ bg='rgba(255,80,80,.10)'; bd='rgba(255,120,120,.22)'; col='#FFE5E5'; }
 
-    var row = document.createElement('div');
+    const row = document.createElement('div');
     if(tp==='ok') row.className='sfv2-log-ok';
     else if(tp==='bad') row.className='sfv2-log-bad';
     else if(tp==='warn') row.className='sfv2-log-warn';
@@ -1083,7 +1083,7 @@ logBox.appendChild(logList);
     }
 
     // chaos record (only show when chaos used)
-    var chaosBox = document.createElement('div');
+    const chaosBox = document.createElement('div');
     chaosBox.style.cssText='margin-top:10px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);border-radius:14px;padding:10px;';
     md.appendChild(chaosBox);
 
@@ -1099,36 +1099,36 @@ logBox.appendChild(logList);
 
       chaosBox.appendChild(h('div','混沌卷當次紀錄','font-weight:900;font-size:13px;opacity:.9;'));
 
-      var eff = node._lastChaosEff || null;
+      const eff = node._lastChaosEff || null;
       if(!eff){
         chaosBox.appendChild(h('div','尚無混沌卷紀錄','margin-top:8px;opacity:.75;font-size:12px;'));
         return;
       }
 
-      var sub = document.createElement('div');
+      const sub = document.createElement('div');
       sub.style.cssText='margin-top:8px;font-size:12px;opacity:.8;';
       sub.textContent = '最近一次：' + (node._lastChaosName || '混沌卷');
       chaosBox.appendChild(sub);
 
-      var maxMap = chaosMaxMapByName(node._lastChaosName);
+      const maxMap = chaosMaxMapByName(node._lastChaosName);
       function chip(label, v){
         v = Number(v||0);
-        var max = null;
+        let max = null;
         if(label==='ATK') max = maxMap.atk;
         else if(label==='HP') max = maxMap.hp;
         else if(label==='DEF') max = maxMap.def;
         else max = maxMap.main;
-        var col = (v>0)?'#7CFFB2':(v<0?'#FF6B6B':'rgba(229,231,235,.75)');
+        let col = (v>0)?'#7CFFB2':(v<0?'#FF6B6B':'rgba(229,231,235,.75)');
         if(max!=null && v===max) col = '#FFD36A';
-        var d = document.createElement('div');
+        const d = document.createElement('div');
         d.style.cssText='border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);border-radius:10px;padding:6px 10px;font:900 12px ui-monospace,monospace;color:'+col+';display:flex;gap:8px;align-items:center;';
-        var k = document.createElement('span'); k.textContent = label; k.style.opacity='.9';
-        var vv = document.createElement('span'); vv.textContent = (v>=0?'+':'')+v; vv.style.marginLeft='auto';
+        const k = document.createElement('span'); k.textContent = label; k.style.opacity='.9';
+        const vv = document.createElement('span'); vv.textContent = (v>=0?'+':'')+v; vv.style.marginLeft='auto';
         d.appendChild(k); d.appendChild(vv);
         return d;
       }
 
-      var grid = document.createElement('div');
+      const grid = document.createElement('div');
       grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;';
       grid.appendChild(chip('STR', eff.str));
       grid.appendChild(chip('DEX', eff.dex));
@@ -1142,7 +1142,7 @@ logBox.appendChild(logList);
 
 
     // actions
-    var act = document.createElement('div');
+    const act = document.createElement('div');
     act.style.cssText='margin-top:10px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);border-radius:14px;padding:10px;';
     md.appendChild(act);
 
@@ -1159,9 +1159,9 @@ function tidyMsg(msg){
   // 移除內部 reason code，例如（no_slot）
   msg = msg.replace(/\s*\((no_slot|wrong_type|locked|not_found|not_scrollable|no_item|cap|no_failed_slots)\)\s*$/,'');
   // 將「不可使用：XXX（reason）」轉成玩家可讀
-  msg = msg.replace(/不可使用：(.+?)\s*\(([^\)]+)\)\s*$/ , function(_, name, reason){
-    var r = String(reason||'');
-    var map = {
+  msg = msg.replace(/不可使用：(.+?)\s*\(([^\)]+)\)\s*$/ , (_, name, reason) =>{
+    const r = String(reason||'');
+    const map = {
       'no_slot':'沒有卷軸格數（已用完）',
       'wrong_type':'此裝備無法使用該卷軸',
       'locked':'裝備未解鎖',
@@ -1199,49 +1199,49 @@ function renderActions(){
       act.appendChild(h('div','可用卷軸','font-weight:900;font-size:13px;opacity:.9;'));
 
       if(pendingChaosChoice){
-        var lockHint = document.createElement('div');
+        const lockHint = document.createElement('div');
         lockHint.style.cssText='margin-top:8px;margin-bottom:6px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);border-radius:12px;padding:8px;font-size:12px;opacity:.9;';
         lockHint.textContent='⚠️ 尚未選擇「混沌是否套用」，請先在上方選擇「套用 / 不套用」，否則無法繼續衝卷。';
         act.appendChild(lockHint);
       }
-      var grid = document.createElement('div');
+      const grid = document.createElement('div');
       grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;';
       act.appendChild(grid);
 
       // 使用核心的 UI actions（若有）
-      var actions = (typeof getUIActions==='function') ? getUIActions({ node: node, invCount: invCount, invUse: invUse }) : [];
+      const actions = (typeof getUIActions==='function') ? getUIActions({ node, invCount, invUse }) : [];
       // 只顯示「卷軸 / 混沌 / 恢復 / 重置 / 上限」等 action
-      for(var i=0;i<actions.length;i++){
+      for(let i=0;i<actions.length;i++){
         (function(a){
           if(!a || !a.label) return;
-          var countTxt = '';
+          let countTxt = '';
           if(a.itemName) countTxt = '（'+invCount(a.itemName)+'）';
-          var isLocked = !!pendingChaosChoice;
-          var b = btn(a.label + countTxt, function(){
+          const isLocked = !!pendingChaosChoice;
+          const b = btn(a.label + countTxt, () =>{
             if(pendingChaosChoice){
               addLog('尚未選擇混沌套用，請先套用或取消');
               renderChaos();
               return;
             }
             // 混沌：需要 preview+選擇券處理（由 core 的 action.run 已包好）
-            var r = a.run({ node: node });
+            const r = a.run({ node });
             if(r && r.pending && r.pending.kind==='chaos_choice'){
               showChaosChoice(r.pending);
               return;
             }
             if(!r || !r.ok){
               addLog(tidyMsg((r&&r.msg)||'操作失敗'), inferLogType((r&&r.msg)||'操作失敗', false));
-              
+
               renderChaos();
               return;
             }
             if(r.nextNode){
               saveNode(r.nextNode);
             }
-            var _m = tidyMsg(r.msg||'完成');
+            const _m = tidyMsg(r.msg||'完成');
             addLog(_m, inferLogType(_m, true));
             applyResultMeta(r);
-            
+
             // 重抓 node
             node = getNode() || node;
             renderInfo(); renderLog(); renderChaos(); renderActions();
@@ -1263,34 +1263,34 @@ function renderActions(){
 
 return {
     def: DEF,
-    getUIActions: getUIActions,
-    openScrollModal: openScrollModal,
-    canUse: canUse,
-    apply: apply,
-    recoverFailedOnce: recoverFailedOnce,
-    perfectReset: perfectReset,
-    chaosMainProb: chaosMainProb,
-    chaosSuperMainProb: chaosSuperMainProb,
-    chaosSuperAtkProb: chaosSuperAtkProb,
-    chaosPreview: chaosPreview,
-    chaosCommit: chaosCommit,
- 
+    getUIActions,
+    openScrollModal,
+    canUse,
+    apply,
+    recoverFailedOnce,
+    perfectReset,
+    chaosMainProb,
+    chaosSuperMainProb,
+    chaosSuperAtkProb,
+    chaosPreview,
+    chaosCommit,
+
     // ★卷軸上限提升
-    canAugmentSlots: canAugmentSlots,
-    augmentSlots: augmentSlots,
+    canAugmentSlots,
+    augmentSlots,
 
     // ★機率查詢／覆寫
     augmentMax: SLOT_AUGMENT_MAX,
     augmentSteps: SLOT_AUGMENT_STEPS.slice(), // 0~1
-    getAugmentChances: function(){
-      var out=[], i, x;
+    getAugmentChances(){
+      let out=[], i, x;
       for(i=0;i<SLOT_AUGMENT_STEPS.length;i++){
         x=SLOT_AUGMENT_STEPS[i];
         out.push(Math.round((x*100)*100)/100); // 轉百分比、保留兩位
       }
       return out;
     },
-    setAugmentChances: function(arr){
+    setAugmentChances(arr){
       if (Array.isArray(arr) && arr.length){
         SLOT_AUGMENT_STEPS = arr.slice();
       }

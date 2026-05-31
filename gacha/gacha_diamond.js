@@ -5,8 +5,8 @@
   "use strict";
 
   // ===== 基本設定 =====
-  var TICKET_NAME = "鑽石抽獎券";
-  var COST_PER_PULL = 1;
+  const TICKET_NAME = "鑽石抽獎券";
+  const COST_PER_PULL = 1;
 
   // ===== 工具 =====
   function randint(a, b){ return Math.floor(Math.random()*(b-a+1))+a; }
@@ -20,7 +20,7 @@
   //  50 鑽石 / 5%
   //  30 鑽石 / 10%
   // 其餘（81.89%）→ 隨機 1~20 鑽石
-  var FIXED_PRIZES = [
+  const FIXED_PRIZES = [
     { qty: 500, p: 0.0001 },
     { qty: 300, p: 0.001  },
     { qty: 150, p: 0.01   },
@@ -28,17 +28,17 @@
     { qty:  50, p: 0.05   },
     { qty:  30, p: 0.10   },
   ];
-  var FIXED_SUM = FIXED_PRIZES.reduce(function(s, x){ return s + x.p; }, 0); // = 0.1811
-  var RANDOM_P = Math.max(0, 1 - FIXED_SUM); // 0.8189
+  const FIXED_SUM = FIXED_PRIZES.reduce((s, x) =>{ return s + x.p; }, 0); // = 0.1811
+  const RANDOM_P = Math.max(0, 1 - FIXED_SUM); // 0.8189
 
   // ===== 內部狀態（此分頁用）=====
-  var state = { history: [], showTable: false };
+  const state = { history: [], showTable: false };
 
   // ===== 核心：抽一次 =====
   function pullOnce() {
-    var x = Math.random();
-    var acc = 0;
-    for (var i=0;i<FIXED_PRIZES.length;i++){
+    const x = Math.random();
+    let acc = 0;
+    for (let i=0;i<FIXED_PRIZES.length;i++){
       acc += FIXED_PRIZES[i].p;
       if (x <= acc) return FIXED_PRIZES[i].qty;
     }
@@ -54,29 +54,29 @@
   // ===== 消耗 / 判斷 =====
   function canSpend(times){
     times = Math.max(1, Math.floor(times||1));
-    var need = COST_PER_PULL * times;
-    var have = (typeof w.getItemQuantity === "function") ? w.getItemQuantity(TICKET_NAME) : 0;
+    const need = COST_PER_PULL * times;
+    const have = (typeof w.getItemQuantity === "function") ? w.getItemQuantity(TICKET_NAME) : 0;
     return have >= need;
   }
   function spend(times){
     times = Math.max(1, Math.floor(times||1));
-    var need = COST_PER_PULL * times;
+    const need = COST_PER_PULL * times;
     if (typeof w.removeItem === "function") w.removeItem(TICKET_NAME, need);
   }
 
   // ===== UI：渲染 =====
   function fmtTime(sec){
-    var d = new Date(sec*1000);
-    var hh = String(d.getHours()).padStart(2,"0");
-    var mm = String(d.getMinutes()).padStart(2,"0");
-    var ss = String(d.getSeconds()).padStart(2,"0");
+    const d = new Date(sec*1000);
+    const hh = String(d.getHours()).padStart(2,"0");
+    const mm = String(d.getMinutes()).padStart(2,"0");
+    const ss = String(d.getSeconds()).padStart(2,"0");
     return hh+":"+mm+":"+ss;
   }
 
   function render(container){
-    var hasTicket = (typeof w.getItemQuantity === "function") ? (w.getItemQuantity(TICKET_NAME) || 0) : 0;
+    const hasTicket = (typeof w.getItemQuantity === "function") ? (w.getItemQuantity(TICKET_NAME) || 0) : 0;
 
-    var tableHtml =
+    const tableHtml =
       '<div id="diamondProbTable" style="display:'+(state.showTable?'block':'none')+';margin-top:8px;padding:8px;border:1px solid #1f2937;border-radius:8px;background:#0b1220;line-height:1.8;">'+
         '<div>‧ 500💎：<b>0.01%</b></div>'+
         '<div>‧ 300💎：<b>0.10%</b></div>'+
@@ -114,27 +114,27 @@
       '</div>';
 
     // 結果列表
-    var box = container.querySelector('#diaResultBox');
+    const box = container.querySelector('#diaResultBox');
     if (state.history.length){
-      var html = '';
-      for (var i=state.history.length-1;i>=0;i--){
-        var h = state.history[i];
+      let html = '';
+      for (let i=state.history.length-1;i>=0;i--){
+        const h = state.history[i];
         html += '<div style="padding:4px 0;border-bottom:1px dashed #1f2937"><span style="color:#aab;margin-right:6px;font-size:12px">['+fmtTime(h.t)+']</span>'+h.text+'</div>';
       }
       box.innerHTML = html;
     }
 
     // 綁定事件
-    var onceBtn = container.querySelector('#diaOnceBtn');
-    var tenBtn  = container.querySelector('#diaTenBtn');
-    var clrBtn  = container.querySelector('#diaClearBtn');
-    var toggle  = container.querySelector('#toggleTableBtn');
+    const onceBtn = container.querySelector('#diaOnceBtn');
+    const tenBtn  = container.querySelector('#diaTenBtn');
+    const clrBtn  = container.querySelector('#diaClearBtn');
+    const toggle  = container.querySelector('#toggleTableBtn');
 
     if (onceBtn){
       onceBtn.onclick = function(){
         if (!canSpend(1)){ alert('需要 '+COST_PER_PULL+' 張「'+TICKET_NAME+'」'); return; }
         spend(1);
-        var qty = pullOnce();
+        const qty = pullOnce();
         grantGems(qty);
         w.updateResourceUI && w.updateResourceUI();
         if (typeof w.logPrepend === 'function') w.logPrepend('💎 鑽石單抽：獲得『鑽石 × '+qty+'』');
@@ -148,13 +148,13 @@
       tenBtn.onclick = function(){
         if (!canSpend(10)){ alert('需要 '+(COST_PER_PULL*10)+' 張「'+TICKET_NAME+'」'); return; }
         spend(10);
-        var results = [];
-        for (var i=0;i<10;i++){ results.push(pullOnce()); grantGems(results[i]); }
+        const results = [];
+        for (let i=0;i<10;i++){ results.push(pullOnce()); grantGems(results[i]); }
         w.updateResourceUI && w.updateResourceUI();
-        if (typeof w.logPrepend === 'function') w.logPrepend('💎 鑽石十連：'+ results.map(function(q){ return '鑽石×'+q; }).join('、'));
+        if (typeof w.logPrepend === 'function') w.logPrepend('💎 鑽石十連：'+ results.map((q) =>{ return '鑽石×'+q; }).join('、'));
         state.history.push({
           t: Math.floor(Date.now()/1000),
-          text: '十連：'+ results.map(function(q){ return '<b>鑽石 × '+q+'</b>'; }).join('、')
+          text: '十連：'+ results.map((q) =>{ return '<b>鑽石 × '+q+'</b>'; }).join('、')
         });
         if (state.history.length > 200) state.history.shift();
         w.GachaHub && w.GachaHub.requestRerender && w.GachaHub.requestRerender();
@@ -181,8 +181,8 @@
     w.GachaHub.registerTab({
       id: 'gacha_diamond',
       title: '鑽石抽獎',
-      render: render,
-      tick: tick
+      render,
+      tick
     });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', registerIntoHub);

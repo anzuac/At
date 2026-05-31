@@ -1,6 +1,6 @@
 /*!
  * PotentialCoreV21.js — 潛能 2.1（含 SLR 擴充）— 完整整理版（依你的需求）
- * UMD / ES5
+ * UMD / ES2020+
  *
  * ✅ 保留原本所有功能：升階鏈 / 三條規則 / 倍率 / RNG
  * ✅ 調整重點（最小改動）：
@@ -34,16 +34,16 @@
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) { module.exports = factory(); }
   else { root.PotentialCoreV21 = factory(); }
-})(this, function () {
+})(this, () => {
   'use strict';
 
   // ===== 小工具 =====
   function clone(o){ try{return JSON.parse(JSON.stringify(o||{}));}catch(_){return {}; } }
   function pickWeighted(items, rng){
     rng = (typeof rng==='function') ? rng : Math.random;
-    var i, sum=0; for(i=0;i<items.length;i++) sum += (items[i].w||0);
+    let i, sum=0; for(i=0;i<items.length;i++) sum += (items[i].w||0);
     if (sum<=0) return items[0].v;
-    var r = rng()*sum, acc=0;
+    let r = rng()*sum, acc=0;
     for(i=0;i<items.length;i++){ acc += (items[i].w||0); if (r <= acc) return items[i].v; }
     return items[items.length-1].v;
   }
@@ -53,7 +53,7 @@
   function resolveBaseVal(effect, rng){
     rng = (typeof rng==='function') ? rng : Math.random;
     try{
-      var v = effect ? effect.val : 0;
+      const v = effect ? effect.val : 0;
       if (typeof v === 'number') return v;
       if (typeof v === 'function') return +v(rng) || 0;
       if (v && typeof v.length === 'number'){ // array
@@ -69,15 +69,15 @@
   // ✅ 剩餘機率不寫死：以 100 為目標，把剩餘平均分給沒寫 prob 的詞條
   function finalizeEffectsProbs(effects){
     effects = effects || [];
-    var i, fixedSum = 0, openIdx = [];
+    let i, fixedSum = 0, openIdx = [];
     for(i=0;i<effects.length;i++){
-      var p = effects[i].prob;
+      const p = effects[i].prob;
       if (typeof p === 'number' && isFinite(p)) fixedSum += p;
       else openIdx.push(i);
     }
-    var leftover = 100 - fixedSum;
+    const leftover = 100 - fixedSum;
     if (openIdx.length > 0){
-      var each = leftover / openIdx.length;
+      const each = leftover / openIdx.length;
       for(i=0;i<openIdx.length;i++){
         effects[openIdx[i]].prob = each;
       }
@@ -86,7 +86,7 @@
   }
 
   // ===== 組態 =====
-  var config = {
+  const config = {
     // 升階鏈（一般 / 高級）
     chain: {
       base: { r2sr:0.10, sr2ssr:0.05, ssr2ur:0.02,  ur2lr:0.005,  lr2slr:0.0005 },
@@ -137,7 +137,7 @@
   function distForSessionTier(session, samePct){
     // samePct: 第二/第三條「同等級」機率（%）
     // 規則：R 只能是 R；其餘階級 = 低一階 (100-samePct)% + 同階 samePct%
-    var sp = Number(samePct)||0;
+    let sp = Number(samePct)||0;
     if (sp < 0) sp = 0;
     if (sp > 100) sp = 100;
 
@@ -151,8 +151,8 @@
     }
 
     if (session==='R') return [{v:'R', w:100}];
-    var low = prevTier(session);
-    var lw = 100 - sp;
+    const low = prevTier(session);
+    const lw = 100 - sp;
     // 若同階機率為 0，仍回傳單一 low，避免 pickWeighted 浮點誤差
     if (sp <= 0) return [{v:low, w:100}];
     if (lw <= 0) return [{v:session, w:100}];
@@ -162,7 +162,7 @@
   // 單次升階檢定（只往上）
   function promoteOnce(currentTier, cubeType, rng){
     rng = (typeof rng==='function') ? rng : Math.random;
-    var ch = (cubeType==='cube_plus') ? config.chain.plus : config.chain.base;
+    const ch = (cubeType==='cube_plus') ? config.chain.plus : config.chain.base;
     if (currentTier==='R'    && rng()<ch.r2sr)   return 'SR';
     if (currentTier==='SR'   && rng()<ch.sr2ssr) return 'SSR';
     if (currentTier==='SSR'  && rng()<ch.ssr2ur) return 'UR';
@@ -174,7 +174,7 @@
   // 從 R 池抽一條
   function pickEffectR(rng){
     rng = (typeof rng==='function') ? rng : Math.random;
-    var arr=config.effectsR.map(function(e){ return {v:e, w:e.prob}; });
+    const arr=config.effectsR.map((e) =>{ return {v:e, w:e.prob}; });
     return pickWeighted(arr, rng);
   }
 
@@ -184,27 +184,27 @@
 
     // SLR 特例：1、2 保底 SLR；第 3 條 LR97% / SLR3%
     if (sessionTier === 'SLR'){
-      var lines = [];
-      for (var i=0; i<3; i++){
-        var tier = (i<2) ? 'SLR' : pickWeighted([{v:'LR',w:97},{v:'SLR',w:3}], rng);
-        var e = pickEffectR(rng);
-        var m = config.mult[tier]||1;
-        var base = resolveBaseVal(e, rng);
-        lines.push({ tier:tier, id:e.id, label:e.label, type:e.type, unit:e.unit, baseVal:base, mult:m, value:base*m });
+      const lines = [];
+      for (let i=0; i<3; i++){
+        const tier = (i<2) ? 'SLR' : pickWeighted([{v:'LR',w:97},{v:'SLR',w:3}], rng);
+        const e = pickEffectR(rng);
+        const m = config.mult[tier]||1;
+        const base = resolveBaseVal(e, rng);
+        lines.push({ tier, id:e.id, label:e.label, type:e.type, unit:e.unit, baseVal:base, mult:m, value:base*m });
       }
       return lines;
     }
 
     // 其它階級：第1條固定 session 等級；第2/3 條依「依此類推」
-    var out=[], i;
+    let out=[], i;
     for(i=0;i<3;i++){
-      var tier2;
+      let tier2;
       if (i===0) tier2 = sessionTier;
       else if (i===1) tier2 = pickWeighted(distForSessionTier(sessionTier, 20), rng); // 第2條：同階 20%
       else tier2 = pickWeighted(distForSessionTier(sessionTier, 5), rng);            // 第3條：同階 5%
-      var e2 = pickEffectR(rng);
-      var m2 = config.mult[tier2]||1;
-      var base2 = resolveBaseVal(e2, rng);
+      const e2 = pickEffectR(rng);
+      const m2 = config.mult[tier2]||1;
+      const base2 = resolveBaseVal(e2, rng);
       out.push({ tier:tier2, id:e2.id, label:e2.label, type:e2.type, unit:e2.unit, baseVal:base2, mult:m2, value:base2*m2 });
     }
     return out;
@@ -212,18 +212,18 @@
 
   // 從「目前等級」出發（只升不降），回傳本次等級+三條
   function rollThreeSessionFrom(currentTier, cubeType, rng){
-    var next = promoteOnce(currentTier||'R', cubeType||'cube', rng);
+    const next = promoteOnce(currentTier||'R', cubeType||'cube', rng);
     return { sessionTier: next, lines: rollThreeFixedSession(next, rng) };
   }
 
   // 合併三條到總加成
   function linesToBonus(lines){
     // ✅ 補齊 MP / DEF%（不影響原本）
-    var sum = {
+    const sum = {
       str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0,
       strPct:0,dexPct:0,intPct:0,lukPct:0, atkPct:0, hpPct:0, mpPct:0, defPct:0, allStatPct:0
     };
-    var i, ln;
+    let i, ln;
     for(i=0;i<(lines||[]).length;i++){
       ln = lines[i];
       if (ln.type==='flat'){
@@ -253,19 +253,19 @@
 
   // 行描述（UI用）
   function describeLine(ln){
-    var unit = (ln.unit==='pct'||ln.unit==='allpct') ? '%' : '';
+    const unit = (ln.unit==='pct'||ln.unit==='allpct') ? '%' : '';
     return '['+ln.tier+'] '+ln.label+' +'+ln.value+unit;
   }
 
   // 參考（從 R 起算一次的 Session 機率）
   function sessionTierProbs(cubeType){
-    var ch = (cubeType==='cube_plus') ? config.chain.plus : config.chain.base;
+    const ch = (cubeType==='cube_plus') ? config.chain.plus : config.chain.base;
     return { SLR:0, LR:0, UR:0, SSR:0, SR:(ch.r2sr*100), R:((1-ch.r2sr)*100) };
   }
 
   // ===== UI 查詢工具 =====
   function upgradeChanceFrom(tier, cubeType){
-    var ch = (cubeType==='cube_plus') ? config.chain.plus : config.chain.base;
+    const ch = (cubeType==='cube_plus') ? config.chain.plus : config.chain.base;
     if (tier==='R')    return ch.r2sr;
     if (tier==='SR')   return ch.sr2ssr;
     if (tier==='SSR')  return ch.ssr2ur;
@@ -277,17 +277,17 @@
 
   // ✅ val 可能是 array：UI 表格用「a/b/c」顯示（不改你原本功能）
   function effectTableForSession(tier){
-    var mult = config.mult[tier] || 1;
-    return config.effectsR.map(function(e){
-      var unit = (e.unit==='pct'||e.unit==='allpct') ? '%' : '';
-      var v = e.val;
-      var displayVal;
+    const mult = config.mult[tier] || 1;
+    return config.effectsR.map((e) =>{
+      const unit = (e.unit==='pct'||e.unit==='allpct') ? '%' : '';
+      const v = e.val;
+      let displayVal;
       if (typeof v === 'number'){
         displayVal = v * mult;
       } else if (v && typeof v.length === 'number'){
         // array：每個可能值都乘倍率後顯示
-        var arr = [];
-        for (var i=0;i<v.length;i++) arr.push((+v[i]||0) * mult);
+        const arr = [];
+        for (let i=0;i<v.length;i++) arr.push((+v[i]||0) * mult);
         displayVal = arr.join('/');
       } else {
         // function 或其他：用一次 resolveBaseVal 做展示（避免 NaN）
@@ -297,7 +297,7 @@
         id: e.id,
         label: e.label,
         value: displayVal,
-        unit: unit,
+        unit,
         prob: e.prob
       };
     });
@@ -306,7 +306,7 @@
 
   // ===== 方塊定義（UI 以此為主導）=====
   // cubeType 對應 promoteOnce/rollThreeSessionFrom 的第二參數：'cube' | 'cube_plus'
-  var cubeDefs = [
+  const cubeDefs = [
     // 一般：直接洗三條並套用
     { id:'cube', title:'一般潛能方塊', cubeType:'cube',
       ui:{
@@ -330,7 +330,7 @@
   function getCubeDefs(){ return cubeDefs.slice(); }
 
 
-  
+
 
   // =====================================================================
   // Flow-driven UI Engine（讓彈窗完全由潛能檔案主導）
@@ -340,9 +340,9 @@
 
   function _cloneLines(lines){
     if(!Array.isArray(lines)) return [];
-    var out=[], i;
+    let out=[], i;
     for(i=0;i<lines.length;i++){
-      var a=lines[i]||{};
+      const a=lines[i]||{};
       // 保留完整欄位：tier/id/type/unit/label/value 等（避免 UI 徽章與加成計算變空白）
       out.push({
         tier: a.tier || a.sessionTier || a.rank || a.grade || a.t || a.T || a._tier || undefined,
@@ -361,7 +361,7 @@
   // 對外：初始化一個 flow ctx（UI 每次開彈窗/切換方塊都可呼叫）
   function flowInit(cubeId, curTier, curLines){
     return {
-      cubeId: cubeId,
+      cubeId,
       state: 'idle',
       curTier: curTier || 'R',
       curLines: _cloneLines(curLines),
@@ -378,11 +378,11 @@
   function _randLineIndex(){ return (Math.random()*3|0)+1; } // 1..3
 
   // ---- flows 定義（純資料）----
-  var uiFlows = {
+  const uiFlows = {
     cube_basic: {
       states: {
         idle: {
-          panels: function(ctx){
+          panels(ctx){
             return [ { title:'目前潛能', tier:ctx.curTier, lines:ctx.curLines } ];
           },
           actions: [
@@ -395,7 +395,7 @@
     cube_plus_keep_replace: {
       states: {
         idle: {
-          panels: function(ctx){
+          panels(ctx){
             return [ { title:'目前潛能', tier:ctx.curTier, lines:ctx.curLines } ];
           },
           actions: [
@@ -403,7 +403,7 @@
           ]
         },
         confirm: {
-          panels: function(ctx){
+          panels(ctx){
             return [
               { title:'目前', tier:ctx.curTier, lines:ctx.curLines },
               { title:'新結果', tier:(ctx.candidateTier||ctx.curTier), lines:(ctx.candidateLines||[]) }
@@ -421,7 +421,7 @@
     cube_combine_select_then_wash: {
       states: {
         idle: {
-          panels: function(ctx){
+          panels(ctx){
             return [ { title:'目前潛能', tier:ctx.curTier, lines:ctx.curLines } ];
           },
           actions: [
@@ -429,7 +429,7 @@
           ]
         },
         selected: {
-          panels: function(ctx){
+          panels(ctx){
             return [ { title:'已選中第 '+(ctx.selectedLineIndex||'?')+' 排', tier:ctx.curTier, lines:ctx.curLines, highlightLine:ctx.selectedLineIndex } ];
           },
           actions: [
@@ -443,19 +443,19 @@
 
   // ---- actions 實作（純邏輯）----
   function _action_roll_full(ctx, cubeType, asCandidate){
-    var res = rollThreeSessionFrom(ctx.curTier, cubeType); // {sessionTier, lines}
+    const res = rollThreeSessionFrom(ctx.curTier, cubeType); // {sessionTier, lines}
     if (asCandidate){
       ctx.candidateTier = res.sessionTier;
       ctx.candidateLines = _cloneLines(res.lines);
       ctx.state = 'confirm';
       ctx.message = '已產生新結果，請選擇套用或保留。';
-      return { ctx: ctx, patch: null };
+      return { ctx, patch: null };
     } else {
       ctx.curTier = res.sessionTier;
       ctx.curLines = _cloneLines(res.lines);
       ctx.state = 'idle';
       ctx.message = '已套用新潛能。';
-      return { ctx: ctx, patch: { apply: { tier: ctx.curTier, lines: ctx.curLines } }, fx: ctx.fx };
+      return { ctx, patch: { apply: { tier: ctx.curTier, lines: ctx.curLines } }, fx: ctx.fx };
     }
   }
 
@@ -468,7 +468,7 @@
     ctx.candidateLines = null;
     ctx.state = 'idle';
     ctx.message = '已套用新結果。';
-    return { ctx: ctx, patch: { apply: { tier: ctx.curTier, lines: ctx.curLines } } };
+    return { ctx, patch: { apply: { tier: ctx.curTier, lines: ctx.curLines } } };
   }
 
   function _action_keep_current(ctx){
@@ -476,29 +476,29 @@
     ctx.candidateLines = null;
     ctx.state = 'idle';
     ctx.message = '已保留目前潛能。';
-    return { ctx: ctx, patch: null };
+    return { ctx, patch: null };
   }
 
   function _action_combine_draw(ctx){
     ctx.selectedLineIndex = _randLineIndex();
     ctx.state = 'selected';
     ctx.message = '已抽選第 '+ctx.selectedLineIndex+' 排；是否要洗這一排？';
-    return { ctx: ctx, patch: null };
+    return { ctx, patch: null };
   }
 
   function _action_combine_wash(ctx, cubeId){
     // 結合方塊：只洗「選中的那一排」；單條 tier 機率：同階 15% / 低一階 85%（可由 def.ui.combineTierDist 覆蓋）
-    var def=null, i;
+    let def=null, i;
     for(i=0;i<cubeDefs.length;i++){ if(cubeDefs[i].id===cubeId){ def=cubeDefs[i]; break; } }
-    var dist = (def && def.ui && def.ui.combineTierDist) ? def.ui.combineTierDist : { same:0.15, down:0.85 };
+    const dist = (def && def.ui && def.ui.combineTierDist) ? def.ui.combineTierDist : { same:0.15, down:0.85 };
 
-    var idx = (ctx.selectedLineIndex||1)-1; // 0..2
-    var curTier = ctx.curTier || 'R';
+    const idx = (ctx.selectedLineIndex||1)-1; // 0..2
+    const curTier = ctx.curTier || 'R';
 
     // 產生一條新詞條（同階/低一階）
-    var line = rollOneLineSameOrDown(curTier, dist);
+    const line = rollOneLineSameOrDown(curTier, dist);
 
-    var _sameTier = (line && line.tier === curTier);
+    const _sameTier = (line && line.tier === curTier);
 
     // 確保 lines 長度
     if (!Array.isArray(ctx.curLines)) ctx.curLines = [];
@@ -524,30 +524,30 @@
     ctx.fx = { kind:'combine', lineIndex: idx, sameTier: _sameTier };
 
     // 注意：結合方塊不改全域階級（curTier 不變），只改指定一行
-    return { ctx: ctx, patch: { apply: { tier: ctx.curTier, lines: ctx.curLines } } };
+    return { ctx, patch: { apply: { tier: ctx.curTier, lines: ctx.curLines } } };
   }
 
   // 對外：取得某顆方塊當前 state 的 view（panels/actions）
   function flowView(cubeId, ctx){
     ctx = ctx || flowInit(cubeId, 'R', []);
-    var def=null, i;
+    let def=null, i;
     for(i=0;i<cubeDefs.length;i++){ if(cubeDefs[i].id===cubeId){ def=cubeDefs[i]; break; } }
-    var flowId = def && def.ui && def.ui.flowId ? def.ui.flowId : 'cube_basic';
-    var flow = uiFlows[flowId] || uiFlows.cube_basic;
-    var st = flow.states[ctx.state] || flow.states.idle;
+    const flowId = def && def.ui && def.ui.flowId ? def.ui.flowId : 'cube_basic';
+    const flow = uiFlows[flowId] || uiFlows.cube_basic;
+    const st = flow.states[ctx.state] || flow.states.idle;
 
-    var panels = [];
+    let panels = [];
     if (st.panels) panels = st.panels(ctx) || [];
-    var actions = st.actions ? st.actions.slice() : [];
-    return { cubeId:cubeId, flowId:flowId, state:ctx.state, panels:panels, actions:actions, message:(ctx.message||'') };
+    const actions = st.actions ? st.actions.slice() : [];
+    return { cubeId, flowId, state:ctx.state, panels, actions, message:(ctx.message||'') };
   }
 
   // 對外：派發 action，回傳 {ctx, patch}
   function flowDispatch(cubeId, ctx, actionId){
     ctx = ctx || flowInit(cubeId, 'R', []);
-    var def=null, i;
+    let def=null, i;
     for(i=0;i<cubeDefs.length;i++){ if(cubeDefs[i].id===cubeId){ def=cubeDefs[i]; break; } }
-    var cubeType = def ? def.cubeType : 'cube';
+    const cubeType = def ? def.cubeType : 'cube';
 
     if (actionId === 'roll_full_apply')     return _action_roll_full(ctx, cubeType, false);
     if (actionId === 'roll_full_candidate') return _action_roll_full(ctx, cubeType, true);
@@ -558,60 +558,60 @@
 
     // unknown
     ctx.message = '未知操作：'+actionId;
-    return { ctx: ctx, patch: null };
+    return { ctx, patch: null };
   }
 
 
   // ===== 單條洗（供特殊方塊使用）=====
-  var _TIERS_ORDER = ['R','SR','SSR','UR','LR','SLR'];
+  const _TIERS_ORDER = ['R','SR','SSR','UR','LR','SLR'];
   function prevTier(t){
-    var i=_TIERS_ORDER.indexOf(t);
+    const i=_TIERS_ORDER.indexOf(t);
     if(i<=0) return t||'R';
     return _TIERS_ORDER[i-1];
   }
   function rollOneLineAtTier(tier, rng){
     rng = (typeof rng==='function') ? rng : Math.random;
     tier = tier || 'R';
-    var e = pickEffectR(rng);
-    var m = config.mult[tier] || 1;
-    var base = resolveBaseVal(e, rng);
-    return { tier:tier, id:e.id, label:e.label, type:e.type, unit:e.unit, baseVal:base, mult:m, value:base*m };
+    const e = pickEffectR(rng);
+    const m = config.mult[tier] || 1;
+    const base = resolveBaseVal(e, rng);
+    return { tier, id:e.id, label:e.label, type:e.type, unit:e.unit, baseVal:base, mult:m, value:base*m };
   }
   // 依機率決定「同階/低一階」，洗出單條
   // dist: {same:0.15, down:0.85}
   function rollOneLineSameOrDown(currentTier, dist, rng){
     rng = (typeof rng==='function') ? rng : Math.random;
     dist = dist || { same:0.15, down:0.85 };
-    var same = +dist.same || 0;
-    var down = +dist.down || 0;
-    var total = same + down;
+    let same = +dist.same || 0;
+    let down = +dist.down || 0;
+    let total = same + down;
     if(total<=0){ same=0.15; down=0.85; total=1; }
-    var pSame = same/total;
-    var t = (rng() < pSame) ? (currentTier||'R') : prevTier(currentTier||'R');
+    const pSame = same/total;
+    const t = (rng() < pSame) ? (currentTier||'R') : prevTier(currentTier||'R');
     return rollOneLineAtTier(t, rng);
   }
   return {
-    config: config,
-    cubeDefs: cubeDefs,
-    getCubeDefs: getCubeDefs,
-    promoteOnce: promoteOnce,
-    rollThreeFixedSession: rollThreeFixedSession,
-    rollThreeSessionFrom: rollThreeSessionFrom,
-    rollOneLineAtTier: rollOneLineAtTier,
-    rollOneLineSameOrDown: rollOneLineSameOrDown,
-    linesToBonus: linesToBonus,
-    describeLine: describeLine,
-    sessionTierProbs: sessionTierProbs,
-    upgradeChanceFrom: upgradeChanceFrom,
-    effectTableForSession: effectTableForSession,
-    prevTier: prevTier,
-    rollOneLineAtTier: rollOneLineAtTier,
-    rollOneLineSameOrDown: rollOneLineSameOrDown    ,
+    config,
+    cubeDefs,
+    getCubeDefs,
+    promoteOnce,
+    rollThreeFixedSession,
+    rollThreeSessionFrom,
+    rollOneLineAtTier,
+    rollOneLineSameOrDown,
+    linesToBonus,
+    describeLine,
+    sessionTierProbs,
+    upgradeChanceFrom,
+    effectTableForSession,
+    prevTier,
+    rollOneLineAtTier,
+    rollOneLineSameOrDown    ,
     // Flow-driven UI exports
-    uiFlows: uiFlows,
-    flowInit: flowInit,
-    flowView: flowView,
-    flowDispatch: flowDispatch
+    uiFlows,
+    flowInit,
+    flowView,
+    flowDispatch
 
   };
 });

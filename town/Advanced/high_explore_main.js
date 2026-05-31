@@ -3,7 +3,7 @@
 // 多槽 / 自動難度 / 段位門檻 / 免費次數 / 內建獎勵一覽
 // ✨ 掉落表更新提示（偵測 HighExploreData 變更，吐司 + 自動展開獎勵一覽）
 // 依賴：TownHub；可選：HighExploreData、HighExploreDrops、HighExploreEvents、combat_power.js（computeCombatPower + getRankByCP）
-// 另依賴：SaveHub（save_hub_es5.js）— 用於統一存檔
+// 另依賴：SaveHub（save_hub_es2020.js）— 用於統一存檔
 // ==========================================
 (function (w) {
   "use strict";
@@ -25,7 +25,7 @@
 
   // --- 小吐司（與其他模組共存）---
   function showToast(msg, isError){
-    var id='toast-mini', el=document.getElementById(id);
+    let id='toast-mini', el=document.getElementById(id);
     if(!el){
       el=document.createElement('div');
       el.id=id;
@@ -37,28 +37,28 @@
         opacity:'0',transform:'translateY(-6px)'
       });
       document.body.appendChild(el);
-      requestAnimationFrame(function(){ el.style.opacity='1'; el.style.transform='translateY(0)'; });
+      requestAnimationFrame(() =>{ el.style.opacity='1'; el.style.transform='translateY(0)'; });
     }
     el.textContent=msg;
     el.style.background=isError?'#ef4444':'#10b981';
     clearTimeout(el._timer);
-    el._timer=setTimeout(function(){
+    el._timer=setTimeout(() =>{
       el.style.opacity='0'; el.style.transform='translateY(-6px)';
-      setTimeout(function(){ if (el && el.parentNode) el.parentNode.removeChild(el); },220);
+      setTimeout(() =>{ if (el && el.parentNode) el.parentNode.removeChild(el); },220);
     },1600);
   }
 
   // ----- 段位工具（F- → SSS+）-----
-  var RANK_ORDER = ["F-","F","F+","E-","E","E+","D-","D","D+","C-","C","C+","B-","B","B+","A-","A","A+","S-","S","S+","SS-","SS","SS+","SSS-","SSS","SSS+"];
+  const RANK_ORDER = ["F-","F","F+","E-","E","E+","D-","D","D+","C-","C","C+","B-","B","B+","A-","A","A+","S-","S","S+","SS-","SS","SS+","SSS-","SSS","SSS+"];
   function rankIndex(label){
-    var i = RANK_ORDER.indexOf(String(label||""));
+    const i = RANK_ORDER.indexOf(String(label||""));
     return i < 0 ? 0 : i;
   }
   function getPlayerRankLabel(){
     try{
       if (typeof w.computeCombatPower === "function" && typeof w.getRankByCP === "function"){
-        var cp = w.computeCombatPower(w.player || {});
-        var rk = w.getRankByCP(cp);
+        const cp = w.computeCombatPower(w.player || {});
+        const rk = w.getRankByCP(cp);
         return rk && rk.label ? rk.label : "F-";
       }
     }catch(_){}
@@ -66,14 +66,14 @@
   }
   function meetsRankRequirement(reqRank){
     if (reqRank == null) return true;
-    var cur = getPlayerRankLabel();
+    const cur = getPlayerRankLabel();
     return rankIndex(cur) >= rankIndex(reqRank);
   }
 
   // --- 掉落表簽章（偵測 HighExploreData 是否變更）---
   function _fnv1a(str){
-    var h=0x811c9dc5|0;
-    for(var i=0;i<str.length;i++){
+    let h=0x811c9dc5|0;
+    for(let i=0;i<str.length;i++){
       h^=str.charCodeAt(i);
       h=(h+((h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24)))>>>0;
     }
@@ -81,9 +81,9 @@
   }
   function getData(){ return w.HighExploreData || {}; }
   function _dropsSignature(){
-    var D=getData();
-    var pack={
-      difficulties:(Array.isArray(D.difficulties)? D.difficulties.map(function(d){return{
+    const D=getData();
+    const pack={
+      difficulties:(Array.isArray(D.difficulties)? D.difficulties.map((d) =>{return{
         id:d.id,name:d.name,
         // 兼容：舊資料用 reqCP，新資料用 reqRank
         reqCP:+(d.reqCP||0),
@@ -92,51 +92,51 @@
         qtyMult:+(d.qtyMult||1),
         expMult:+(d.expMult||1)
       };}):[]),
-      rewards:(Array.isArray(D.rewards)? D.rewards.map(function(r){return{
+      rewards:(Array.isArray(D.rewards)? D.rewards.map((r) =>{return{
         type:r.type,key:r.key,name:r.name,rate:+(r.rate||0),qty:r.qty
       };}):[]),
-      guaranteed:(Array.isArray(D.guaranteed||D.fixedRewards)? (D.guaranteed||D.fixedRewards).map(function(g){return{
+      guaranteed:(Array.isArray(D.guaranteed||D.fixedRewards)? (D.guaranteed||D.fixedRewards).map((g) =>{return{
         type:g.type,key:g.key,name:g.name,baseQty:g.baseQty,qty:g.qty
       };}):[])
     };
-    pack.rewards.sort(function(a,b){return String(a.name||a.key).localeCompare(String(b.name||b.key),'zh-Hant');});
-    pack.guaranteed.sort(function(a,b){return String(a.name||a.key).localeCompare(String(b.name||b.key),'zh-Hant');});
+    pack.rewards.sort((a,b) =>{return String(a.name||a.key).localeCompare(String(b.name||b.key),'zh-Hant');});
+    pack.guaranteed.sort((a,b) =>{return String(a.name||a.key).localeCompare(String(b.name||b.key),'zh-Hant');});
     return _fnv1a(JSON.stringify(pack));
   }
 
   // ===== 常數 =====
-  var NS = "high_explore";          // SaveHub 命名空間
-  var DROPS_SIG_KEY = "HIGH_EXPLORE_DROPS_SIG";
-  var SLOT_MAX = 4;
-  var SLOT_BASE = 1;
-  var SLOT_UNLOCK_COST = 5000; // 💎
-  var RUN_SEC = 800;
-  var TICKET_NAME = "高級探索券";
+  const NS = "high_explore";          // SaveHub 命名空間
+  const DROPS_SIG_KEY = "HIGH_EXPLORE_DROPS_SIG";
+  const SLOT_MAX = 4;
+  const SLOT_BASE = 1;
+  const SLOT_UNLOCK_COST = 5000; // 💎
+  const RUN_SEC = 800;
+  const TICKET_NAME = "高級探索券";
 
   // 免費次數規則
-  var FREE_INIT = 5;
-  var FREE_MAX = 5;
-  var FREE_REFILL_SEC = 36000; // 每小時 +1
+  const FREE_INIT = 5;
+  const FREE_MAX = 5;
+  const FREE_REFILL_SEC = 36000; // 每小時 +1
 
   // ===== 讀取難度/獎勵（兼容欄位）=====
   function getDiffs(){
-    var D = getData();
+    const D = getData();
     return Array.isArray(D.difficulties) ? D.difficulties : [];
   }
   function getDiffById(id){
-    var L = getDiffs(); if (!L.length) return null;
-    for (var i=0;i<L.length;i++){
-      var did = L[i].id || ("D"+i);
+    const L = getDiffs(); if (!L.length) return null;
+    for (let i=0;i<L.length;i++){
+      const did = L[i].id || ("D"+i);
       if (did === id) return L[i];
     }
     return L[0];
   }
   function getRewards(){
-    var D = getData();
+    const D = getData();
     return Array.isArray(D.rewards) ? D.rewards : [];
   }
   function getFixedRewards(){
-    var D = getData();
+    const D = getData();
     if (Array.isArray(D.fixedRewards)) return D.fixedRewards;
     if (Array.isArray(D.guaranteed))   return D.guaranteed;
     return [];
@@ -150,25 +150,25 @@
       }
     } catch(_){}
     if (d && d.reqRank != null) return meetsRankRequirement(d.reqRank);
-    var cpReq = nznum(d && d.reqCP, 0);
+    const cpReq = nznum(d && d.reqCP, 0);
     if (cpReq <= 0) return true;
-    var cp = 0;
+    let cp = 0;
     try { cp = (typeof w.computeCombatPower==="function") ? w.computeCombatPower(w.player) : 0; } catch(_){}
     return cp >= cpReq;
   }
   function getAutoDiffIdByRank() {
-    var diffs = getDiffs();
+    const diffs = getDiffs();
     if (!diffs.length) return "R01";
-    var best = diffs[0].id || "R01";
-    for (var i=0;i<diffs.length;i++){
-      var d = diffs[i], id = d.id || ("R"+(i+1));
+    let best = diffs[0].id || "R01";
+    for (let i=0;i<diffs.length;i++){
+      const d = diffs[i], id = d.id || ("R"+(i+1));
       if (canEnterDiff(d)) best = id;
     }
     return best;
   }
   function getNextDiffInfo() {
-    var diffs = getDiffs();
-    for (var i=0;i<diffs.length;i++){
+    const diffs = getDiffs();
+    for (let i=0;i<diffs.length;i++){
       if (!canEnterDiff(diffs[i])) return diffs[i];
     }
     return null; // 已達最高
@@ -176,7 +176,7 @@
 
   // ===== SaveHub 初始化 =====
   if (w.SaveHub){
-    var spec = {}; spec[NS] = { version: 1, migrate: function(old){ return old || {}; } };
+    const spec = {}; spec[NS] = { version: 1, migrate(old){ return old || {}; } };
     w.SaveHub.registerNamespaces(spec);
   }
   function persist(){ if (w.SaveHub) w.SaveHub.set(NS, state); }
@@ -195,10 +195,10 @@
     };
   }
   function normalizeSlots(slots){
-    var out = [];
+    const out = [];
     if (!Array.isArray(slots)) slots = [];
-    for (var i=0;i<slots.length;i++){
-      var s=slots[i]||{};
+    for (let i=0;i<slots.length;i++){
+      const s=slots[i]||{};
       out.push({
         id: toInt(s.id||i),
         enabled: (s.enabled!==false),
@@ -211,13 +211,13 @@
       });
     }
     if (out.length < SLOT_BASE){
-      for (var k=out.length; k<SLOT_BASE; k++) out.push(newSlot(k));
+      for (let k=out.length; k<SLOT_BASE; k++) out.push(newSlot(k));
     }
     return out;
   }
 
-  var DEFAULT_STATE = (function fresh(){
-    var s = {
+  const DEFAULT_STATE = (function fresh(){
+    const s = {
       slots: [],
       log: [],
       freeCharges: FREE_INIT,
@@ -226,11 +226,11 @@
       showRewards: false,
       _dropsSigChecked: false
     };
-    for (var i=0; i<SLOT_BASE; i++) s.slots.push(newSlot(i));
+    for (let i=0; i<SLOT_BASE; i++) s.slots.push(newSlot(i));
     return s;
   })();
 
-  var state = (w.SaveHub ? w.SaveHub.get(NS, DEFAULT_STATE) : DEFAULT_STATE);
+  const state = (w.SaveHub ? w.SaveHub.get(NS, DEFAULT_STATE) : DEFAULT_STATE);
   // 啟動時補欄位
   (function migrateFill(){
     state.slots = normalizeSlots(state.slots);
@@ -245,11 +245,11 @@
 
   // ===== 免費次數回補 =====
   function ensureRefill(){
-    var now = nowSec();
+    const now = nowSec();
     if (state.freeCharges >= FREE_MAX) { state.lastRefillAt = now; return; }
-    var elapsed = Math.max(0, now - toInt(state.lastRefillAt||now));
+    const elapsed = Math.max(0, now - toInt(state.lastRefillAt||now));
     if (elapsed < FREE_REFILL_SEC) return;
-    var add = Math.floor(elapsed / FREE_REFILL_SEC);
+    const add = Math.floor(elapsed / FREE_REFILL_SEC);
     if (add > 0){
       state.freeCharges = clamp(state.freeCharges + add, 0, FREE_MAX);
       state.lastRefillAt += add * FREE_REFILL_SEC;
@@ -268,17 +268,17 @@
     // 2) 視圖函式（HighExploreData）
     try{
       if (w.HighExploreData && typeof w.HighExploreData.getViewForTier==="function"){
-        var view = w.HighExploreData.getViewForTier(diffId);
-        var bag = [], i, j;
+        const view = w.HighExploreData.getViewForTier(diffId);
+        let bag = [], i, j;
         for (i=0;i<view.guaranteed.length;i++){
-          var g = view.guaranteed[i];
-          var q = (g.min===g.max)? g.min : randInt(g.min, g.max);
+          const g = view.guaranteed[i];
+          const q = (g.min===g.max)? g.min : randInt(g.min, g.max);
           if (q>0) bag.push({ type:g.type, key:(g.name||g.key), qty:q });
         }
         for (j=0;j<view.random.length;j++){
-          var r = view.random[j];
+          const r = view.random[j];
           if (Math.random() < r.effRate){
-            var rq = (r.min===r.max)? r.min : randInt(r.min, r.max);
+            const rq = (r.min===r.max)? r.min : randInt(r.min, r.max);
             if (rq>0) bag.push({ type:r.type, key:(r.name||r.key), qty:rq });
           }
         }
@@ -286,32 +286,32 @@
       }
     }catch(_){}
     // 3) 備援（兼容舊 dropMult/qtyMult）
-    var diff = getDiffById(diffId) || {};
-    var chanceMult = nznum(diff.chanceMult!=null? diff.chanceMult : diff.dropMult, 1);
-    var qtyMult    = nznum(diff.qtyMult, 1);
+    const diff = getDiffById(diffId) || {};
+    const chanceMult = nznum(diff.chanceMult!=null? diff.chanceMult : diff.dropMult, 1);
+    const qtyMult    = nznum(diff.qtyMult, 1);
 
-    var bag2 = [], fixed = getFixedRewards(), rewards = getRewards(), i2;
+    let bag2 = [], fixed = getFixedRewards(), rewards = getRewards(), i2;
     for (i2=0;i2<fixed.length;i2++){
-      var f = fixed[i2];
-      var fq;
+      const f = fixed[i2];
+      let fq;
       if (Array.isArray(f.baseQty)) {
-        var fmin = Math.max(1, toInt(f.baseQty[0]*qtyMult));
-        var fmax = Math.max(fmin, toInt(f.baseQty[1]*qtyMult));
+        const fmin = Math.max(1, toInt(f.baseQty[0]*qtyMult));
+        const fmax = Math.max(fmin, toInt(f.baseQty[1]*qtyMult));
         fq = randInt(fmin, fmax);
       } else {
-        var base = toInt(f.baseQty!=null ? f.baseQty : f.qty);
+        const base = toInt(f.baseQty!=null ? f.baseQty : f.qty);
         fq = Math.max(1, toInt(base * qtyMult));
       }
       if (fq>0) bag2.push({ type:f.type||"item", key:(f.key||f.name||"?"), qty:fq });
     }
     for (i2=0;i2<rewards.length;i2++){
-      var r2 = rewards[i2];
-      var rate = clamp(nznum(r2.rate,0) * chanceMult, 0, 1);
+      const r2 = rewards[i2];
+      const rate = clamp(nznum(r2.rate,0) * chanceMult, 0, 1);
       if (Math.random() < rate){
-        var q2 = 1;
+        let q2 = 1;
         if (Array.isArray(r2.qty)){
-          var min = Math.max(1, toInt(r2.qty[0] * qtyMult));
-          var max = Math.max(min, toInt(r2.qty[1] * qtyMult));
+          const min = Math.max(1, toInt(r2.qty[0] * qtyMult));
+          const max = Math.max(min, toInt(r2.qty[1] * qtyMult));
           q2 = randInt(min, max);
         } else if (r2.qty != null){
           q2 = Math.max(1, toInt(nznum(r2.qty,1) * qtyMult));
@@ -336,24 +336,24 @@
     return (state.freeCharges > 0 || getItemQuantity(TICKET_NAME) > 0);
   }
   function canStartAny(){
-    var autoId = getAutoDiffIdByRank();
-    var diff = getDiffById(autoId);
-    var ok = diff ? canEnterDiff(diff) : true;
+    const autoId = getAutoDiffIdByRank();
+    const diff = getDiffById(autoId);
+    const ok = diff ? canEnterDiff(diff) : true;
     return ok && hasChargeOrTicket();
   }
 
   // ===== 開始 / 結束 =====
-  function getSlot(id){ for (var i=0;i<state.slots.length;i++) if (state.slots[i].id===id) return state.slots[i]; return null; }
+  function getSlot(id){ for (let i=0;i<state.slots.length;i++) if (state.slots[i].id===id) return state.slots[i]; return null; }
 
   function startRun(slotId){
     ensureRefill();
-    var slot = getSlot(slotId);
+    const slot = getSlot(slotId);
     if (!slot){ showToast('找不到探索槽', true); return false; }
     if (slot.running){ showToast('此槽位正在探索中', true); return false; }
 
     // 段位/門檻檢查
-    var autoId = getAutoDiffIdByRank();
-    var diff = getDiffById(autoId);
+    const autoId = getAutoDiffIdByRank();
+    const diff = getDiffById(autoId);
     if (diff && !canEnterDiff(diff)){
       if (diff.reqRank){
         showToast('⚠️ 段位不足，需求：'+diff.reqRank, true);
@@ -374,7 +374,7 @@
       state.freeCharges = Math.max(0, state.freeCharges - 1);
       persist();
     } else {
-      var ok = getItemQuantity(TICKET_NAME) > 0;
+      const ok = getItemQuantity(TICKET_NAME) > 0;
       if (!ok){ showToast('⚠️ 您的資源不足：沒有 '+TICKET_NAME, true); return false; }
       removeItem(TICKET_NAME, 1);
     }
@@ -399,10 +399,10 @@
     // 先停止狀態，確保就算後續出錯也不會被 tick 一直重複觸發
     slot.running = false;
 
-    var diffId = slot.currentDiffId || getAutoDiffIdByRank();
-    var diff = getDiffById(diffId);
+    const diffId = slot.currentDiffId || getAutoDiffIdByRank();
+    const diff = getDiffById(diffId);
 
-    var drops = [];
+    let drops = [];
     try {
       drops = computeDropsForDiff(diffId) || [];
     } catch (e) {
@@ -412,8 +412,8 @@
 
     try {
       // 發獎
-      for (var k=0;k<drops.length;k++){
-        var d = drops[k], q = Math.max(1, (d.qty|0)), key = d.key;
+      for (let k=0;k<drops.length;k++){
+        const d = drops[k], q = Math.max(1, (d.qty|0)), key = d.key;
         if (d.type === "gem" && w.player) {
           w.player.gem  = (w.player.gem  || 0) + q;
         } else if (d.type === "gold" && w.player) {
@@ -436,9 +436,9 @@
 
     // 紀錄：儲存物件而非字串（渲染時再格式化）
     try{
-      var line = {
+      const line = {
         at: nowSec(),
-        diffId: diffId,
+        diffId,
         diffName: (diff && diff.name) ? diff.name : diffId,
         drops: drops || []
       };
@@ -463,13 +463,13 @@
   // ===== tick =====
   function tick(sec){
     ensureRefill();
-    var hasRunning=false;
-    var changed=false;
-    for (var i=0;i<state.slots.length;i++){
-      var s=state.slots[i];
+    let hasRunning=false;
+    let changed=false;
+    for (let i=0;i<state.slots.length;i++){
+      const s=state.slots[i];
       if(!s.running)continue;
       hasRunning=true;
-      var t=nowSec();
+      const t=nowSec();
       if(t>=s.startAt+s.duration){
         finishRun(s);
         changed=true;
@@ -479,17 +479,17 @@
     if(hasRunning){ updateCountdownDOM(); }
   }
 
-  
+
 // 更新倒數顯示（不需要 rerender，避免每秒重繪整個頁面）
   function updateCountdownDOM(){
-    for (var i=0;i<state.slots.length;i++){
-      var s=state.slots[i];
+    for (let i=0;i<state.slots.length;i++){
+      const s=state.slots[i];
       if(!s.running) continue;
-      var rem = remainSec(s);
-      var el = byId('hexpRem_' + i);
+      const rem = remainSec(s);
+      const el = byId('hexpRem_' + i);
       if(el) el.textContent = rem + 's';
-      var pct = remainPct(s);
-      var barEl = byId('hexpBar_' + i);
+      const pct = remainPct(s);
+      const barEl = byId('hexpBar_' + i);
       if(barEl) barEl.style.width = clamp(pct,0,100) + '%';
     }
   }
@@ -497,13 +497,13 @@
 // ===== UI =====
   function injectStyles() {
     if (document.getElementById('hexp-styles')) return;
-    var style = document.createElement('style');
+    const style = document.createElement('style');
     style.id = 'hexp-styles';
     style.innerHTML = `
       .hexp-container { font-family: sans-serif; color: #f3f4f6; line-height: 1.5; }
       .hexp-card { background: #0b1220; border: 1px solid #1f2937; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); }
       .hexp-title { font-weight: 700; margin-bottom: 8px; color: #60a5fa; display: flex; align-items: center; gap: 6px; }
-      
+
       /* 探索槽 Grid 佈局 */
       .hexp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
       .hexp-slot-card { background: #111827; border: 1px solid #374151; border-radius: 10px; padding: 12px; transition: transform 0.2s, border-color 0.2s; }
@@ -527,7 +527,7 @@
       .hexp-table thead { background: #1f2937; }
       .hexp-table th { text-align: left; padding: 10px; font-weight: 600; }
       .hexp-table td { padding: 8px 10px; border-bottom: 1px dashed #1f2937; }
-      
+
       .hexp-log-box { max-height: 200px; overflow-y: auto; font-size: 12px; padding: 8px; background: #060a12; border-radius: 6px; color: #9ca3af; }
       .mini-info { font-size: 12px; opacity: 0.8; margin-bottom: 4px; }
     `;
@@ -545,30 +545,30 @@
 
   function remainPct(slot) {
     if (!slot.running) return 0;
-    var t = nowSec();
-    var used = clamp(t - slot.startAt, 0, slot.duration);
+    const t = nowSec();
+    const used = clamp(t - slot.startAt, 0, slot.duration);
     return Math.floor(used / slot.duration * 100);
   }
 
   function remainSec(slot) {
     if (!slot.running) return 0;
-    var t = nowSec();
+    const t = nowSec();
     return Math.max(0, (slot.startAt + slot.duration) - t);
   }
 
   function renderRewardsTable() {
-    var autoId = getAutoDiffIdByRank();
-    var diff = getDiffById(autoId) || {};
-    var dropMult = nznum((diff.dropMult != null ? diff.dropMult : diff.chanceMult), 1);
-    var qtyMult = nznum(diff.qtyMult, 1);
+    const autoId = getAutoDiffIdByRank();
+    const diff = getDiffById(autoId) || {};
+    const dropMult = nznum((diff.dropMult != null ? diff.dropMult : diff.chanceMult), 1);
+    const qtyMult = nznum(diff.qtyMult, 1);
 
-    var fixed = getFixedRewards();
-    var rewards = getRewards();
-    var rows = '', i, r;
+    const fixed = getFixedRewards();
+    const rewards = getRewards();
+    let rows = '', i, r;
 
     for (i = 0; i < fixed.length; i++) {
-      var f = fixed[i];
-      var q = Array.isArray(f.baseQty) 
+      const f = fixed[i];
+      const q = Array.isArray(f.baseQty)
         ? Math.max(1, toInt(f.baseQty[0] * qtyMult)) + '–' + Math.max(1, toInt(f.baseQty[1] * qtyMult))
         : fmt(Math.max(1, toInt((f.baseQty != null ? f.baseQty : f.qty) * qtyMult)));
       rows += '<tr><td>' + (f.name || f.key) + '</td><td>固定</td><td style="text-align:right"><b>' + q + '</b></td><td style="text-align:right;opacity:0.5">—</td></tr>';
@@ -576,8 +576,8 @@
 
     for (i = 0; i < rewards.length; i++) {
       r = rewards[i];
-      var effRate = Math.min(1, nznum(r.rate, 0) * dropMult);
-      var qtyStr = Array.isArray(r.qty)
+      const effRate = Math.min(1, nznum(r.rate, 0) * dropMult);
+      const qtyStr = Array.isArray(r.qty)
         ? 'x' + fmt(Math.max(1, toInt(r.qty[0] * qtyMult))) + '–' + fmt(Math.max(1, toInt(r.qty[1] * qtyMult)))
         : 'x' + fmt(Math.max(1, toInt(r.qty * qtyMult)));
       rows += '<tr><td>' + (r.name || r.key) + '</td><td>機率</td><td style="text-align:right">' + qtyStr + '</td><td style="text-align:right"><b>' + (effRate * 100).toFixed(2) + '%</b></td></tr>';
@@ -587,19 +587,19 @@
   }
 
   function renderSlot(slot, idx) {
-    var pct = remainPct(slot);
-    var remS = remainSec(slot);
-    var ticket = getItemQuantity(TICKET_NAME);
-    var last = slot.lastResult;
-    var canStartNow = (!!slot && !slot.running && canStartAny());
+    const pct = remainPct(slot);
+    const remS = remainSec(slot);
+    const ticket = getItemQuantity(TICKET_NAME);
+    const last = slot.lastResult;
+    const canStartNow = (!!slot && !slot.running && canStartAny());
 
-    var autoId = getAutoDiffIdByRank();
-    var diff = getDiffById(autoId);
-    var meetRank = diff ? canEnterDiff(diff) : true;
-    
-    var lastHtml = last ? '<div style="font-size:11px;opacity:0.7;margin-top:8px;padding-top:8px;border-top:1px dashed #374151;">上次：' + (last.drops && last.drops.length ? last.drops.map(function(d){ return d.key + 'x' + d.qty; }).join('、') : '無') + '</div>' : '';
+    const autoId = getAutoDiffIdByRank();
+    const diff = getDiffById(autoId);
+    const meetRank = diff ? canEnterDiff(diff) : true;
 
-    var statusInfo = slot.running
+    const lastHtml = last ? '<div style="font-size:11px;opacity:0.7;margin-top:8px;padding-top:8px;border-top:1px dashed #374151;">上次：' + (last.drops && last.drops.length ? last.drops.map((d) =>{ return d.key + 'x' + d.qty; }).join('、') : '無') + '</div>' : '';
+
+    const statusInfo = slot.running
       ? '<div class="mini-info">倒數：<b id="hexpRem_' + idx + '">' + remS + 's</b></div>' + bar(pct, idx)
       : '<div class="mini-info" style="color:#9ca3af">狀態：閒置</div>';
 
@@ -619,8 +619,8 @@
     ensureRefill();
 
     if (!state._dropsSigChecked) {
-      var curSig = _dropsSignature();
-      var prevSig = "";
+      const curSig = _dropsSignature();
+      let prevSig = "";
       try { prevSig = (w.SaveHub ? w.SaveHub.get('_hexp_drops_sig', '') : (localStorage.getItem(DROPS_SIG_KEY) || "")); } catch (_) {}
       if (curSig && curSig !== prevSig) {
         if (w.SaveHub) w.SaveHub.set('_hexp_drops_sig', curSig);
@@ -632,12 +632,12 @@
       state._dropsSigChecked = true;
     }
 
-    var autoId = getAutoDiffIdByRank();
-    var curDiff = getDiffById(autoId);
-    var nextDiff = getNextDiffInfo();
-    var nextText = nextDiff ? ('下一檔：' + nextDiff.name + ' (' + (nextDiff.reqRank || fmt(nextDiff.reqCP)) + ')') : '已達最高難度';
+    const autoId = getAutoDiffIdByRank();
+    const curDiff = getDiffById(autoId);
+    const nextDiff = getNextDiffInfo();
+    const nextText = nextDiff ? ('下一檔：' + nextDiff.name + ' (' + (nextDiff.reqRank || fmt(nextDiff.reqCP)) + ')') : '已達最高難度';
 
-    var headerHtml = '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">' +
+    const headerHtml = '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">' +
         '<div><div style="font-size:16px;font-weight:700;">目前難度：' + (curDiff ? curDiff.name : autoId) + '</div>' +
         '<div style="font-size:12px;opacity:0.7;">' + nextText + '</div></div>' +
         '<button id="hexpToggleRewards" class="hexp-btn hexp-btn-toggle">' + (state.showRewards ? '隱藏獎勵' : '獎勵一覽') + '</button>' +
@@ -645,62 +645,62 @@
       '<div class="mini-info">免費次數：<b>' + state.freeCharges + ' / ' + FREE_MAX + '</b>｜' + TICKET_NAME + '：<b>' + getItemQuantity(TICKET_NAME) + '</b></div>' +
       (state.showRewards ? '<div style="margin-top:10px;">' + renderRewardsTable() + '</div>' : '');
 
-    var slotsHtml = '<div class="hexp-grid">';
-    for (var i = 0; i < state.slots.length; i++) slotsHtml += renderSlot(state.slots[i], i);
+    let slotsHtml = '<div class="hexp-grid">';
+    for (let i = 0; i < state.slots.length; i++) slotsHtml += renderSlot(state.slots[i], i);
     slotsHtml += '</div>';
 
-    var canUnlock = state.slots.length < SLOT_MAX;
-    var unlockHtml = '<div style="margin-top:12px;">' +
+    const canUnlock = state.slots.length < SLOT_MAX;
+    const unlockHtml = '<div style="margin-top:12px;">' +
       (canUnlock ? '<button id="hexpUnlock" class="hexp-btn hexp-btn-unlock">🔓 解鎖新槽位（' + fmt(SLOT_UNLOCK_COST) + ' 💎）</button>' : '<div style="opacity:0.5;font-size:12px;">已達槽位上限</div>') +
       '</div>';
 
 	    // --- 📝 探索紀錄優化版 ---
 	    // 兼容：舊版 log 可能是字串；新版 log 可能是物件 {at,diffName,drops:[{name,qty}]}
 	    function _fmtTimeFromSec(sec){
-	      var d = new Date((toInt(sec)||0)*1000);
-	      var hh = String(d.getHours()).padStart(2,'0');
-	      var mm = String(d.getMinutes()).padStart(2,'0');
-	      var ss = String(d.getSeconds()).padStart(2,'0');
+	      const d = new Date((toInt(sec)||0)*1000);
+	      const hh = String(d.getHours()).padStart(2,'0');
+	      const mm = String(d.getMinutes()).padStart(2,'0');
+	      const ss = String(d.getSeconds()).padStart(2,'0');
 	      return hh + ':' + mm + ':' + ss;
 	    }
 	    function _coerceLogLine(line){
 	      // returns { timePart, contentPart, diffPart }
 	      if (line && typeof line === 'object') {
-	        var timePart = line.at ? _fmtTimeFromSec(line.at) : '';
-	        var diffPart = String(line.diffName || line.diffId || '');
-	        var drops = Array.isArray(line.drops) ? line.drops : [];
-	        var contentPart = '';
+	        const timePart = line.at ? _fmtTimeFromSec(line.at) : '';
+	        const diffPart = String(line.diffName || line.diffId || '');
+	        const drops = Array.isArray(line.drops) ? line.drops : [];
+	        let contentPart = '';
 	        if (!drops.length) {
 	          contentPart = '未獲得任何獎勵';
 	        } else {
-	          var parts = [];
-	          for (var i=0;i<drops.length;i++) {
-	            var it = drops[i] || {};
-	            var nm = String(it.name || it.key || '');
-	            var q = toInt(it.qty || it.amount || 1);
+	          const parts = [];
+	          for (let i=0;i<drops.length;i++) {
+	            const it = drops[i] || {};
+	            const nm = String(it.name || it.key || '');
+	            const q = toInt(it.qty || it.amount || 1);
 	            parts.push(nm + ' x' + q);
 	          }
 	          contentPart = parts.join('、');
 	        }
-	        return { timePart: timePart, contentPart: contentPart, diffPart: diffPart };
+	        return { timePart, contentPart, diffPart };
 	      }
-	
-	      var s = String(line == null ? '' : line);
+
+	      const s = String(line == null ? '' : line);
 	      // 1) 嘗試解析出時間與內容 (格式："HH:mm:ss 取得：內容（難度）")
-	      var match = s.match(/^(\d{1,2}:\d{2}:\d{2})\s取得：(.*)（(.*)）$/);
+	      const match = s.match(/^(\d{1,2}:\d{2}:\d{2})\s取得：(.*)（(.*)）$/);
 	      if (match) return { timePart: match[1], contentPart: match[2], diffPart: match[3] };
 	      // 2) fallback：整行當內容
 	      return { timePart: '', contentPart: s, diffPart: '' };
 	    }
 
-	    var logEntries = state.log.map(function(line) {
-	      var p = _coerceLogLine(line);
-	      var timePart = p.timePart;
-	      var contentPart = p.contentPart;
-	      var diffPart = p.diffPart;
+	    const logEntries = state.log.map((line) => {
+	      const p = _coerceLogLine(line);
+	      const timePart = p.timePart;
+	      const contentPart = p.contentPart;
+	      const diffPart = p.diffPart;
 
       // 2. 為不同類型的獎勵加上顏色與圖示 (針對常見關鍵字)
-	      var styledContent = String(contentPart || '')
+	      const styledContent = String(contentPart || '')
         .replace(/鑽石/g, '💎<span style="color:#60a5fa">鑽石</span>')
         .replace(/金幣/g, '🪙<span style="color:#fbbf24">金幣</span>')
         .replace(/探索挑戰券/g, '🎫<span style="color:#a855f7">票券</span>')
@@ -712,14 +712,14 @@
 	                 '<span style="font-family:monospace; opacity:0.4; font-size:10px;">' + (timePart||'') + '</span>' +
 	                 (diffPart ? '<span style="background:rgba(96,165,250,0.1); color:#60a5fa; padding:1px 6px; border-radius:4px; font-size:10px; font-weight:bold;">' + diffPart + '</span>' : '<span></span>') +
 	               '</div>' +
-               '<div style="font-size:13px; color:#e5e7eb; padding-left:2px;">' + 
-	                 (String(contentPart||'').indexOf('未獲得') > -1 ? '<span style="opacity:0.5;font-style:italic">💨 空手而回</span>' : styledContent) + 
+               '<div style="font-size:13px; color:#e5e7eb; padding-left:2px;">' +
+	                 (String(contentPart||'').indexOf('未獲得') > -1 ? '<span style="opacity:0.5;font-style:italic">💨 空手而回</span>' : styledContent) +
                '</div>' +
              '</div>';
     });
 
-    var logHtml = '<div class="hexp-log-box" style="padding:0 8px;">' + 
-                  (logEntries.length ? logEntries.join('') : '<div style="padding:20px;text-align:center;opacity:0.5;">尚無紀錄</div>') + 
+    const logHtml = '<div class="hexp-log-box" style="padding:0 8px;">' +
+                  (logEntries.length ? logEntries.join('') : '<div style="padding:20px;text-align:center;opacity:0.5;">尚無紀錄</div>') +
                   '</div>';
 
 
@@ -730,22 +730,22 @@
       '</div>';
 
     // 綁定事件
-    container.querySelectorAll('.btn-start').forEach(function(btn) {
+    container.querySelectorAll('.btn-start').forEach((btn) => {
       btn.onclick = function() {
-        var sid = toInt(this.getAttribute('data-sid'));
-        if (startRun(sid)) { showToast('已開始探索'); } 
+        const sid = toInt(this.getAttribute('data-sid'));
+        if (startRun(sid)) { showToast('已開始探索'); }
         else if (!hasChargeOrTicket()) { showToast('⚠️ 資源不足', true); }
         w.TownHub.requestRerender();
       };
     });
 
-    var tg = byId('hexpToggleRewards');
+    const tg = byId('hexpToggleRewards');
     if (tg) tg.onclick = function() { state.showRewards = !state.showRewards; persist(); w.TownHub.requestRerender(); };
 
-    var bu = byId('hexpUnlock');
+    const bu = byId('hexpUnlock');
     if (bu) bu.onclick = function() {
       if (state.slots.length >= SLOT_MAX) return;
-      var gem = toInt(w.player && w.player.gem);
+      const gem = toInt(w.player && w.player.gem);
       if (gem < SLOT_UNLOCK_COST) { showToast('⚠️ 鑽石不足', true); return; }
       w.player.gem -= SLOT_UNLOCK_COST;
       state.slots.push(newSlot(state.slots.length));
@@ -758,7 +758,7 @@
   w.TownHub.registerTab({
     id: 'high_explore',
     title: '高級探索',
-    render: render,
-    tick: tick
+    render,
+    tick
   });
 })(window);
