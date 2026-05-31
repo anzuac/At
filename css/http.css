@@ -1,0 +1,1418 @@
+    /*
+        基本樣式 (通用，適用於所有裝置)
+      */
+      body {
+        margin: 0;
+        background: #0c0c1c;
+        color: #fff;
+        font-family: "Microsoft JhengHei", sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 10px;
+        font-size: 14px;
+      }
+  
+      .hp-bar-wrapper {
+        margin: 8px 0;
+      }
+      .hp-bar-bg {
+        background-color: #444;
+        border: 1px solid #222;
+        width: 100%;
+        height: 20px;
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+      }
+      .hp-bar-fill {
+        background-color: #e53935;
+        height: 100%;
+        width: 100%;
+        transition: width 0.4s ease;
+      }
+      .hp-bar-text {
+        font-size: 14px;
+        margin-top: 4px;
+        color: #fff;
+        text-align: center;
+      }
+      .container {
+        width: 100%;
+        max-width: 960px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .skill-description {
+    max-height: 80px;   /* 限制高度 */
+    overflow-y: auto;   /* 多的部分可以滑動 */
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .skill-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+      .row {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .section {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid #444;
+        border-radius: 6px;
+        padding: 12px;
+        box-shadow: inset 0 0 4px #111;
+        flex: 1;
+      }
+      .section h2 {
+        margin: 0 0 8px 0;
+        font-size: 16px;
+        border-bottom: 1px solid #555;
+        padding-bottom: 4px;
+      }
+      .section span {
+        display: block;
+        margin: 4px 0;
+      }
+      .section button {
+        padding: 8px 12px;
+        background: #2e2e4e;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 6px;
+      }
+      .section button:hover {
+        background: #3a3a72;
+      }
+  
+      #battleLog {
+        margin-top: 10px;
+        background: #111;
+        padding: 12px;
+        border-radius: 4px;
+        max-height: 200px;
+        overflow-y: auto;
+        font-size: 12px;
+      }
+  
+  
+  
+  
+  /* 區塊標題＋右側小開關鈕 */
+  .section h2 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 0 0 8px;
+  }
+  .mini-toggle {
+    border: 0;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #2b2f3a;
+    color: #e6e8ee;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .mini-toggle:hover { background:#343949; }
+  
+  /* 方格卡片容器：兩欄，手機自動一欄 */
+  .stat-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+    gap: 8px;
+  }
+  
+  /* 每一列是小卡片：左標籤、右數值 */
+  .stat-list > span {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  
+    
+    border: 1px solid #2b2f3a;            /* 邊框 */
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+    color: #dde2eb;
+    min-height: 30px;
+  }
+  
+  /* 左邊文字（span 本身的文字）微灰，冒號保留即可 */
+  .stat-list > span { color: #b8bdc8; }
+  
+  /* 右側數值：固定寬度、置中、等寬字形（數字對齊更漂亮） */
+  .stat-list > span > strong {
+    color: #fff;
+    min-width:70px;          /* 讓右欄寬度一致 */
+    text-align: center;        /* 文字置中 */
+    font-variant-numeric: tabular-nums;   /* 數字等寬 */
+    letter-spacing: 0.2px;
+  }
+  
+  /* 狀態按鈕在卡片內也要漂亮 */
+  #manaShieldBtn {
+    border: 0;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #22344a;
+    color: #eaf2ff;
+    cursor: pointer;
+  }
+  #manaShieldBtn:hover { background:#274057; }
+  
+  /* RWD：窄螢幕自動單欄 */
+  @media (max-width: 600px) {
+    .stat-list { grid-template-columns: 1fr; }
+  }
+  
+  /* 額外：整個能力區域外殼更乾淨（可選） */
+  .section {
+    background: #141821;
+    border: 1px solid #262b36;
+    border-radius: 12px;
+    padding: 12px;
+  }
+  
+  
+  
+  
+  
+  
+      /* 模態視窗樣式（保留原有） */
+      #equipModal, #skillModal {
+        display: none;
+        position: fixed;
+        top: 10%;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #222;
+        padding: 12px;
+        border: 1px solid #888;
+        border-radius: 6px;
+        z-index: 1000;
+        width: 90vw;
+        max-width: 320px;
+        max-height: 70vh;
+        overflow: auto;
+        box-sizing: border-box;
+      }
+      #skillModal h3 {
+        margin-top: 0;
+        font-size: 1.2em;
+        border-bottom: 1px solid #666;
+        padding-bottom: 4px;
+      }
+      #skillList {
+        max-height: 50vh;
+        overflow-y: auto;
+        padding-right: 4px;
+        box-sizing: border-box;
+      }
+      #modalBackdrop, #skillBackdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+      }
+      .setup-modal {
+        display: none;
+        position: fixed;
+        z-index: 10000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.8);
+        justify-content: center;
+        align-items: center;
+      }
+      .setup-modal-content {
+        background-color: #1a1a2e;
+        color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 350px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        text-align: center;
+      }
+      .setup-modal-content h2 {
+        margin-top: 0;
+        font-size: 1.5em;
+        border-bottom: 2px solid #5c628e;
+        padding-bottom: 10px;
+      }
+      .mini-toggle {
+        margin-left: 6px;
+        padding: 2px 8px;
+        font-size: 12px;
+        background: #2e2e4e;
+        color: #fff;
+        border: 1px solid #5c628e;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .mini-toggle:hover {
+        background: #3a3a72;
+      }
+      .setup-modal-content input, .setup-modal-content select, .setup-modal-content button {
+        width: calc(100% - 20px);
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 4px;
+        border: 1px solid #5c628e;
+        background-color: #2e2e4e;
+        color: #fff;
+        font-size: 14px;
+      }
+      .setup-modal-content button {
+        cursor: pointer;
+        background-color: #4a4a8a;
+      }
+      .setup-modal-content button:hover {
+        background-color: #6a6ad0;
+      }
+      
+      
+      
+      
+      
+      /*
+        PC 版樣式 (螢幕寬度大於 600px 時生效)
+      */
+      @media (min-width: 600px) {
+        .row {
+          flex-direction: row;
+        }
+      }
+      /*
+        手機版樣式 (螢幕寬度小於 600px 時生效)
+      */
+      @media (max-width: 599px) {
+        /* 讓第一排和第三排的區塊並排 */
+        .row:nth-of-type(1),
+        .row:nth-of-type(3) {
+          flex-direction: row;
+          flex-wrap: wrap;
+        }
+        .row:nth-of-type(1) .section,
+        .row:nth-of-type(3) .section {
+          flex: 1 1 calc(50% - 6px); /* 讓兩個區塊平均分配空間 */
+        }
+  
+        /* 確保其他單一區塊的 .row 保持垂直排列 */
+        .row:nth-of-type(2),
+        .row:nth-of-type(4),
+        .row:nth-of-type(5),
+        .row:nth-of-type(6),
+        .row:nth-of-type(7) {
+          flex-direction: column;
+        }
+      }
+      /* ========= 版面佈局：一、三排雙欄，其餘單欄 ========= */
+  
+  /* 所有 row 預設單欄（全寬） */
+  .container > .row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  /* 第 1 排（角色資訊 | 資源）做成左右兩欄 */
+  .container > .row:first-of-type {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  
+  /* 第 3 排（能力值 | 預留區塊）做成左右兩欄 */
+  .container > .row:nth-of-type(3) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  
+  /* 防止內容把卡片撐爆 */
+  .section { min-width: 0; }
+  
+  /* 如需在極窄手機也強制兩欄，就保留；若想超窄時自動一欄，刪掉這段即可 */
+  @media (max-width: 360px) {
+    .container > .row:first-of-type,
+    .container > .row:nth-of-type(3) {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+  }
+  /* 只針對 #rewardBox 作用，其他區塊不受影響 */
+  #rewardBox .reward-stats{
+    display:grid !important;
+    gap:10px !important;
+  }
+  /* 手機單欄、>=600px 兩欄 */
+  @media (min-width:600px){
+    #rewardBox .reward-stats{ grid-template-columns:1fr 1fr; }
+  }
+  
+
+  
+  
+  /* 統一卡片外觀：累積 / 每小時、歷史、道具 */
+  #rewardBox .reward-col,
+  #rewardBox #reward-history,
+  #rewardBox #reward-items{
+    background:#14141e !important;
+    border:1px solid #2b2b3b !important;
+    border-radius:8px !important;
+    padding:10px !important;
+    box-shadow: inset 0 0 4px rgba(0,0,0,.25);
+  }
+  
+  /* 小標題風格（你原本<h2>保留不動） */
+  #rewardBox .reward-col > div:first-child,
+  #rewardBox #reward-items > div:first-child{
+    font-weight:700;
+    color:#e6e8ff;
+    margin-bottom:8px !important;
+    border-bottom:1px dashed #393a4a;
+    padding-bottom:6px;
+  }
+  
+  /* 數值列的字距與對齊 */
+  #rewardBox .reward-col div{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:4px 0;
+    gap:8px;
+  }
+  #rewardBox .reward-col strong{ font-weight:800; color:#fff; }
+  
+  /* 歷史與道具區的滾動高度 */
+  #rewardBox #reward-history{
+    max-height:110px !important;
+    overflow:auto !important;
+    font-size:12px;
+  }
+  #rewardBox #reward-items{
+    max-height:160px !important;
+    overflow:auto !important;
+  }
+  
+  /* 道具網格更整齊 */
+  #rewardBox #reward-items-grid{
+    display:grid !important;
+    grid-template-columns: repeat( auto-fill, minmax(140px, 1fr) ) !important;
+    gap:8px !important;
+  }
+  
+  /* 空狀態行更淡一點 */
+  #rewardBox .empty{ color:#cfd3e1; opacity:.85; }
+  
+  /* 若你想把「近期紀錄」顯示在「道具」上面，什麼都不用動；
+     若想顛倒順序但不改HTML，可用 order（可選） */
+  /* 例：讓道具在上、歷史在下（目前已是這樣，保留作參考）
+  #rewardBox #reward-items{ order:1; }
+  #rewardBox #reward-history{ order:2; }
+  */
+  /* ===== Tabs 基礎 ===== */
+.sys-tabs { margin-top: 8px; }
+.sys-tabs .tablist {
+  display: flex; gap: 6px; align-items: center;
+  border-bottom: 1px solid #333; padding-bottom: 6px;
+}
+.sys-tabs .tab {
+  appearance: none; border: 1px solid #444; background: #1f1f30;
+  color: #fff; padding: 6px 10px; border-radius: 6px 6px 0 0;
+  cursor: pointer; font-weight: 600;
+}
+.sys-tabs .tab.is-active {
+  background: #34344f; border-bottom-color: transparent;
+}
+.sys-tabs .tab:focus-visible { outline: 2px solid #7aa2ff; outline-offset: 2px; }
+
+/* 面板 */
+.sys-tabs .tabpanel { display: none; padding-top: 10px; }
+.sys-tabs .tabpanel.is-active { display: block; }
+
+/* 內容樣式 */
+.resource-stats {
+  display: grid; gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  margin-bottom: 8px; font-size: 14px;
+}
+.btn-grid {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+.sys-btn {
+  padding: 8px 12px; border-radius: 10px; border: 1px solid #4c4c6a;
+  background: #2b2b45; color: #fff; cursor: pointer; font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: transform .04s ease, background .2s;
+}
+.sys-btn:hover { background: #3a3a60; }
+.sys-btn:active { transform: translateY(1px); }
+.sys-btn.highlight {
+  background: #9333ea; border: none; box-shadow: 0 4px 10px rgba(0,0,0,.25);
+}
+
+/* 小螢幕微調 */
+@media (max-width: 520px) {
+  .sys-tabs .tab { padding: 6px 8px; font-size: 14px; }
+  .sys-btn { padding: 10px 12px; }
+}
+.resource-topbar {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  background: rgba(20,20,35,0.9);
+  border-bottom: 1px solid #333;
+  padding: 6px 10px;
+  backdrop-filter: blur(4px);
+}
+.resource-topbar .res {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: #fff;
+}
+.resource-topbar .icon {
+  margin-right: 6px;
+  font-size: 18px;
+}
+/* ===== 頂部資源列 ===== */
+.resource-topbar {
+  position: fixed;        /* 固定在畫面頂端 */
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 9999;          /* 確保在所有內容上層 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  background: rgba(25, 25, 40, 0.92);  /* 半透明背景 */
+  border-bottom: 1px solid #444;
+  backdrop-filter: blur(6px);          /* 毛玻璃效果 */
+  padding: 6px 12px;
+  height: 42px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+/* 個別資源樣式 */
+.resource-topbar .res {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #fff;
+  font-weight: 600;
+  min-width: 100px;
+  justify-content: center;
+}
+.resource-topbar .icon {
+  font-size: 18px;
+}
+.resource-topbar .res.gold span#gold { color: #ffd95e; }
+.resource-topbar .res.gem span#gem { color: #7de9ff; }
+.resource-topbar .res.stone span#stone { color: #cfcfcf; }
+
+/* 避免主內容被遮住：給頂部留出空間 */
+body {
+  padding-top: 48px; /* 根據 .resource-topbar 的高度略加一點空隙 */
+}
+
+/* 手機小調整 */
+@media (max-width: 480px) {
+  .resource-topbar {
+    gap: 10px;
+    height: 40px;
+    font-size: 14px;
+  }
+}
+.resource-topbar {
+  background: linear-gradient(90deg, rgba(25,25,40,0.95), rgba(35,35,55,0.95));
+  animation: topbar-glow 4s linear infinite alternate;
+}
+@keyframes topbar-glow {
+  0% { box-shadow: 0 0 8px rgba(255,255,255,0.1); }
+  100% { box-shadow: 0 0 12px rgba(255,255,255,0.3); }
+}
+
+
+
+/* 數字變化特效：微放大 + 亮一下（極輕量，只用 transform/brightness） */
+.res-change-fx {
+  will-change: transform, filter, opacity;
+  animation: resFlash .30s ease-out;
+}
+@keyframes resFlash {
+  0%   { transform: scale(1);   filter: brightness(1); }
+  40%  { transform: scale(1.10); filter: brightness(1.35); }
+  100% { transform: scale(1);   filter: brightness(1); }
+}
+
+
+/* 變更時閃爍（超輕量） */
+.res-change-fx {
+  will-change: transform, filter, opacity;
+  animation: resFlash .30s ease-out;
+}
+@keyframes resFlash {
+  0%   { transform: scale(1);    filter: brightness(1);   }
+  40%  { transform: scale(1.10); filter: brightness(1.35);}
+  100% { transform: scale(1);    filter: brightness(1);   }
+}
+
+/* 漂浮的 + / − 數字（正值顏色在 JS 設；負值紅色由這裡定義） */
+.res-float {
+  position: fixed;
+  left: 0; top: 0;
+  transform: translate(-50%, 6px);
+  font-weight: 800;
+  font-size: 14px;
+  pointer-events: none;
+  opacity: 0;
+  text-shadow: 0 1px 2px rgba(0,0,0,.35);
+  z-index: 99999;
+  animation: resFloat .6s ease-out forwards;
+}
+.res-float.loss { color: #ff7c7c; }
+
+@keyframes resFloat {
+  0%   { transform: translate(-50%, 6px);  opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translate(-50%, -18px); opacity: 0; }
+}
+
+
+/* === 角色卡 === */
+.profile-card {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #121222;
+  border: 1px solid #2a2a3f;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 標題 */
+.profile-card h2 {
+  font-size: 18px;
+  margin-bottom: 6px;
+  color: #fff;
+}
+
+/* 單行資訊排列 */
+.profile-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  font-size: 15px;
+  color: #ddd;
+}
+
+/* 標籤與值 */
+.profile-row .label { 
+  width: 70px;
+  color: #9da4c6;
+  font-weight: 500;
+}
+.profile-row .value {
+  flex: 1;
+  color: #fff;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 職業列：右側按鈕 */
+.job-row {
+  position: relative;
+}
+.job-btn {
+  margin-left: auto;
+  background: #2e2e4e;
+  border: 1px solid #5c628e;
+  color: #fff;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.job-btn:hover { background: #3b3b63; }
+
+/* 經驗值條 */
+.exp-bar {
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+  margin-top: 4px;
+  appearance: none;
+  background: #1b1b2a;
+  border: 1px solid #333;
+  overflow: hidden;
+}
+.exp-bar::-webkit-progress-value {
+  background: linear-gradient(90deg, #6aa8ff, #9c7cff);
+  border-radius: 999px;
+}
+.exp-bar::-webkit-progress-bar {
+  background: transparent;
+}
+.exp-bar::-moz-progress-bar {
+  background: linear-gradient(90deg, #6aa8ff, #9c7cff);
+  border-radius: 999px;
+}
+
+/* 手機窄螢幕優化 */
+@media (max-width: 480px) {
+  .profile-card { padding: 10px 12px; }
+  .profile-row .label { width: 60px; font-size: 14px; }
+  .profile-row .value { font-size: 14px; }
+  .job-btn { font-size: 13px; padding: 3px 8px; }
+}
+
+
+
+/* —— 主題色系（可改） —— */
+:root{
+  --card-bg:#121222;
+  --card-bd:#2a2a3f;
+  --label:#9da4c6;
+  --text:#e9ecff;
+  --muted:#c9cceb;
+  --btn-bg:#2e2e4e;
+  --btn-bd:#5c628e;
+  --btn-bg-hover:#3a3a60;
+  --exp-track:#1b1b2a;
+  --exp-fill-start:#6aa8ff;
+  --exp-fill-end:#9c7cff;
+  --shadow:0 4px 16px rgba(0,0,0,.25);
+}
+
+/* —— 卡片與標題 —— */
+.section.profile-card{
+  background:var(--card-bg);
+  border:1px solid var(--card-bd);
+  border-radius:12px;
+  padding:14px 16px;
+  box-shadow:var(--shadow);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.section.profile-card h2{
+  margin:0 0 6px 0;
+  font-size:18px;
+  color:#fff;
+  letter-spacing:.5px;
+}
+
+/* —— 單行列：label 固定寬度，value 自動延伸 —— */
+.profile-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:15px;
+  line-height:1.4;
+}
+.profile-row .label{
+  width:70px;                 /* 讓欄對齊 */
+  color:var(--label);
+  font-weight:600;
+}
+.profile-row .value{
+  flex:1;
+  color:var(--text);
+  font-weight:700;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;     /* 名字太長時不換行 */
+}
+
+/* —— 職業列：轉職靠右 —— */
+.job-row .job-btn{
+  margin-left:auto;
+}
+.job-btn{
+  background:var(--btn-bg);
+  border:1px solid var(--btn-bd);
+  color:#fff;
+  border-radius:10px;
+  padding:6px 12px;
+  font-weight:700;
+  cursor:pointer;
+  transition:background .15s ease, transform .05s ease;
+}
+.job-btn:hover{ background:var(--btn-bg-hover); }
+.job-btn:active{ transform:translateY(1px); }
+
+/* —— 等級 & 經驗值條 —— */
+.exp-bar{
+  width:100%;
+  height:14px;
+  border-radius:999px;
+  appearance:none;
+  background:var(--exp-track);
+  border:1px solid #333;
+  overflow:hidden;
+  margin-top:2px;
+}
+.exp-bar::-webkit-progress-bar{ background:transparent; }
+.exp-bar::-webkit-progress-value{
+  background:linear-gradient(90deg,var(--exp-fill-start),var(--exp-fill-end));
+  border-radius:999px;
+}
+.exp-bar::-moz-progress-bar{
+  background:linear-gradient(90deg,var(--exp-fill-start),var(--exp-fill-end));
+  border-radius:999px;
+}
+
+/* —— 細節：行內小分隔線（可選） —— */
+.profile-row + .profile-row{ border-top:1px dashed rgba(255,255,255,.05); padding-top:6px; }
+
+/* —— 手機優化 —— */
+@media (max-width:480px){
+  .section.profile-card{ padding:12px; gap:6px; }
+  .profile-row .label{ width:62px; font-size:14px; }
+  .profile-row .value{ font-size:14px; }
+  .job-btn{ padding:5px 10px; font-size:13px; }
+}
+
+
+
+
+/* 標題與上方操作 */
+.section-stats .section-header{
+  display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;
+}
+.alloc-actions{ display:flex; gap:6px; flex-wrap:wrap; }
+.mini-toggle{
+  padding:4px 8px; font-size:12px; background:#2e2e4e; color:#fff;
+  border:1px solid #5c628e; border-radius:8px; cursor:pointer; font-weight:700;
+}
+.mini-toggle.ghost{ background:#1b1b2b; border:1px dashed #475077; color:#cfe3ff; }
+.mini-toggle:hover{ filter:brightness(1.07); }
+
+/* 可分配點數條 */
+.alloc-header{
+  display:flex; align-items:center; justify-content:space-between;
+  background:#191a2c; border:1px solid #2e2f4a; border-radius:10px;
+  padding:8px 10px; margin-top:4px;
+}
+.alloc-header .label{ color:#9da4c6; font-weight:600; }
+.alloc-header .points{ color:#ffd95e; font-weight:800; font-size:16px; }
+
+/* 分配網格 */
+.alloc-grid{
+  display:grid; gap:8px; margin-top:8px;
+  grid-template-columns: 1fr 1fr; /* 桌機雙欄 */
+}
+@media (max-width:720px){ .alloc-grid{ grid-template-columns: 1fr; } }
+
+/* 每一列 */
+.alloc-row{
+  display:grid; gap:8px; align-items:center;
+  grid-template-columns: 80px 1fr auto; /* 名稱 / 數值 / 按鈕群 */
+  background:#17182a; border:1px solid #2b2f4d; border-radius:10px; padding:8px 10px;
+}
+.attr-name{ color:#cfd3ff; font-weight:800; letter-spacing:.5px; }
+.attr-value{ color:#fff; font-weight:800; font-size:16px; }
+.attr-ops{ display:flex; gap:6px; }
+
+/* 按鈕 */
+.stat-btn{
+  background:#2b2b45; color:#fff; border:1px solid #4c4c6a;
+  border-radius:8px; padding:6px 10px; font-size:12px; cursor:pointer; font-weight:700;
+}
+.stat-btn:hover{ background:#3a3a60; }
+.stat-btn.ghost{
+  background:#1c1c2e; border:1px dashed #4c4c6a; color:#cfd3ff;
+}
+
+/* 戰力條尾 */
+.cp-footer{
+  display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px;
+}
+.cp-value{ font-weight:800; font-size:16px; color:#fff; }
+.cp-actions{ display:flex; gap:6px; }
+.cp-detail{
+  margin-top:8px; padding:8px; background:#1a1a1a; border-radius:8px;
+  font-size:13px; line-height:1.4; color:#ccc;
+}
+
+/* ====== 能力值：Chip 版通用 ====== */
+.stat-chips{
+  display:grid;
+  gap:8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+/* ★ 桌機：穩定鋪滿，不用 column-flow（避免跑版） */
+@media (min-width: 1024px){
+  .stat-chips.two-rows{
+    grid-auto-flow: row;                           /* 安全 */
+    grid-template-columns: repeat(6, minmax(200px, 1fr));
+  }
+}
+
+/* 平板 */
+@media (max-width: 1023.98px){
+  .stat-chips.two-rows{
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
+  }
+}
+
+/* 手機：2 欄 → 1 欄 */
+@media (max-width: 640px){
+  .stat-chips.two-rows{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 420px){
+  .stat-chips,
+  .stat-chips.two-rows{ grid-template-columns: 1fr; }
+}
+
+/* 基本三項（血/盾/魔）可稍寬一點 */
+.basic-chips{
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+/* 單顆 chip */
+.chip-stat{
+  background:#17182a;
+  border:1px solid #2b2f4d;
+  border-radius:10px;
+  padding:8px 10px;
+  color:#cfd3ff;
+  font-size:14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  min-height:40px;                                  /* 視覺一致 */
+  box-sizing:border-box;
+}
+.chip-stat strong{
+  color:#fff;
+  font-weight:800;
+}
+
+/* 橫跨整列（例如：魔力護盾 + 按鈕） */
+.chip-stat.full{ grid-column: 1 / -1; }
+
+/* 內部按鈕（沿用你的按鈕風格） */
+.stat-btn{
+  background:#2b2b45;
+  color:#fff;
+  border:1px solid #4c4c6a;
+  border-radius:8px;
+  padding:6px 10px;
+  font-size:12px;
+  cursor:pointer;
+  font-weight:700;
+}
+.stat-btn.ghost{
+  background:#1c1c2e;
+  border:1px dashed #4c4c6a;
+  color:#cfd3ff;
+}
+.stat-btn:hover{ background:#3a3a60; }
+
+/* ====== 容器保護（避免被子元素撐爆造成跑版） ====== */
+.section, .stat-chips, .chip-stat{ min-width:0; }
+
+
+
+/* ===== 容器保護 ===== */
+.section, .row, .battle-log-wrap, .reward-stats, .reward-items-grid { min-width: 0; }
+.row{ display:flex; gap:12px; flex-wrap:wrap; }
+.section{
+  background:#121222; border:1px solid #2a2a3f; border-radius:12px;
+  padding:12px; box-sizing:border-box;
+}
+
+/* ===== 按鈕與徽章 ===== */
+.btn-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+.btn{
+  background:#2b2b45; color:#fff; border:1px solid #4c4c6a;
+  border-radius:10px; padding:8px 12px; font-weight:800; cursor:pointer;
+  transition:transform .05s ease, filter .15s ease;
+}
+.btn:hover{ filter:brightness(1.07); }
+.btn:active{ transform:translateY(1px); }
+.btn.primary{ background:#3f5bff; border-color:#5d75ff; }
+.btn.danger{ background:#a63446; border-color:#c54559; }
+.btn.ghost{ background:#1c1c2e; border:1px dashed #4c4c6a; color:#cfd3ff; }
+
+.badge{
+  display:inline-block; padding:2px 8px; border-radius:999px;
+  background:#30345a; color:#d7dbff; font-weight:700; font-size:12px;
+}
+
+/* ===== 表單 ===== */
+.form-label-block{ display:block; margin-top:6px; color:#9da4c6; font-weight:700; }
+.form-row{
+  display:grid; gap:8px; align-items:center;
+  grid-template-columns: auto 1fr auto 1fr; /* label/select/label/select */
+  margin:8px 0;
+}
+.form-row.nowrap{ grid-template-columns: 1fr auto; gap:10px; }
+.form-row label{ color:#9da4c6; font-weight:700; }
+.form-row select{
+  background:#15162a; color:#e9ecff; border:1px solid #2a2e4a;
+  border-radius:8px; padding:6px 8px;
+}
+.hint{ color:#ffd95e; font-size:13px; }
+
+/* ===== 怪物清單（可自行用卡片填入） ===== */
+#monsters-box{
+  display:grid; gap:8px; margin:8px 0;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+#monsters-box .monster-card{
+  background:#17182a; border:1px solid #2b2f4d; border-radius:10px; padding:8px;
+  color:#cfd3ff; display:flex; flex-direction:column; gap:6px;
+}
+.monster-name{ font-weight:800; color:#fff; }
+.monster-meta{ font-size:12px; opacity:.85; }
+.hp-bar{ height:8px; border-radius:999px; background:#1b1b2a; overflow:hidden; border:1px solid #333; }
+.hp-bar .fill{ height:100%; background:linear-gradient(90deg,#ff6a6a,#ffc46a); }
+
+/* ===== 獎勵紀錄 ===== */
+.reward-title{
+  display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 6px 0;
+}
+.mini-toggle{
+  padding:4px 8px; font-size:12px; background:#2e2e4e; color:#fff;
+  border:1px solid #5c628e; border-radius:8px; cursor:pointer; font-weight:800;
+}
+.mini-toggle:hover{ filter:brightness(1.07); }
+
+.reward-stats{ display:grid; gap:8px; grid-template-columns: 1fr; }
+.reward-col{
+  background:#16172a; border:1px solid #2a2e4a; border-radius:10px; padding:8px 10px;
+  color:#cfd3ff;
+}
+.reward-col-title{ font-weight:800; margin-bottom:4px; color:#e9ecff; }
+
+.reward-items{
+  max-height:160px; overflow:auto; background:#111; padding:8px; border-radius:10px;
+  border:1px solid #262626; margin-top:6px;
+}
+.reward-items-title{ font-weight:800; margin-bottom:6px; color:#e9ecff; }
+.reward-items-grid{
+  display:grid; gap:8px; grid-template-columns: repeat( auto-fill, minmax(120px, 1fr) );
+}
+.reward-items-grid .empty{ opacity:.7; }
+
+.reward-history{
+  max-height:120px; overflow:auto; background:#111; padding:8px; border-radius:10px;
+  border:1px solid #262626; font-size:12px; color:#cfd3ff; margin-top:6px;
+}
+.reward-history .empty{ opacity:.7; }
+
+/* ===== 技能控制區 ===== */
+.panel{
+  background:#121222; border:1px solid #2a2a3f; border-radius:12px; overflow:hidden;
+}
+.panel-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 10px; background:linear-gradient(180deg,#191a2f,#141528); border-bottom:1px solid #22253f;
+  color:#e9ecff; font-weight:800;
+}
+.panel-header .toggle-btn{
+  background:#2b2b45; color:#fff; border:1px solid #4c4c6a; border-radius:8px; padding:4px 8px; cursor:pointer;
+}
+.panel-body{ padding:10px; }
+.skill-grid{ display:grid; gap:8px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+
+/* ===== 怪物資訊 ===== */
+#monsterInfo{
+  background:#17182a; border:1px solid #2b2f4d; border-radius:10px; padding:10px; color:#cfd3ff;
+}
+
+/* ===== 戰鬥 Log ===== */
+.battle-log-wrap{
+  display:grid; gap:10px; margin-top:10px;
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 800px){
+  .battle-log-wrap{ grid-template-columns: 1fr; }
+}
+.battle-log-col{
+  background:#121222; border:1px solid #2a2a3f; border-radius:12px; overflow:hidden;
+  display:flex; flex-direction:column; min-height:180px;
+}
+.battle-log-title{
+  padding:8px 10px; background:#18192f; border-bottom:1px solid #23264b;
+  color:#e9ecff; font-weight:800; display:flex; align-items:center; justify-content:space-between;
+}
+.battle-log-title .aps{ font-size:12px; opacity:.8; margin-left:.5em; }
+.battle-log{
+  padding:8px 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size:12px; color:#dbe0ff; height:240px; overflow:auto; background:#0e0f1c;
+}
+.battle-log .hit  { color:#8fe388; }
+.battle-log .crit { color:#ffd95e; font-weight:800; }
+.battle-log .miss { color:#ff7c7c; }
+
+/* ===== APS 進度條 ===== */
+.aps-bar{
+  position:relative;
+  flex:1;
+  height:6px;
+  background:#2a2a40;
+  border-radius:999px;
+  margin:0 6px;
+  overflow:hidden;
+}
+.aps-fill{
+  position:absolute;
+  top:0; left:0; height:100%;
+  background:linear-gradient(90deg,#6aa8ff,#9c7cff);
+  width:0%; transition:width .2s ease;
+}
+.aps-value{
+  font-size:12px;
+  color:#ffd95e;
+  min-width:48px;
+  text-align:right;
+  font-weight:700;
+}
+
+
+/* ===== Utils ===== */
+.is-hidden { display: none !important; }
+.muted { opacity: .7; }
+.num {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ===== 共用條樣式基底 ===== */
+.bar {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #202236;
+  border: 1px solid #2b2f4d;
+}
+.bar-fill, .bar-chip, .bar-guard { position:absolute; inset:0 auto 0 0; width:0%; }
+
+/* ===== HP 樣式 ===== */
+.hp-wrap { margin: 6px 0 2px 0; }
+.hp-label {
+  display:flex; justify-content:space-between; align-items:center;
+  font-weight:700; color:#e9ecff; margin-bottom:4px;
+}
+.hp-label .num { opacity:.9; }
+
+/* HP 主條（彩色） */
+.hp-bar .bar-fill {
+  z-index: 2;
+  background: linear-gradient(90deg, #61d26f, #b5ff6a); /* high 預設 */
+  transition: width .12s linear;
+}
+.hp-bar .bar-fill.mid { background: linear-gradient(90deg, #ff9a3b, #ffd56a); }
+.hp-bar .bar-fill.low { background: linear-gradient(90deg, #ff3b3b, #ff9a6a); }
+
+/* HP 白色殘影 */
+.hp-bar .bar-chip {
+  z-index: 3;
+  background: linear-gradient(90deg, rgba(255,255,255,.75), rgba(255,255,255,.35));
+  box-shadow: 0 0 8px rgba(255,255,255,.25);
+  transition: width .28s ease;
+  mix-blend-mode: screen;
+  opacity: .9;
+}
+
+/* 受擊閃爍（套在 .hp-bar） */
+.hp-hit .bar-fill {
+  animation: hpHitFlash .28s ease-out;
+}
+@keyframes hpHitFlash {
+  0%   { filter: brightness(1);   box-shadow: none; }
+  30%  { filter: brightness(1.25); box-shadow: 0 0 12px rgba(255,255,255,.35) inset; }
+  100% { filter: brightness(1);   box-shadow: none; }
+}
+
+/* ===== 護盾條樣式（獨立一條、可被扣） ===== */
+.sh-wrap { margin: 8px 0 4px 0; }
+.sh-label {
+  display:flex; justify-content:space-between; align-items:center;
+  font-weight:700; color:#cfe7ff; margin-bottom:4px; font-size: 13px;
+}
+.sh-label .num { opacity:.9; }
+
+/* 護盾主條（藍色） */
+.sh-bar .bar-fill {
+  z-index: 2;
+  background: linear-gradient(90deg, #5aa0ff, #a0dcff);
+  transition: width .14s ease;
+}
+
+/* 護盾白色殘影（偏藍） */
+.sh-bar .bar-chip {
+  z-index: 3;
+  background: linear-gradient(90deg, rgba(210,235,255,.85), rgba(160,220,255,.45));
+  box-shadow: 0 0 8px rgba(160,220,255,.25);
+  transition: width .32s ease;
+  mix-blend-mode: screen;
+  opacity: .95;
+}
+
+/* 護盾受擊閃爍 */
+.sh-hit .bar-fill {
+  animation: shHitFlash .28s ease-out;
+}
+@keyframes shHitFlash {
+  0%   { filter: brightness(1); }
+  35%  { filter: brightness(1.3); }
+  100% { filter: brightness(1); }
+}
+
+
+
+/* ===== Skill Detail 基本樣式 ===== */
+
+.skill-detail-line {
+  margin-bottom: 4px;
+}
+
+.skill-detail-head {
+  font-weight: 700;
+  margin-bottom: 2px;
+  padding-bottom: 2px;
+  border-bottom: 1px dashed rgba(255,255,255,0.2);
+  font-size: 14px;
+}
+
+.skill-detail-item {
+  font-size: 13px;
+  padding: 1px 0;
+}
+
+/* 數字本身的樣式（基礎） */
+.skill-detail-dmg {
+  font-weight: 600;
+}
+
+/* ===== Tag 標籤樣式 ===== */
+
+.skill-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* 一般命中 */
+.skill-tag-normal {
+  background: rgba(255,255,255,0.08);
+  color: #dddddd;
+}
+
+/* 爆擊 */
+.skill-tag-crit {
+  background: rgba(255, 215, 0, 0.25);
+  color: #ffe27a;
+  border: 1px solid rgba(255, 215, 0, 0.6);
+}
+
+/* 秒殺 */
+.skill-tag-kill {
+  background: rgba(255, 80, 80, 0.3);
+  color: #ffb3b3;
+  border: 1px solid rgba(255, 80, 80, 0.7);
+}
+
+/* 溢傷（如果啟用的話） */
+.skill-tag-overkill {
+  background: rgba(120, 200, 255, 0.25);
+  color: #d0f0ff;
+  border: 1px solid rgba(120, 200, 255, 0.7);
+}
+
+/* ===== 行整體加強效果：爆擊 / 秒殺 ===== */
+
+/* 爆擊：數字高亮 + 整行稍微提亮 */
+.skill-detail-item.is-crit .skill-detail-dmg {
+  color: #ffe27a;
+  text-shadow: 0 0 4px rgba(255, 215, 0, 0.7);
+}
+
+.skill-detail-item.is-crit {
+  background: radial-gradient(circle at left, rgba(255, 215, 0, 0.12), transparent);
+}
+
+/* 秒殺：紅色高亮 */
+.skill-detail-item.is-kill .skill-detail-dmg {
+  color: #ff8f8f;
+  text-shadow: 0 0 6px rgba(255, 80, 80, 0.9);
+}
+
+.skill-detail-item.is-kill {
+  background: radial-gradient(circle at left, rgba(255, 80, 80, 0.12), transparent);
+}
+
+
+/* 轉職選擇面板外層 */
+.job-change-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.job-change-modal.hidden {
+  display: none;
+}
+
+/* 內層卡片容器 */
+.job-change-modal-content {
+  background: #1e1e1e;
+  border-radius: 10px;
+  padding: 16px;
+  max-width: 420px;
+  width: 90%;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.job-change-modal-content h2 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+}
+
+.job-change-modal-subtitle {
+  margin: 0 0 12px 0;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* 小方塊網格 */
+.job-change-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* 單一職業卡片 */
+.job-card {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 8px;
+  text-align: left;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+}
+
+.job-card:hover {
+  border-color: #ffa726;
+  background: #333333;
+  transform: translateY(-1px);
+}
+
+.job-card-name {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.job-card-desc {
+  font-size: 12px;
+  line-height: 1.3;
+  opacity: 0.9;
+}
+
+/* 取消按鈕 */
+.job-change-cancel-btn {
+  width: 100%;
+  padding: 6px 0;
+  border-radius: 6px;
+  border: none;
+  background: #555;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  transition: background-color 0.15s ease;
+}
+
+.job-change-cancel-btn:hover {
+  background: #777;
+}
+
+#market-status-text {
+  white-space: nowrap;
+}
+
+.market-day-segment {
+  color: #ffffff;
+}
+
+.market-phase-segment.market-open {
+  color: #4ade80;
+}
+
+.market-phase-segment.market-closed {
+  color: #94a3b8;
+}
+
+.market-dividend-segment.market-dividend-yes {
+  color: #facc15;
+}
+
+.market-dividend-segment.market-dividend-no {
+  color: #e5e7eb;
+}
+
+.market-status-sep {
+  color: #94a3b8;
+  margin: 0 2px;
+}
+
+#market-status-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.market-day-segment {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.market-phase-segment.market-open {
+  color: #4ade80;
+}
+
+.market-phase-segment.market-closed {
+  color: #94a3b8;
+}
+
+.market-dividend-segment.market-dividend-yes {
+  color: #facc15;
+}

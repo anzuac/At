@@ -1,0 +1,502 @@
+/* 版面：左右兩欄（手機會自動併成上下） */
+.battle-log-wrap {
+  display: flex;
+  gap: 10px;
+  height: 280px;
+}
+
+.battle-log-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  background: #111827;
+}
+
+.battle-log-title {
+  font-size: 14px;
+  font-weight: bold;
+  padding: 6px;
+  text-align: center;
+  border-bottom: 1px solid #374151;
+  color: #e5e7eb;
+}
+
+/* 滾動區：正常 column，配合 JS 的 prepend() → 最新顯示最上面 */
+.battle-log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;   /* ← 這裡要 column，別用 column-reverse */
+  gap: 6px;
+}
+
+/* 基礎泡泡外觀 */
+.log-entry {
+  padding: 6px 10px;
+  border-radius: 10px;
+  line-height: 1.25;
+  box-shadow: 0 1px 0 rgba(0,0,0,.25);
+}
+
+/* 對齊方向 */
+.player-log .log-entry  { align-self: flex-start; text-align: left; }
+.monster-log .log-entry { align-self: flex-end;   text-align: right; }
+
+/* —— 色系 —— */
+/* 玩家 普攻 */
+.player-log .log-entry.normal {
+  background: #1e40af; border: 1px solid #60a5fa; color: #e0f2fe;
+}
+/* 玩家 技能 */
+.player-log .log-entry.skill {
+  background: #4c1d95; border: 1px solid #a78bfa; color: #ede9fe; font-weight: 600;
+}
+/* 玩家 擊敗/獎勵 */
+.player-log .log-entry.reward {
+  background: #78350f; border: 1px solid #facc15; color: #fef9c3; font-weight: 700;
+}
+
+/* 怪物 普攻 */
+.monster-log .log-entry.normal {
+  background: #7f1d1d; border: 1px solid #f87171; color: #fee2e2;
+}
+/* 怪物 技能 */
+.monster-log .log-entry.skill {
+  background: #7c2d12; border: 1px solid #fb923c; color: #fff7ed; font-weight: 600;
+}
+/* 玩家 爆擊 */
+.player-log .log-entry.critical {
+  background: #78350f;       /* 深金棕 */
+  border: 1px solid #fbbf24; /* 金黃色邊框 */
+  color: #fef3c7;            /* 米黃色字體 */
+  font-weight: 700;
+}
+
+/* 怪物 爆擊 */
+.monster-log .log-entry.critical {
+  background: #7f1d1d;       /* 暗紅 */
+  border: 1px solid #f87171; /* 鮮紅邊框 */
+  color: #fee2e2;            /* 淡紅字體 */
+  font-weight: 700;
+}
+
+
+
+/* =============== 生命套裝（外觀樣式）================ */
+.life-card{
+  transition: box-shadow .25s ease, border-color .25s ease;
+}
+
+.life-title{
+  font-weight: 800;
+  letter-spacing: .3px;
+}
+
+.life-badge{
+  display:inline-block;
+  padding:2px 8px;
+  border-radius:999px;
+  font-size:12px;
+  line-height:18px;
+}
+
+/* —— 生命女神祝福（突破4）專屬外觀 —— */
+.life-goddess{
+  border-color:#34d399 !important; /* 青翠綠主線 */
+  box-shadow:
+    0 0 12px 3px rgba(52,211,153,0.45),
+    0 0 25px 8px rgba(16,185,129,0.25),
+    0 0 60px 15px rgba(16,185,129,0.20);
+  position:relative;
+  background: radial-gradient(circle at 50% 15%, rgba(34,197,94,0.08) 0%, rgba(15,23,42,1) 60%);
+}
+
+.life-goddess .life-title{
+  background:linear-gradient(90deg,#a7f3d0,#34d399,#10b981);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  text-shadow:0 0 12px rgba(52,211,153,0.45);
+}
+
+/* 「女神祝福」徽章 */
+.life-goddess .life-badge--goddess{
+  background:linear-gradient(90deg,#6ee7b7,#34d399,#10b981);
+  color:#0b1220;
+  border:1px solid rgba(17,24,39,.4);
+  box-shadow:0 0 12px rgba(52,211,153,.45);
+}
+
+/* 頂部柔光帶 */
+.life-goddess::before{
+  content:"";
+  position:absolute; inset:0 0 auto 0; height:2px;
+  background:linear-gradient(90deg,transparent,#6ee7b7,transparent);
+  opacity:.95;
+  border-top-left-radius:12px; border-top-right-radius:12px;
+}
+
+/* 🌿 柔和律動光暈 */
+@keyframes lifeGlow {
+  0% {
+    box-shadow:
+      0 0 10px 2px rgba(34,197,94,0.35),
+      0 0 30px 8px rgba(16,185,129,0.25),
+      0 0 70px 20px rgba(16,185,129,0.15);
+  }
+  50% {
+    box-shadow:
+      0 0 18px 4px rgba(52,211,153,0.55),
+      0 0 45px 15px rgba(34,197,94,0.35),
+      0 0 100px 30px rgba(34,197,94,0.25);
+  }
+  100% {
+    box-shadow:
+      0 0 10px 2px rgba(34,197,94,0.35),
+      0 0 30px 8px rgba(16,185,129,0.25),
+      0 0 70px 20px rgba(16,185,129,0.15);
+  }
+}
+.life-goddess{
+  animation:lifeGlow 3s ease-in-out infinite;
+}
+
+/* 使用者偏好：減少動態則關閉 */
+@media (prefers-reduced-motion: reduce){
+  .life-goddess{ animation:none; }
+}
+/* —— 套裝說明卡（setDesc）發光版 —— */
+.life-set-banner--goddess{
+  border-color:#34d399 !important; /* 強化外框色 */
+  box-shadow:
+    0 0 14px 4px rgba(52,211,153,0.50),
+    0 0 38px 12px rgba(16,185,129,0.32),
+    0 0 110px 40px rgba(16,185,129,0.22);
+  position:relative;
+  background:
+    radial-gradient(circle at 50% 15%, rgba(34,197,94,0.10) 0%, rgba(11,18,32,1) 60%),
+    #0b1220;
+}
+.life-set-banner--goddess::before{
+  content:"";
+  position:absolute; inset:0 0 auto 0; height:2px;
+  background:linear-gradient(90deg,transparent,#6ee7b7,transparent);
+  opacity:.95;
+  border-top-left-radius:12px; border-top-right-radius:12px;
+}
+.life-set-banner--goddess{
+  animation:lifeGlow 3s ease-in-out infinite; /* 沿用原本 lifeGlow 動畫 */
+}
+@media (prefers-reduced-motion: reduce){
+  .life-set-banner--goddess{ animation:none; }
+}
+
+
+
+/* skill panel layout */
+#skillStatus {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* 區塊標題 */
+.skill-group {
+  margin-bottom: 8px;
+}
+
+.skill-group-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+  padding: 2px 4px;
+  border-left: 3px solid #999;
+}
+
+/* grid 容器 */
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 4px;
+}
+
+/* 卡片本體 */
+.skill-card {
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* 卡片區塊 */
+.skill-card-header {
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.skill-card-body {
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.skill-card-footer {
+  text-align: right;
+}
+
+/* 按鈕 */
+.skill-btn.support-skill-btn {
+  font-size: 11px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.skill-btn.support-skill-btn[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+    
+    
+    
+    /* 外框 */
+.pp-summary-card {
+  margin-top: 10px;
+  background: #020617;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.pp-summary-title {
+  font-weight: 900;
+  margin-bottom: 8px;
+  color: #93c5fd;
+}
+
+/* 左右容器：固定左右，寬不夠可橫向滑動 */
+.pp-summary-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+/* 一個欄位（核心 / 潛能） */
+.pp-summary-col {
+  flex: 0 0 50%;
+  min-width: 0;
+}
+
+/* 欄位標題 */
+.pp-summary-col-title {
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+/* 顏色區分：核心 = 藍，潛能 = 橘 */
+.pp-summary-core .pp-summary-col-title {
+  color: #38bdf8;
+}
+
+.pp-summary-pot .pp-summary-col-title {
+  color: #fb923c;
+}
+
+/* 內部使用「方格」呈現屬性 */
+.pp-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+/* 每一格 */
+.pp-summary-cell {
+  background: #020617;
+  border-radius: 8px;
+  padding: 4px 6px;
+  border: 1px solid #1f2937;
+  font-size: 11px;
+}
+
+/* 標籤 / 數值 */
+.pp-summary-cell-label {
+  opacity: 0.75;
+}
+
+.pp-summary-cell-value {
+  font-weight: 700;
+}
+
+/* 數值 = 0 時變淡，>0 用亮色 */
+.pp-summary-cell.zero .pp-summary-cell-value {
+  opacity: 0.4;
+}
+
+.pp-summary-core .pp-summary-cell.nonzero .pp-summary-cell-value {
+  color: #38bdf8;
+}
+
+.pp-summary-pot .pp-summary-cell.nonzero .pp-summary-cell-value {
+  color: #fb923c;
+}
+
+
+
+.spd-wrap {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+.spd-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+.spd-bar {
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(255,255,255,.08);
+}
+.spd-bar .spd-fill {
+  height: 100%;
+}
+
+/* 多體卡片樣式（之前提過那套） */
+.multi-monster-header {
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.multi-monster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+.monster-card {
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  background: rgba(0,0,0,.35);
+}
+.monster-card.is-selected {
+  border-color: #ffd54f;
+  box-shadow: 0 0 0 1px rgba(255,213,79,.4);
+}
+.mc-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+.mc-name {
+  font-weight: 600;
+}
+.mc-level {
+  opacity: .8;
+}
+.mc-hp-bar {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,.08);
+  overflow: hidden;
+  margin: 2px 0 4px;
+}
+.mc-hp-fill {
+  height: 100%;
+  width: 0;
+  background: #4caf50;
+}
+.mc-line {
+  opacity: .9;
+}
+.mc-def {
+  font-size: 11px;
+  opacity: .8;
+}
+
+
+
+
+
+/* --- 戰鬥紀錄父層 --- */
+.battle-log-wrap {
+  width: 100%;
+  display: grid;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+/* --- Grid 版本（三格上 + 一格下）--- */
+.battle-log-grid {
+  grid-template-columns: 1fr 1fr; /* 上排左右 */
+  grid-template-rows: auto auto; /* 上排+下排 */
+}
+
+/* 上排 2 個區塊（玩家 + 技能詳情） */
+.player-log,
+.skill-detail-log {
+  min-height: 270px;  /* <<<<< 調整高度 */
+}
+
+/* 下排怪物欄位 */
+.monster-log {
+  grid-column: 1 / span 2; /* 佔整排 */
+  min-height: 160px; /* <<<<< 怪物欄位變高 */
+}
+
+/* --- 共同框樣式 --- */
+.battle-log-col {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+/* 標題區 */
+.battle-log-title {
+  font-size: 17px;   /* 原本可能 14~15 → 放大 */
+  font-weight: 700;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Log 主內容 */
+.battle-log {
+  max-height: 260px;  /* <<<<< 主要內容區高度提升 */
+  overflow-y: auto;
+  font-size: 15px;    /* 字體放大 */
+  line-height: 1.4;
+  padding-right: 4px;
+}
+
+/* 技能詳情額外調整（通常內容量較多） */
+.skill-detail-log .battle-log {
+  max-height: 300px;   /* <<<<< 技能詳情更高 */
+}
+
+/* 每條 log 行 */
+.battle-log-line {
+  margin-bottom: 4px;
+}
+
+/* 技能詳情強調數字 */
+.skill-detail-dmg {
+  color: #ffdd66;
+  font-weight: bold;
+}
+
+/* 清除按鈕 */
+.skill-detail-clear-btn {
+  background:#444;
+  color:white;
+  padding:2px 6px;
+  border-radius:4px;
+  font-size:13px;
+}
+

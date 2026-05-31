@@ -1,0 +1,62 @@
+/* =======================
+   skill_panel.css
+   技能控制區樣式（與既有 .panel/.panel-header/.panel-body 相容）
+   ======================= */
+
+.skill-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 每個技能列 */
+.skill-row {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  padding: 8px;
+}
+.skill-row--no-mp { opacity: 0.85; }
+
+/* 標題行 */
+.skill-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.skill-name { font-weight: 600; }
+.skill-meta { font-size: 12px; opacity: 0.9; }
+
+/* MP 不足徽章 */
+.skill-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #a33;
+  color: #fff;
+  margin-left: 8px;
+}
+
+/* 進度條 */
+.skill-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.skill-bar {
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.1);
+}
+.skill-bar .skill-bar-fill {
+  height: 100%;
+  transition: width .25s linear;
+}
+
+/* 顏色：CD / Buff */
+.skill-bar.cd   .skill-bar-fill { background: rgba(90,160,255,0.9); }
+.skill-bar.buff .skill-bar-fill { background: rgba(60,200,120,0.9); }

@@ -1,0 +1,2992 @@
+/*
+
+內部版本6.0
+ * equip_system_v4_1_es5.js — 裝備系統 v4.1（ES5 / 外掛模組 / 潛能等級累積只升不降 / SLR 動態外框）
+ 
+ * 依賴：StarforceTableV1, ScrollForgeV2, EquipStatsV2, PotentialCoreV21
+ * 儲存：localStorage('EQUIP_SYS_STANDALONE_V2')
+ */
+
+(function (global) {
+  'use strict';
+
+  // ==== 依賴警告 ====
+  (function(){
+    if (!global.StarforceTableV1) console.warn('[equip_v4.1] Missing StarforceTableV1');
+    if (!global.ScrollForgeV2)     console.warn('[equip_v4.1] Missing ScrollForgeV2');
+    if (!global.EquipStatsV2)      console.warn('[equip_v4.1] Missing EquipStatsV2');
+    if (!global.PotentialCoreV21)  console.warn('[equip_v4.1] Missing PotentialCoreV21');
+    if (!global.FlameCore)        console.warn('[equip_v4.1] Missing FlameCore');
+  })();
+
+  // === 潛能徽章樣式（含 SLR 動態） ===
+  (function injectPotentialBadgeCSS(){
+    if (document.getElementById('potential-badge-style')) return;
+    var css = "\n  .tier-badge{display:inline-flex;align-items:center;justify-content:center;\n    padding:2px 8px;border-radius:999px;font:700 12px/1 ui-monospace,monospace;\n    border:1px solid #2d3a4d;background:#0f172a;color:#e5e7eb}\n  .tier-R   {color:#d1d5db;border-color:#374151;background:#1f2937}\n  .tier-SR  {color:#60a5fa;border-color:#1e40af;background:#0b2555}\n  .tier-SSR {color:#a78bfa;border-color:#4c1d95;background:#25104a}\n  .tier-UR  {color:#34d399;border-color:#065f46;background:#062b23}\n  .tier-LR  {color:#fbbf24;border-color:#92400e;background:#2b1803}\n  /* SLR：彩色外框＋動態發光 */\n  .tier-SLR{\n    color:#fff;border:2px solid transparent;background:#0b1220;\n    background-image:linear-gradient(#0b1220,#0b1220),\n      linear-gradient(90deg,#ff5,#f0f,#6ff);\n    background-origin:border-box;background-clip:padding-box,border-box;\n    box-shadow:0 0 0 rgba(255,255,255,.6); animation:slrGlow 1.2s linear infinite;\n  }\n  @keyframes slrGlow{\n    0%{ box-shadow:0 0 0px rgba(255,255,255,.6); }\n    50%{ box-shadow:0 0 16px rgba(255,255,255,.95); }\n    100%{ box-shadow:0 0 0px rgba(255,255,255,.6); }\n  }\n  .pot-sparkle{animation:potSparkle 700ms ease-out 1;}\n  @keyframes potSparkle{0%{transform:scale(1);filter:brightness(1);}40%{transform:scale(1.02);filter:brightness(1.35);}100%{transform:scale(1);filter:brightness(1);}}";
+    var s=document.createElement('style'); s.id='potential-badge-style'; s.textContent=css;
+    document.head.appendChild(s);
+  })();
+  // === v8: 裝備外框樣式（內建，不依賴外部 CSS） ===
+  (function injectEquipTierBorderCSS(){
+    if (document.getElementById('equip-tier-border-style')) return;
+    var css = ""
+      + "\n  .border-ur{box-shadow:0 0 6px rgba(255,152,0,.75);}"
+      + "\n  .border-lr{box-shadow:0 0 8px rgba(255,87,34,.78);}"
+      + "\n  .border-slr-rainbow{position:relative;border-radius:12px;}"
+      + "\n  .border-slr-rainbow::before{content:'';position:absolute;inset:-2px;padding:2px;border-radius:inherit;"
+      + "background:linear-gradient(270deg,#ff004c,#ff8a00,#ffe600,#2bff00,#00ffd5,#0066ff,#b300ff,#ff004c);"
+      + "background-size:400% 400%;animation:slrRainbowFlow 2.8s linear infinite;"
+      + "-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;"
+      + "mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;"
+      + "filter:saturate(1.25) brightness(1.15);"
+      + "box-shadow:0 0 10px rgba(255,255,255,.18),0 0 16px rgba(255,255,255,.10);"
+      + "pointer-events:none;z-index:2;}"
+      + "\n  .border-slr-rainbow>*{position:relative;z-index:3;}"
+      + "\n  @keyframes slrRainbowFlow{0%{background-position:0% 50%;}100%{background-position:100% 50%;}}"
+      + "\n  .border-slr-rainbow:hover::before{animation-duration:1.1s;filter:saturate(1.45) brightness(1.22);"
+      + "box-shadow:0 0 14px rgba(255,255,255,.22),0 0 22px rgba(255,255,255,.14);}"
+      + "\n  .is-selected.border-slr-rainbow,.selected.border-slr-rainbow,.active.border-slr-rainbow,"
+      + "[aria-selected='true'].border-slr-rainbow,[data-selected='1'].border-slr-rainbow{animation:slrPulse 1.25s ease-in-out infinite;}"
+      + "\n  @keyframes slrPulse{0%,100%{transform:translateZ(0) scale(1);}50%{transform:translateZ(0) scale(1.02);}}"
+      + "\n  .slr-activate{animation:slrActivatePop 650ms ease-out 1;}"
+      + "\n  @keyframes slrActivatePop{0%{transform:scale(.92);}55%{transform:scale(1.06);}100%{transform:scale(1);}}"
+      + "\n  .slr-activate.border-slr-rainbow::before{animation-duration:.75s;filter:saturate(1.65) brightness(1.35);"
+      + "box-shadow:0 0 18px rgba(255,255,255,.28),0 0 32px rgba(255,255,255,.18);}"
+    ;
+    var st = document.createElement('style');
+    st.id = 'equip-tier-border-style';
+    st.textContent = css;
+    document.head.appendChild(st);
+  })();
+
+
+
+  // ==== 工具 ====
+  function isNum(n){ return typeof n==='number' && isFinite(n); }
+  function toInt(n){ n=Number(n); return isFinite(n)?Math.floor(n):0; }
+  function clone(o){ try{return JSON.parse(JSON.stringify(o||{}));}catch(_){return {}; } }
+  function fmt(n){ return Number(n||0).toLocaleString(); }
+  function nz(n){ return (typeof n==='number' && isFinite(n)) ? n : 0; }
+
+  // ==== 套裝部位清單（動態）====
+  // 目標：未來新增任何部位時，套裝系統/顯示可自動抓到，不需要維護 SET_TYPES。
+  // 規則：
+  // 1) 若外部有提供 global.SET_TYPES（手動覆蓋）→ 使用它
+  // 2) 否則優先使用當前存檔 st.equips 的所有 key
+  // 3) 若 st 不可用，則退回 DEF_BASE 的 key（初始化後可用）
+  function resolveSetTypes(st){
+    var keys = null;
+
+    if (global.SET_TYPES && Object.prototype.toString.call(global.SET_TYPES) === '[object Array]') {
+      keys = global.SET_TYPES.slice();
+    } else if (st && st.equips) {
+      keys = [];
+      for (var k in st.equips) if (st.equips.hasOwnProperty(k)) keys.push(k);
+    } else if (typeof DEF_BASE === 'object' && DEF_BASE) {
+      keys = [];
+      for (var k2 in DEF_BASE) if (DEF_BASE.hasOwnProperty(k2)) keys.push(k2);
+    } else {
+      keys = [];
+    }
+
+    // 排序：若有 DEF_ORDER（後面會定義），就照 DEF_ORDER；其餘照字母
+    if (keys && keys.length){
+      keys.sort(function(a,b){
+        var ia = (typeof DEF_ORDER!=='undefined' && DEF_ORDER && DEF_ORDER.indexOf) ? DEF_ORDER.indexOf(a) : -1;
+        var ib = (typeof DEF_ORDER!=='undefined' && DEF_ORDER && DEF_ORDER.indexOf) ? DEF_ORDER.indexOf(b) : -1;
+        if (ia === -1) ia = 9999;
+        if (ib === -1) ib = 9999;
+        if (ia !== ib) return ia - ib;
+        return String(a).localeCompare(String(b));
+      });
+    }
+    return keys;
+  }
+
+  // 舊版相容：避免仍有殘留函式引用 SET_RULES 時拋出錯誤
+  //（新套裝邏輯已改用 SET_RULES_V2 / computeSetBonusV2）
+  var SET_RULES = global.SET_RULES || {};
+  global.SET_RULES = SET_RULES;
+
+  // ==== 顏色 ====
+  var THEME = {
+    cardBg:"#0b1220", cardBorder:"#203048", cardShadow:"0 6px 20px rgba(0,0,0,.35)",
+    text:"#e5e7eb", pillBg:"#0f172a", pillBorder:"#2a364b", pillActiveBg:"#1d4ed8", pillActiveBorder:"#2b3f8f",
+    success:"#22c55e", warn:"#f59e0b", blue:"#3b82f6", neg:"#ef4444", zero:"#94a3b8"
+  };
+  var TIER_COLOR = {
+    R:{ border:"#334155", badge:"#93a3b8", text:"#e5e7eb", glow:"0 0 0 0 rgba(0,0,0,0)" },
+    SR:{ border:"#2563eb", badge:"#60a5fa", text:"#eaf2ff", glow:"0 0 0 2px rgba(37,99,235,.25)" },
+    SSR:{ border:"#7c3aed", badge:"#a78bfa", text:"#f3e8ff", glow:"0 0 0 2px rgba(124,58,237,.25)" },
+    UR:{ border:"#f59e0b", badge:"#fbbf24", text:"#fff7e6", glow:"0 0 0 2px rgba(245,158,11,.25)" },
+    LR:{ border:"#f43f5e", badge:"#fb7185", text:"#fff1f3", glow:"0 0 0 2px rgba(244,63,94,.25)" },
+    SLR:{ border:"#ffffff", badge:"#ffffff", text:"#ffffff", glow:"0 0 16px rgba(255,255,255,.65)" }
+  };
+
+  // ==== 星數顏色（UI）====
+  function starColor(star){
+    star = toInt(star);
+    if (star <= 0) return THEME.zero;
+    if (star < 5)  return THEME.blue;
+    if (star < 10) return THEME.success;
+    if (star < 15) return '#a78bfa';   // 紫
+    if (star < 20) return THEME.warn;
+    return '#fbbf24';                  // 金
+  }
+  function starGlow(star){
+    star = toInt(star);
+    if (star <= 0) return 'none';
+    if (star < 10) return '0 0 10px rgba(59,130,246,.18)';
+    if (star < 15) return '0 0 12px rgba(34,197,94,.18)';
+    if (star < 20) return '0 0 14px rgba(167,139,250,.22)';
+    return '0 0 18px rgba(251,191,36,.25)';
+  }
+
+  var TIER_ORDER = { R:0, SR:1, SSR:2, UR:3, LR:4, SLR:5 };
+
+  // ==== v7: 職業對應命名（生成=N名 / 升階換名） + UR以上才改外框（SLR 使用外部 CSSv2 彩虹流動） ====
+  // ※ 職業來源：player.job（warrior/mage/archer/thief），你的專案已 window.jobs = jobs
+  var TIER_TEXT_COLOR = { N:"#9aa0a6", R:"#4caf50", SR:"#2196f3", SSR:"#9c27b0", UR:"#ff9800", LR:"#ff5722", SLR:"#ffd700" };
+  var TIER_BORDER_CLASS = { UR:"border-ur", LR:"border-lr", SLR:"border-slr-rainbow" }; // 內建：UR/LR光暈；SLR霓虹流動外框(僅外框)
+
+  var EQUIP_NAME_TABLE = {
+  warrior: {
+    hat: { N:'制式頭盔', R:'鋼盔', SR:'戰衛鋼盔', SSR:'王衛戰盔', UR:'誓約戰盔', LR:'古戰王盔', SLR:'終局王冠盔' },
+    suit: { N:'制式戰甲', R:'鋼甲', SR:'戰衛重鎧', SSR:'王衛戰鎧', UR:'誓約戰鎧', LR:'古戰聖鎧', SLR:'終局戰皇鎧' },
+    glove: { N:'制式護手', R:'鋼護手', SR:'戰衛護手', SSR:'王衛護手', UR:'誓約護手', LR:'古戰護手', SLR:'終局戰皇護手' },
+    weapon: { N:'制式戰劍', R:'重鋼戰刃', SR:'鍛魂巨劍', SSR:'王座裁決劍', UR:'英雄誓約之刃', LR:'世界斬裂劍', SLR:'終焉審斷劍' },
+    cape: { N:'制式披風', R:'戰披', SR:'戰衛披風', SSR:'王衛披風', UR:'誓約披風', LR:'古戰披風', SLR:'終局戰皇披風' },
+    shoes: { N:'制式戰靴', R:'鋼靴', SR:'戰衛戰靴', SSR:'王衛戰靴', UR:'誓約戰靴', LR:'古戰戰靴', SLR:'終局戰皇戰靴' },
+    shoulder: { N:'制式肩甲', R:'鋼肩', SR:'戰衛肩甲', SSR:'王衛肩甲', UR:'誓約肩甲', LR:'古戰肩甲', SLR:'終局戰皇肩甲' },
+    subweapon: { N:'制式副武', R:'戰盾', SR:'戰衛戰盾', SSR:'王衛戰盾', UR:'誓約戰盾', LR:'古戰巨盾', SLR:'終局戰皇盾' },
+    badge: { N:'制式徽記', R:'戰紋徽記', SR:'戰衛徽記', SSR:'王衛徽記', UR:'誓約徽記', LR:'古戰徽記', SLR:'終局戰皇徽記' },
+    ornament: { N:'制式飾物', R:'戰士飾物', SR:'戰衛飾物', SSR:'王衛飾物', UR:'誓約飾物', LR:'古戰飾物', SLR:'終局戰皇飾物' },
+    ornament2: { N:'制式項鍊', R:'鬥志項鍊', SR:'戰意核心', SSR:'王戰徽記', UR:'英雄戰魂核', LR:'世界抗衡核心', SLR:'終焉不屈核心' }
+  },
+  mage: {
+    hat: { N:'制式法帽', R:'布法帽', SR:'秘紋法帽', SSR:'王權法冠', UR:'法則冠冕', LR:'古式星冠', SLR:'終局法冠' },
+    suit: { N:'制式法袍', R:'布法袍', SR:'秘紋法袍', SSR:'王權法衣', UR:'法則戰袍', LR:'古式星袍', SLR:'終局法衣' },
+    glove: { N:'制式手套', R:'法紋手套', SR:'秘紋護手', SSR:'王權護手', UR:'法則護手', LR:'古式護手', SLR:'終局護手' },
+    weapon: { N:'初階法杖', R:'聚能法杖', SR:'奧術導引杖', SSR:'王權構式權杖', UR:'英雄法則之杖', LR:'世界干涉權杖', SLR:'終焉演算權杖' },
+    cape: { N:'制式披肩', R:'法披肩', SR:'秘紋披肩', SSR:'王權披肩', UR:'法則披肩', LR:'古式披肩', SLR:'終局披肩' },
+    shoes: { N:'制式法靴', R:'法靴', SR:'秘紋法靴', SSR:'王權法靴', UR:'法則法靴', LR:'古式法靴', SLR:'終局法靴' },
+    shoulder: { N:'制式肩飾', R:'法肩飾', SR:'秘紋肩飾', SSR:'王權肩飾', UR:'法則肩飾', LR:'古式肩飾', SLR:'終局肩飾' },
+    subweapon: { N:'制式魔導器', R:'魔導書', SR:'秘紋魔導書', SSR:'王權魔導書', UR:'法則魔導書', LR:'世界演算書', SLR:'終局演算書' },
+    badge: { N:'制式徽記', R:'法印徽記', SR:'秘紋徽記', SSR:'王權徽記', UR:'法則徽記', LR:'古式徽記', SLR:'終局徽記' },
+    ornament: { N:'制式飾物', R:'法師飾物', SR:'秘紋飾物', SSR:'王權飾物', UR:'法則飾物', LR:'古式飾物', SLR:'終局飾物' },
+    ornament2: { N:'法力導環', R:'魔能項鍊', SR:'奧術穩定器', SSR:'王權法式核心', UR:'英雄法源核', LR:'世界演算核心', SLR:'終焉法則核心' }
+  },
+  archer: {
+    hat: { N:'制式獵帽', R:'皮獵帽', SR:'風紋獵帽', SSR:'王獵冠帽', UR:'逐風戰帽', LR:'古獵星帽', SLR:'終局獵冠' },
+    suit: { N:'制式皮甲', R:'獵人皮甲', SR:'風紋戰衣', SSR:'王獵戰衣', UR:'逐風戰衣', LR:'古獵星衣', SLR:'終局獵王衣' },
+    glove: { N:'制式手套', R:'射手手套', SR:'風紋護手', SSR:'王獵護手', UR:'逐風護手', LR:'古獵護手', SLR:'終局獵王護手' },
+    weapon: { N:'訓練弓', R:'強弦長弓', SR:'風切戰弓', SSR:'王獵裁定弓', UR:'英雄逐風之弓', LR:'世界貫穿弓', SLR:'終焉定軌神弓' },
+    cape: { N:'制式披風', R:'獵披', SR:'風紋披風', SSR:'王獵披風', UR:'逐風披風', LR:'古獵披風', SLR:'終局獵王披風' },
+    shoes: { N:'制式靴', R:'獵靴', SR:'風紋獵靴', SSR:'王獵戰靴', UR:'逐風戰靴', LR:'古獵戰靴', SLR:'終局獵王戰靴' },
+    shoulder: { N:'制式肩甲', R:'獵肩甲', SR:'風紋肩甲', SSR:'王獵肩甲', UR:'逐風肩甲', LR:'古獵肩甲', SLR:'終局獵王肩甲' },
+    subweapon: { N:'制式箭袋', R:'獵箭袋', SR:'風紋箭袋', SSR:'王獵箭袋', UR:'逐風箭袋', LR:'世界制導箭袋', SLR:'終局定軌箭袋' },
+    badge: { N:'制式徽記', R:'獵印徽記', SR:'風紋徽記', SSR:'王獵徽記', UR:'逐風徽記', LR:'古獵徽記', SLR:'終局徽記' },
+    ornament: { N:'制式飾物', R:'弓手飾物', SR:'風紋飾物', SSR:'王獵飾物', UR:'逐風飾物', LR:'古獵飾物', SLR:'終局飾物' },
+    ornament2: { N:'射手護符', R:'風行項鍊', SR:'疾射核心', SSR:'王獵節點', UR:'英雄逐風核', LR:'世界制導核心', SLR:'終焉軌道核心' }
+  },
+  thief: {
+    hat: { N:'制式兜帽', R:'暗行兜帽', SR:'影紋兜帽', SSR:'王印夜帽', UR:'夜行戰帽', LR:'古夜星帽', SLR:'終局夜冠' },
+    suit: { N:'制式輕甲', R:'暗行護甲', SR:'影紋戰衣', SSR:'王印戰衣', UR:'夜行戰衣', LR:'古夜星衣', SLR:'終局夜王衣' },
+    glove: { N:'制式手套', R:'暗行手套', SR:'影紋護手', SSR:'王印護手', UR:'夜行護手', LR:'古夜護手', SLR:'終局夜王護手' },
+    weapon: { N:'制式短刃', R:'潛行匕首', SR:'影構雙刃', SSR:'王印無聲刃', UR:'英雄夜行之刃', LR:'世界消抹刃', SLR:'終焉抹殺雙刃' },
+    cape: { N:'制式披風', R:'夜披', SR:'影紋披風', SSR:'王印披風', UR:'夜行披風', LR:'古夜披風', SLR:'終局夜王披風' },
+    shoes: { N:'制式靴', R:'暗行靴', SR:'影紋靴', SSR:'王印戰靴', UR:'夜行戰靴', LR:'古夜戰靴', SLR:'終局夜王戰靴' },
+    shoulder: { N:'制式肩甲', R:'暗行肩甲', SR:'影紋肩甲', SSR:'王印肩甲', UR:'夜行肩甲', LR:'古夜肩甲', SLR:'終局夜王肩甲' },
+    subweapon: { N:'制式暗器袋', R:'暗器袋', SR:'影紋暗器袋', SSR:'王印暗器袋', UR:'夜行暗器袋', LR:'世界操縱暗器袋', SLR:'終局失衡暗器袋' },
+    badge: { N:'制式徽記', R:'夜印徽記', SR:'影紋徽記', SSR:'王印徽記', UR:'夜行徽記', LR:'古夜徽記', SLR:'終局徽記' },
+    ornament: { N:'制式飾物', R:'盜賊飾物', SR:'影紋飾物', SSR:'王印飾物', UR:'夜行飾物', LR:'古夜飾物', SLR:'終局飾物' },
+    ornament2: { N:'潛行護符', R:'暗行項鍊', SR:'影速核心', SSR:'王印詭術節點', UR:'英雄夜行核', LR:'世界欺瞞核心', SLR:'終焉不可測核心' }
+  }
+};
+
+
+// ==== v4.1 擴充：新增部位命名（能源/飾品/戒指/寶玉/勳章/口袋） ====
+// 規則：若已存在同名 key，會覆蓋（用於：裝飾→胸章、項鍊分類調整）
+(function(){
+  function set(job, type, obj){
+    if(!EQUIP_NAME_TABLE[job]) EQUIP_NAME_TABLE[job]={};
+    EQUIP_NAME_TABLE[job][type]=obj;
+  }
+
+  // 以「職業風格」補齊新增部位（N/R/SR/SSR/UR/LR/SLR）
+  // ※ ornament = 胸章；ornament2 = 項鍊①；necklace2 = 項鍊②
+  // ※ ring1~4 = 戒指；gem1~4 = 寶玉（不可卷）
+  // ※ medal = 勳章；pocket = 口袋道具；energy = 能源（不可卷）
+  set('warrior','energy',   { N:'制式能源核心', R:'鍛鋼能源核心', SR:'戰衛能源核心', SSR:'王衛能源爐心', UR:'誓約能源爐心', LR:'古戰能源爐心', SLR:'終局能源爐心' });
+  set('warrior','eye',      { N:'制式觀測鏡', R:'精鍛觀測鏡', SR:'戰紋觀測鏡', SSR:'王權觀測鏡', UR:'誓約戰術鏡', LR:'終焉戰術鏡', SLR:'至高戰術鏡' });
+  set('warrior','face',     { N:'制式面紋', R:'精鍛面紋', SR:'戰紋面飾', SSR:'王權面飾', UR:'誓約戰面', LR:'終焉戰面', SLR:'至高戰面' });
+  set('warrior','earring',  { N:'制式耳飾', R:'精鍛耳飾', SR:'戰紋耳飾', SSR:'王權耳飾', UR:'誓約耳飾', LR:'終焉耳飾', SLR:'至高耳飾' });
+  set('warrior','belt',     { N:'制式腰帶', R:'精鍛腰帶', SR:'戰紋腰帶', SSR:'王權腰帶', UR:'誓約腰帶', LR:'終焉腰帶', SLR:'至高腰帶' });
+  set('warrior','ornament2',{ N:'制式項鍊', R:'鬥魂項鍊', SR:'戰意項鍊', SSR:'王戰項鍊', UR:'誓約戰魂鍊', LR:'終焉戰魂鍊', SLR:'至高戰魂鍊' });
+  set('warrior','necklace2',{ N:'制式核心項鍊', R:'熾鋼核心鍊', SR:'戰衛核心鍊', SSR:'王衛核心鍊', UR:'誓約核心鍊', LR:'終焉核心鍊', SLR:'至高核心鍊' });
+  set('warrior','ornament', { N:'制式胸章', R:'戰功胸章', SR:'戰衛胸章', SSR:'王衛胸章', UR:'誓約胸章', LR:'終焉胸章', SLR:'至高胸章' });
+  set('warrior','medal',    { N:'制式勳章', R:'戰績勳章', SR:'戰衛勳章', SSR:'王衛勳章', UR:'誓約勳章', LR:'終焉勳章', SLR:'至高勳章' });
+  set('warrior','pocket',   { N:'遠征口袋', R:'遠征口袋·改', SR:'遠征口袋·戰紋', SSR:'遠征口袋·王權', UR:'遠征口袋·誓約', LR:'遠征口袋·終焉', SLR:'遠征口袋·至高' });
+  set('warrior','ring1',    { N:'制式戒指Ⅰ', R:'精鍛戒指Ⅰ', SR:'戰紋戒指Ⅰ', SSR:'王權戒指Ⅰ', UR:'誓約戒指Ⅰ', LR:'終焉戒指Ⅰ', SLR:'至高戒指Ⅰ' });
+  set('warrior','ring2',    { N:'制式戒指Ⅱ', R:'精鍛戒指Ⅱ', SR:'戰紋戒指Ⅱ', SSR:'王權戒指Ⅱ', UR:'誓約戒指Ⅱ', LR:'終焉戒指Ⅱ', SLR:'至高戒指Ⅱ' });
+  set('warrior','ring3',    { N:'制式戒指Ⅲ', R:'精鍛戒指Ⅲ', SR:'戰紋戒指Ⅲ', SSR:'王權戒指Ⅲ', UR:'誓約戒指Ⅲ', LR:'終焉戒指Ⅲ', SLR:'至高戒指Ⅲ' });
+  set('warrior','ring4',    { N:'制式戒指Ⅳ', R:'精鍛戒指Ⅳ', SR:'戰紋戒指Ⅳ', SSR:'王權戒指Ⅳ', UR:'誓約戒指Ⅳ', LR:'終焉戒指Ⅳ', SLR:'至高戒指Ⅳ' });
+  set('warrior','gem1',     { N:'血曜寶玉Ⅰ', R:'血曜寶玉Ⅰ·精鍛', SR:'血曜寶玉Ⅰ·戰紋', SSR:'血曜寶玉Ⅰ·王權', UR:'血曜寶玉Ⅰ·誓約', LR:'血曜寶玉Ⅰ·終焉', SLR:'血曜寶玉Ⅰ·至高' });
+  set('warrior','gem2',     { N:'血曜寶玉Ⅱ', R:'血曜寶玉Ⅱ·精鍛', SR:'血曜寶玉Ⅱ·戰紋', SSR:'血曜寶玉Ⅱ·王權', UR:'血曜寶玉Ⅱ·誓約', LR:'血曜寶玉Ⅱ·終焉', SLR:'血曜寶玉Ⅱ·至高' });
+  set('warrior','gem3',     { N:'血曜寶玉Ⅲ', R:'血曜寶玉Ⅲ·精鍛', SR:'血曜寶玉Ⅲ·戰紋', SSR:'血曜寶玉Ⅲ·王權', UR:'血曜寶玉Ⅲ·誓約', LR:'血曜寶玉Ⅲ·終焉', SLR:'血曜寶玉Ⅲ·至高' });
+  set('warrior','gem4',     { N:'血曜寶玉Ⅳ', R:'血曜寶玉Ⅳ·精鍛', SR:'血曜寶玉Ⅳ·戰紋', SSR:'血曜寶玉Ⅳ·王權', UR:'血曜寶玉Ⅳ·誓約', LR:'血曜寶玉Ⅳ·終焉', SLR:'血曜寶玉Ⅳ·至高' });
+
+  set('mage','energy',      { N:'制式能源核心', R:'奧術能源核心', SR:'秘紋能源核心', SSR:'王權能源爐心', UR:'法則能源爐心', LR:'終焉能源爐心', SLR:'至高能源爐心' });
+  set('mage','eye',         { N:'制式觀測鏡', R:'魔視觀測鏡', SR:'秘紋觀測鏡', SSR:'王權觀測鏡', UR:'法則星視鏡', LR:'終焉星視鏡', SLR:'至高星視鏡' });
+  set('mage','face',        { N:'制式面紋', R:'法印面紋', SR:'秘紋面飾', SSR:'王權面飾', UR:'法則面飾', LR:'終焉面飾', SLR:'至高面飾' });
+  set('mage','earring',     { N:'制式耳飾', R:'魔能耳飾', SR:'秘紋耳飾', SSR:'王權耳飾', UR:'法則耳飾', LR:'終焉耳飾', SLR:'至高耳飾' });
+  set('mage','belt',        { N:'制式腰帶', R:'法紋腰帶', SR:'秘紋腰帶', SSR:'王權腰帶', UR:'法則腰帶', LR:'終焉腰帶', SLR:'至高腰帶' });
+  set('mage','ornament2',   { N:'法力項鍊', R:'魔能項鍊', SR:'秘紋項鍊', SSR:'王權項鍊', UR:'法則項鍊', LR:'終焉項鍊', SLR:'至高項鍊' });
+  set('mage','necklace2',   { N:'制式核心項鍊', R:'奧術核心鍊', SR:'秘紋核心鍊', SSR:'王權核心鍊', UR:'法則核心鍊', LR:'終焉核心鍊', SLR:'至高核心鍊' });
+  set('mage','ornament',    { N:'制式胸章', R:'法紋胸章', SR:'秘紋胸章', SSR:'王權胸章', UR:'法則胸章', LR:'終焉胸章', SLR:'至高胸章' });
+  set('mage','medal',       { N:'制式勳章', R:'術式勳章', SR:'秘紋勳章', SSR:'王權勳章', UR:'法則勳章', LR:'終焉勳章', SLR:'至高勳章' });
+  set('mage','pocket',      { N:'次元口袋', R:'次元口袋·改', SR:'次元口袋·秘紋', SSR:'次元口袋·王權', UR:'次元口袋·法則', LR:'次元口袋·終焉', SLR:'次元口袋·至高' });
+  set('mage','ring1',       { N:'制式戒指Ⅰ', R:'法紋戒指Ⅰ', SR:'秘紋戒指Ⅰ', SSR:'王權戒指Ⅰ', UR:'法則戒指Ⅰ', LR:'終焉戒指Ⅰ', SLR:'至高戒指Ⅰ' });
+  set('mage','ring2',       { N:'制式戒指Ⅱ', R:'法紋戒指Ⅱ', SR:'秘紋戒指Ⅱ', SSR:'王權戒指Ⅱ', UR:'法則戒指Ⅱ', LR:'終焉戒指Ⅱ', SLR:'至高戒指Ⅱ' });
+  set('mage','ring3',       { N:'制式戒指Ⅲ', R:'法紋戒指Ⅲ', SR:'秘紋戒指Ⅲ', SSR:'王權戒指Ⅲ', UR:'法則戒指Ⅲ', LR:'終焉戒指Ⅲ', SLR:'至高戒指Ⅲ' });
+  set('mage','ring4',       { N:'制式戒指Ⅳ', R:'法紋戒指Ⅳ', SR:'秘紋戒指Ⅳ', SSR:'王權戒指Ⅳ', UR:'法則戒指Ⅳ', LR:'終焉戒指Ⅳ', SLR:'至高戒指Ⅳ' });
+  set('mage','gem1',        { N:'星輝寶玉Ⅰ', R:'星輝寶玉Ⅰ·奧術', SR:'星輝寶玉Ⅰ·秘紋', SSR:'星輝寶玉Ⅰ·王權', UR:'星輝寶玉Ⅰ·法則', LR:'星輝寶玉Ⅰ·終焉', SLR:'星輝寶玉Ⅰ·至高' });
+  set('mage','gem2',        { N:'星輝寶玉Ⅱ', R:'星輝寶玉Ⅱ·奧術', SR:'星輝寶玉Ⅱ·秘紋', SSR:'星輝寶玉Ⅱ·王權', UR:'星輝寶玉Ⅱ·法則', LR:'星輝寶玉Ⅱ·終焉', SLR:'星輝寶玉Ⅱ·至高' });
+  set('mage','gem3',        { N:'星輝寶玉Ⅲ', R:'星輝寶玉Ⅲ·奧術', SR:'星輝寶玉Ⅲ·秘紋', SSR:'星輝寶玉Ⅲ·王權', UR:'星輝寶玉Ⅲ·法則', LR:'星輝寶玉Ⅲ·終焉', SLR:'星輝寶玉Ⅲ·至高' });
+  set('mage','gem4',        { N:'星輝寶玉Ⅳ', R:'星輝寶玉Ⅳ·奧術', SR:'星輝寶玉Ⅳ·秘紋', SSR:'星輝寶玉Ⅳ·王權', UR:'星輝寶玉Ⅳ·法則', LR:'星輝寶玉Ⅳ·終焉', SLR:'星輝寶玉Ⅳ·至高' });
+
+  set('archer','energy',    { N:'制式能源核心', R:'風紋能源核心', SR:'戰衛能源核心', SSR:'王獵能源爐心', UR:'逐風能源爐心', LR:'終焉能源爐心', SLR:'至高能源爐心' });
+  set('archer','eye',       { N:'制式觀測鏡', R:'風行觀測鏡', SR:'風紋觀測鏡', SSR:'王獵觀測鏡', UR:'逐風戰術鏡', LR:'終焉戰術鏡', SLR:'至高戰術鏡' });
+  set('archer','face',      { N:'制式面紋', R:'獵紋面紋', SR:'風紋面飾', SSR:'王獵面飾', UR:'逐風面飾', LR:'終焉面飾', SLR:'至高面飾' });
+  set('archer','earring',   { N:'制式耳飾', R:'風鈴耳飾', SR:'風紋耳飾', SSR:'王獵耳飾', UR:'逐風耳飾', LR:'終焉耳飾', SLR:'至高耳飾' });
+  set('archer','belt',      { N:'制式腰帶', R:'獵裝腰帶', SR:'風紋腰帶', SSR:'王獵腰帶', UR:'逐風腰帶', LR:'終焉腰帶', SLR:'至高腰帶' });
+  set('archer','ornament2', { N:'射手項鍊', R:'風行項鍊', SR:'風紋項鍊', SSR:'王獵項鍊', UR:'逐風項鍊', LR:'終焉項鍊', SLR:'至高項鍊' });
+  set('archer','necklace2', { N:'制式核心項鍊', R:'風核項鍊', SR:'風紋核心鍊', SSR:'王獵核心鍊', UR:'逐風核心鍊', LR:'終焉核心鍊', SLR:'至高核心鍊' });
+  set('archer','ornament',  { N:'制式胸章', R:'獵功胸章', SR:'風紋胸章', SSR:'王獵胸章', UR:'逐風胸章', LR:'終焉胸章', SLR:'至高胸章' });
+  set('archer','medal',     { N:'制式勳章', R:'獵績勳章', SR:'風紋勳章', SSR:'王獵勳章', UR:'逐風勳章', LR:'終焉勳章', SLR:'至高勳章' });
+  set('archer','pocket',    { N:'斥候口袋', R:'斥候口袋·改', SR:'斥候口袋·風紋', SSR:'斥候口袋·王獵', UR:'斥候口袋·逐風', LR:'斥候口袋·終焉', SLR:'斥候口袋·至高' });
+  set('archer','ring1',     { N:'制式戒指Ⅰ', R:'風紋戒指Ⅰ', SR:'風紋戒指Ⅰ·戰紋', SSR:'王獵戒指Ⅰ', UR:'逐風戒指Ⅰ', LR:'終焉戒指Ⅰ', SLR:'至高戒指Ⅰ' });
+  set('archer','ring2',     { N:'制式戒指Ⅱ', R:'風紋戒指Ⅱ', SR:'風紋戒指Ⅱ·戰紋', SSR:'王獵戒指Ⅱ', UR:'逐風戒指Ⅱ', LR:'終焉戒指Ⅱ', SLR:'至高戒指Ⅱ' });
+  set('archer','ring3',     { N:'制式戒指Ⅲ', R:'風紋戒指Ⅲ', SR:'風紋戒指Ⅲ·戰紋', SSR:'王獵戒指Ⅲ', UR:'逐風戒指Ⅲ', LR:'終焉戒指Ⅲ', SLR:'至高戒指Ⅲ' });
+  set('archer','ring4',     { N:'制式戒指Ⅳ', R:'風紋戒指Ⅳ', SR:'風紋戒指Ⅳ·戰紋', SSR:'王獵戒指Ⅳ', UR:'逐風戒指Ⅳ', LR:'終焉戒指Ⅳ', SLR:'至高戒指Ⅳ' });
+  set('archer','gem1',      { N:'翠風寶玉Ⅰ', R:'翠風寶玉Ⅰ·精鍛', SR:'翠風寶玉Ⅰ·風紋', SSR:'翠風寶玉Ⅰ·王獵', UR:'翠風寶玉Ⅰ·逐風', LR:'翠風寶玉Ⅰ·終焉', SLR:'翠風寶玉Ⅰ·至高' });
+  set('archer','gem2',      { N:'翠風寶玉Ⅱ', R:'翠風寶玉Ⅱ·精鍛', SR:'翠風寶玉Ⅱ·風紋', SSR:'翠風寶玉Ⅱ·王獵', UR:'翠風寶玉Ⅱ·逐風', LR:'翠風寶玉Ⅱ·終焉', SLR:'翠風寶玉Ⅱ·至高' });
+  set('archer','gem3',      { N:'翠風寶玉Ⅲ', R:'翠風寶玉Ⅲ·精鍛', SR:'翠風寶玉Ⅲ·風紋', SSR:'翠風寶玉Ⅲ·王獵', UR:'翠風寶玉Ⅲ·逐風', LR:'翠風寶玉Ⅲ·終焉', SLR:'翠風寶玉Ⅲ·至高' });
+  set('archer','gem4',      { N:'翠風寶玉Ⅳ', R:'翠風寶玉Ⅳ·精鍛', SR:'翠風寶玉Ⅳ·風紋', SSR:'翠風寶玉Ⅳ·王獵', UR:'翠風寶玉Ⅳ·逐風', LR:'翠風寶玉Ⅳ·終焉', SLR:'翠風寶玉Ⅳ·至高' });
+
+  set('thief','energy',     { N:'制式能源核心', R:'影紋能源核心', SR:'影構能源核心', SSR:'王印能源爐心', UR:'夜行能源爐心', LR:'終焉能源爐心', SLR:'至高能源爐心' });
+  set('thief','eye',        { N:'制式觀測鏡', R:'夜視觀測鏡', SR:'影紋觀測鏡', SSR:'王印觀測鏡', UR:'夜行戰術鏡', LR:'終焉戰術鏡', SLR:'至高戰術鏡' });
+  set('thief','face',       { N:'制式面紋', R:'夜印面紋', SR:'影紋面飾', SSR:'王印面飾', UR:'夜行面飾', LR:'終焉面飾', SLR:'至高面飾' });
+  set('thief','earring',    { N:'制式耳飾', R:'暗影耳飾', SR:'影紋耳飾', SSR:'王印耳飾', UR:'夜行耳飾', LR:'終焉耳飾', SLR:'至高耳飾' });
+  set('thief','belt',       { N:'制式腰帶', R:'暗行腰帶', SR:'影紋腰帶', SSR:'王印腰帶', UR:'夜行腰帶', LR:'終焉腰帶', SLR:'至高腰帶' });
+  set('thief','ornament2',  { N:'潛行項鍊', R:'暗行項鍊', SR:'影紋項鍊', SSR:'王印項鍊', UR:'夜行項鍊', LR:'終焉項鍊', SLR:'至高項鍊' });
+  set('thief','necklace2',  { N:'制式核心項鍊', R:'影核項鍊', SR:'影紋核心鍊', SSR:'王印核心鍊', UR:'夜行核心鍊', LR:'終焉核心鍊', SLR:'至高核心鍊' });
+  set('thief','ornament',   { N:'制式胸章', R:'暗功胸章', SR:'影紋胸章', SSR:'王印胸章', UR:'夜行胸章', LR:'終焉胸章', SLR:'至高胸章' });
+  set('thief','medal',      { N:'制式勳章', R:'夜績勳章', SR:'影紋勳章', SSR:'王印勳章', UR:'夜行勳章', LR:'終焉勳章', SLR:'至高勳章' });
+  set('thief','pocket',     { N:'匿蹤口袋', R:'匿蹤口袋·改', SR:'匿蹤口袋·影紋', SSR:'匿蹤口袋·王印', UR:'匿蹤口袋·夜行', LR:'匿蹤口袋·終焉', SLR:'匿蹤口袋·至高' });
+  set('thief','ring1',      { N:'制式戒指Ⅰ', R:'影紋戒指Ⅰ', SR:'影紋戒指Ⅰ·戰紋', SSR:'王印戒指Ⅰ', UR:'夜行戒指Ⅰ', LR:'終焉戒指Ⅰ', SLR:'至高戒指Ⅰ' });
+  set('thief','ring2',      { N:'制式戒指Ⅱ', R:'影紋戒指Ⅱ', SR:'影紋戒指Ⅱ·戰紋', SSR:'王印戒指Ⅱ', UR:'夜行戒指Ⅱ', LR:'終焉戒指Ⅱ', SLR:'至高戒指Ⅱ' });
+  set('thief','ring3',      { N:'制式戒指Ⅲ', R:'影紋戒指Ⅲ', SR:'影紋戒指Ⅲ·戰紋', SSR:'王印戒指Ⅲ', UR:'夜行戒指Ⅲ', LR:'終焉戒指Ⅲ', SLR:'至高戒指Ⅲ' });
+  set('thief','ring4',      { N:'制式戒指Ⅳ', R:'影紋戒指Ⅳ', SR:'影紋戒指Ⅳ·戰紋', SSR:'王印戒指Ⅳ', UR:'夜行戒指Ⅳ', LR:'終焉戒指Ⅳ', SLR:'至高戒指Ⅳ' });
+  set('thief','gem1',       { N:'幽影寶玉Ⅰ', R:'幽影寶玉Ⅰ·精鍛', SR:'幽影寶玉Ⅰ·影紋', SSR:'幽影寶玉Ⅰ·王印', UR:'幽影寶玉Ⅰ·夜行', LR:'幽影寶玉Ⅰ·終焉', SLR:'幽影寶玉Ⅰ·至高' });
+  set('thief','gem2',       { N:'幽影寶玉Ⅱ', R:'幽影寶玉Ⅱ·精鍛', SR:'幽影寶玉Ⅱ·影紋', SSR:'幽影寶玉Ⅱ·王印', UR:'幽影寶玉Ⅱ·夜行', LR:'幽影寶玉Ⅱ·終焉', SLR:'幽影寶玉Ⅱ·至高' });
+  set('thief','gem3',       { N:'幽影寶玉Ⅲ', R:'幽影寶玉Ⅲ·精鍛', SR:'幽影寶玉Ⅲ·影紋', SSR:'幽影寶玉Ⅲ·王印', UR:'幽影寶玉Ⅲ·夜行', LR:'幽影寶玉Ⅲ·終焉', SLR:'幽影寶玉Ⅲ·至高' });
+  set('thief','gem4',       { N:'幽影寶玉Ⅳ', R:'幽影寶玉Ⅳ·精鍛', SR:'幽影寶玉Ⅳ·影紋', SSR:'幽影寶玉Ⅳ·王印', UR:'幽影寶玉Ⅳ·夜行', LR:'幽影寶玉Ⅳ·終焉', SLR:'幽影寶玉Ⅳ·至高' });
+})(); 
+
+  var __lastSlrUpgrade = { type:null, at:0 };
+
+  function equipNameByTier(type, tier){
+    var job = (window.player && window.player.job) ? window.player.job : 'warrior';
+    // 進階職業：向上追溯 parent，直到一轉（warrior/mage/archer/thief）
+    var jobs = window.jobs || {};
+    var guard = 0;
+    while (jobs[job] && jobs[job].parent && guard++ < 20) job = jobs[job].parent;
+    var t = EQUIP_NAME_TABLE[job] && EQUIP_NAME_TABLE[job][type];
+    if (t && t[tier]) return t[tier];
+    return getTypeName(type);
+  }
+
+  // 供外部（若有其他模組想用）
+  window.equipNameByTier = equipNameByTier;
+
+  function triggerSlrActivate(dom){
+    if(!dom) return;
+    dom.classList.remove('slr-activate');
+    void dom.offsetWidth; // restart animation
+    dom.classList.add('slr-activate');
+    window.setTimeout(function(){ dom.classList.remove('slr-activate'); }, 650);
+  }
+  window.triggerSlrActivate = triggerSlrActivate;
+
+  function applyTierVisual(dom, tier, opts){
+    if(!dom) return;
+    // text
+    dom.style.color = TIER_TEXT_COLOR[tier] || dom.style.color || '#fff';
+
+    // border (UR+ only)
+    if(dom.classList){
+      dom.classList.remove('border-ur','border-lr','border-slr-rainbow');
+      if (TIER_BORDER_CLASS[tier]) dom.classList.add(TIER_BORDER_CLASS[tier]);
+    }
+
+    if (tier === 'SLR' && opts && opts.justUpgraded) triggerSlrActivate(dom);
+  }
+  window.applyTierStyle = applyTierVisual;
+  function tierMax(lines){
+    if (!lines || !lines.length) return 'R';
+    var best='R', i; for(i=0;i<lines.length;i++){ var t=lines[i]&&lines[i].tier; if(t && (TIER_ORDER[t]||0)>(TIER_ORDER[best]||0)) best=t; }
+    return best;
+  }
+// === 件數與狀態工具 ===
+function countPiecesAtOrAbove(st, tier){
+  var need = (TIER_ORDER && TIER_ORDER[tier] != null) ? TIER_ORDER[tier] : 0;
+  var types = resolveSetTypes(st);
+  var c = 0;
+  for (var i=0;i<types.length;i++){
+    var n = st.equips[types[i]];
+    if (!n || n.locked) continue;
+    var cur = (TIER_ORDER && TIER_ORDER[n.tier] != null) ? TIER_ORDER[n.tier] : 0;
+    if (cur >= need) c++;
+  }
+  return c;
+}
+function hasAnyAtOrAbove(st, tier){ return countPiecesAtOrAbove(st, tier) > 0; }
+
+// === 效果疊加 ===
+function addEff(sum, eff){
+  sum = sum || {str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0,ignoreDefPct:0,totalDamage:0,skillDamage:0};
+  for (var k in eff) if (eff.hasOwnProperty(k)) sum[k] = (Number(sum[k])||0) + (Number(eff[k])||0);
+  return sum;
+}
+
+// === 最高階 ===
+function bestTierFromState(st){
+  var tiers=['R','SR','SSR','UR','LR','SLR'], bestIdx = 0;
+  if (!st || !st.equips) return 'R';
+  for (var k in st.equips){
+    if (!st.equips.hasOwnProperty(k)) continue;
+    var n = st.equips[k];
+    if (!n || n.locked) continue; // 只看已解鎖/已擁有的裝備，避免未解鎖高階裝備提前啟用規則
+    var t = String(n.tier || 'R');
+    var idx = tiers.indexOf(t);
+    if (idx > bestIdx) bestIdx = idx;
+  }
+  return tiers[bestIdx];
+}
+
+
+// === 合併要用的規則行（依最高階掛 SSR_BASE / LR_EXTRA / SLR_EXTRA） ===
+function getMergedSetRows(bestTier){
+  if (['SSR','UR','LR','SLR'].indexOf(bestTier) === -1) return [];
+  var order = ['SSR_BASE'];
+  if (bestTier === 'LR' || bestTier === 'SLR') order.push('LR_EXTRA');
+  if (bestTier === 'SLR') order.push('SLR_EXTRA');
+
+  var out = [];
+  for (var i=0;i<order.length;i++){
+    var arr = SET_RULES[order[i]] || [];
+    for (var j=0;j<arr.length;j++) out.push(arr[j]);
+  }
+  out.sort(function(a,b){ return a.pieces - b.pieces; });
+  return out;
+}
+
+
+
+
+  // ==== 基底（10 部位）====
+  var DEF_BASE = {
+    // 防具
+    hat:{str:10,dex:10,int:10,luk:10,atk:10,def:30,hp:200,mp:20},
+    suit:{str:12,dex:12,int:12,luk:12,atk:6,def:30,hp:180,mp:20},
+    glove:{str:7,dex:7,int:7,luk:7,atk:12,def:30,hp:50,mp:20},
+    cape:{str:7,dex:7,int:7,luk:7,atk:4,def:20,hp:80,mp:20},
+    shoes:{str:6,dex:6,int:6,luk:6,atk:3,def:40,hp:120,mp:20},
+    shoulder:{str:4,dex:4,int:4,luk:4,atk:2,def:30,hp:50,mp:20},
+
+    // 武器類
+    weapon:{str:0,dex:0,int:0,luk:0,atk:120,def:0,hp:0,mp:20},
+    subweapon:{str:5,dex:5,int:5,luk:5,atk:10,def:30,hp:500,mp:20}, // 不可卷
+    energy:{str:2,dex:2,int:2,luk:2,atk:2,def:0,hp:20,mp:20},       // 不可卷（能源）
+
+    // 飾品類（共通基準：全屬+2／ATK+2／HP+20／MP+20／卷軸6）
+    eye:{str:5,dex:5,int:5,luk:5,atk:5,def:20,hp:120,mp:10},
+    face:{str:7,dex:7,int:7,luk:7,atk:5,def:0,hp:175,mp:2},
+    earring:{str:5,dex:5,int:5,luk:5,atk:5,def:0,hp:210,mp:5},
+    belt:{str:8,dex:8,int:8,luk:8,atk:5,def:0,hp:20,mp:20},
+    ornament2:{str:12,dex:12,int:12,luk:12,atk:12,def:14,hp:20,mp:20},    // 項鍊①（原本在戒指類，已拉回）
+    necklace2:{str:15,dex:15,int:15,luk:15,atk:15,def:11,hp:20,mp:20},    // 項鍊②（新增）
+    ornament:{str:9,dex:9,int:9,luk:9,atk:2,def:0,hp:20,mp:20},     // 胸章（原裝飾）
+    badge:{str:20,dex:20,int:20,luk:20,atk:5,def:40,hp:80,mp:20},       // 徽章（不可卷，保留原本較強）
+
+    // 特殊
+    medal:{str:21,dex:21,int:21,luk:21,atk:21,def:0,hp:0,mp:0},        // 勳章（不可卷）
+    pocket:{str:16,dex:16,int:16,luk:16,atk:12,def:0,hp:20,mp:20},       // 口袋道具（不可卷）
+
+    // 戒指類
+    ring1:{str:2,dex:2,int:2,luk:2,atk:2,def:0,hp:20,mp:20},
+    ring2:{str:2,dex:2,int:2,luk:2,atk:2,def:0,hp:20,mp:20},
+    ring3:{str:2,dex:2,int:2,luk:2,atk:2,def:0,hp:20,mp:20},
+    ring4:{str:2,dex:2,int:2,luk:2,atk:2,def:0,hp:20,mp:20},
+
+    // 寶玉（不可卷）
+    gem1:{str:2,dex:2,int:2,luk:2,atk:2,def:0,hp:20,mp:20},
+    gem2:{str:2,dex:2,int:2,luk:2,atk:2,def:0,hp:20,mp:20},
+    gem3:{str:2,dex:2,int:2,luk:2,atk:2,def:0,hp:20,mp:20},
+    gem4:{str:2,dex:2,int:2,luk:2,atk:2,def:0,hp:20,mp:20}
+  };
+
+  var DEF_SLOTS = {
+    // 防具
+    hat:12, suit:12, glove:8, cape:7, shoes:8, shoulder:3,
+
+    // 武器類
+    weapon:9,
+    subweapon:10, 
+    energy:6,    
+
+    // 飾品類
+    eye:6, face:4, earring:3, belt:7, ornament2:5, necklace2:4, ornament:6,
+
+    // 徽章/特殊（不可卷）
+    badge:1,
+    medal:0,
+    pocket:0,
+
+    // 戒指
+    ring1:6, ring2:4, ring3:5, ring4:7,
+
+    // 寶玉（不可卷）
+    gem1:5, gem2:5, gem3:5, gem4:5
+  };
+
+
+  // ==== 部位定義（集中管理：新增裝備只要在 DEF_BASE/DEF_SLOTS/DEF_NAME 追加即可）====
+  var DEF_NAME = {
+    // 防具
+    hat:'帽子', suit:'套服', glove:'手套', cape:'披風', shoes:'鞋子', shoulder:'肩膀',
+
+    // 武器類
+    weapon:'武器', subweapon:'輔助武器', energy:'能源',
+
+    // 飾品類
+    eye:'眼飾', face:'臉飾', earring:'耳環', belt:'腰帶',
+    ornament2:'項鍊', necklace2:'項鍊Ⅱ',
+    ornament:'胸章', badge:'徽章',
+
+    // 特殊
+    medal:'勳章', pocket:'口袋',
+
+    // 戒指類
+    ring1:'戒指Ⅰ', ring2:'戒指Ⅱ', ring3:'戒指Ⅲ', ring4:'戒指Ⅳ',
+
+    // 寶玉
+    gem1:'寶玉Ⅰ', gem2:'寶玉Ⅱ', gem3:'寶玉Ⅲ', gem4:'寶玉Ⅳ'
+  };
+
+
+  // 想要固定顯示順序就放這裡；新增部位若不在此陣列，會自動排到最後
+  var DEF_ORDER = [
+    // 武器類
+    'weapon','subweapon','energy',
+    // 防具類
+    'hat','suit','glove','cape','shoes','shoulder',
+    // 飾品類
+    'eye','face','earring','belt','ornament2','necklace2','ornament','badge',
+    // 特殊
+    'medal','pocket',
+    // 戒指類
+    'ring1','ring2','ring3','ring4','gem1','gem2','gem3','gem4'
+  ];
+
+
+  function getTypeName(type){
+    return DEF_NAME[type] || type;
+  }
+
+  function getEquipTypes(){
+    // 以 DEF_BASE 的 key 當「目前系統所有部位」來源 → UI/存檔/計算都走同一份
+    var keys = [];
+    for (var k in DEF_BASE) { if (DEF_BASE.hasOwnProperty(k)) keys.push(k); }
+
+    // 依 DEF_ORDER 排序；不在 DEF_ORDER 的新部位自動排到最後（依字母）
+    keys.sort(function(a,b){
+      var ia = DEF_ORDER.indexOf(a);
+      var ib = DEF_ORDER.indexOf(b);
+      if (ia === -1) ia = 9999;
+      if (ib === -1) ib = 9999;
+      if (ia !== ib) return ia - ib;
+      return String(a).localeCompare(String(b));
+    });
+    return keys;
+  }
+  // ==== 潛能加成（獨立於 coreBonus，外部統一讀 global.PotentialBonus）====
+  function ensurePotentialBonus(){
+    if (global.PotentialBonus) return global.PotentialBonus;
+
+    var bonusData = {};
+    function calc(key){
+      var sum = 0;
+      for (var k in bonusData){
+        if (!bonusData.hasOwnProperty(k)) continue;
+        var v = bonusData[k];
+        if (v && typeof v === 'object' && v[key] !== undefined){
+          sum += Number(v[key]) || 0;
+        }
+      }
+      return sum;
+    }
+
+    var api = { bonusData: bonusData };
+    var KEYS = [
+      'hp','mp','atk','def','str','agi','int','luk',
+      'totalDamage','skillDamage','spellDamage',
+      'normalDamage','eliteDamage','bossDamage',
+      'damageReduce','recoverPercent','dodgePercent','magicShieldPercent',
+      'attackSpeedPct','doubleHitChance','comboRate','critRate','critMultiplier',
+      'ignoreDefPct',
+      'preemptiveChance','preemptivePerAttackMax',
+      'expBonus','dropBonus','goldBonus'
+    ];
+    for (var i=0;i<KEYS.length;i++){
+      (function(key){
+        Object.defineProperty(api, key, { enumerable:true, get:function(){ return calc(key); } });
+      })(KEYS[i]);
+    }
+
+    global.PotentialBonus = api;
+    return api;
+  }
+  ensurePotentialBonus();
+
+
+  // ==== 解放需求（集中管理） ====
+  // 你只需要改這裡的數字即可調整各部位「解放石」需求
+  var UNLOCK_COST = {
+    default: 1,
+    subweapon: 10,
+    badge: 10,
+    ornament: 10,
+    ornament2: 10,
+    necklace2: 10,
+    eye: 10,
+    face: 10,
+    earring: 10,
+    belt: 10,
+    energy: 10,
+
+    // 特殊
+    medal: 10,
+    pocket: 100, // 口袋道具：解鎖需要 100 個裝備解放石
+
+    // 寶玉：解鎖需要 50 個裝備解放石
+    gem1: 50, gem2: 50, gem3: 50, gem4: 50
+  };
+
+  function unlockCostByType(type){
+    if (UNLOCK_COST && Object.prototype.hasOwnProperty.call(UNLOCK_COST, type)) return toInt(UNLOCK_COST[type]);
+    return toInt(UNLOCK_COST.default);
+  }
+
+function freshEquipNode(type) {
+  return {
+    type: type,
+    tier: 'N',
+    name: equipNameByTier(type, 'N'),
+    locked: true,
+    base: clone(DEF_BASE[type] || {}), // ✅ 仍保留供計算使用
+    // _baseVer: （移除，不再追蹤版本）
+    slotsMax: toInt(DEF_SLOTS[type] || 0),
+    slotsUsed: 0,
+    enhance: { str: 0, dex: 0, int: 0, luk: 0, atk: 0, def: 0, hp: 0, mp: 0 },
+    star: 0,
+    enhanceSuccess: 0,
+    _lastChaosEff: null,
+    _bestChaosEff: null,
+    flame: null,
+    flameFlat: null
+  };
+}
+function normEquipNode(raw, type){
+  var d = freshEquipNode(type); 
+  raw = raw || {};
+
+  d.tier = String(raw.tier || 'N');
+  d.locked = (typeof raw.locked === 'boolean') ? raw.locked : d.locked;
+  // 名稱：若存檔沒有，就依「職業 + 階級」補上
+  d.name   = String(raw.name || equipNameByTier(type, d.tier) || d.name);
+    var defSlots = toInt(DEF_SLOTS[type] || 0);
+  // slots：以 DEF_SLOTS 為唯一權威（自動化）
+  // - 若 DEF_SLOTS=0 → 強制不可卷（即使舊存檔有 slotsMax 也會歸零）
+  // - 若舊存檔 slotsMax 未設定/為 0 → 自動補成 DEF_SLOTS
+  if (defSlots <= 0) {
+    d.slotsMax = 0;
+    d.slotsUsed = 0;
+  } else {
+    d.slotsMax  = isNum(raw.slotsMax) ? toInt(raw.slotsMax) : defSlots;
+    if (d.slotsMax <= 0) d.slotsMax = defSlots;
+    d.slotsUsed = Math.max(0, isNum(raw.slotsUsed) ? toInt(raw.slotsUsed) : 0);
+    if (d.slotsUsed > d.slotsMax) d.slotsUsed = d.slotsMax;
+  }
+  d.star   = Math.max(0, isNum(raw.star)? raw.star : 0);
+
+  if (isNum(raw._pendingStar)) d._pendingStar = raw._pendingStar;
+
+  // base 永遠用預設
+  d.base = clone(DEF_BASE[type] || {});
+
+  var e = clone(raw.enhance || {});
+  ['str','dex','int','luk','atk','def','hp','mp'].forEach(function(k){
+    d.enhance[k] = isNum(e[k]) ? e[k] : 0;
+  });
+
+  d.enhanceSuccess = Math.max(0, toInt(raw.enhanceSuccess||raw.successCount||0));
+  // 防呆：強化成功次數（卷軸成功）不能超過已用卷軸次數
+  // （避免被其它系統誤寫導致「恢復卷」判定失真）
+  if ((d.slotsMax|0) > 0) {
+    if (d.enhanceSuccess > d.slotsUsed) d.enhanceSuccess = d.slotsUsed;
+  } else {
+    // 不可卷部位強制歸零
+    d.enhanceSuccess = 0;
+  }
+  d._slotAugSuccess = Math.max(0, isNum(raw._slotAugSuccess)? toInt(raw._slotAugSuccess) : 0);
+
+  // ✅ 恢復混沌紀錄（BUG FIX）
+  d._lastChaosEff = raw._lastChaosEff || null;
+  d._bestChaosEff = raw._bestChaosEff || null;
+
+  // ✅ 星火（資料層）
+  if (raw.flame && typeof raw.flame === 'object') {
+    d.flame = clone(raw.flame);
+    if (raw.flameFlat && typeof raw.flameFlat === 'object') d.flameFlat = clone(raw.flameFlat);
+    else if (global.FlameCore && typeof global.FlameCore.linesToFlat === 'function') {
+      d.flameFlat = global.FlameCore.linesToFlat(d.flame);
+    }
+  } else {
+    d.flame = null;
+    d.flameFlat = null;
+  }
+
+  return d;
+}
+
+// ==== 使用 SaveHub 的中央存檔 ====
+  var Storage = (function () {
+    var NS = 'equip_system_v4_1'; // SaveHub 命名空間
+
+    // --- 正規化工具（沿用舊邏輯） ---
+    function normalizeSummary(x) {
+      x = x || {};
+      return {
+        str: nz(x.str), dex: nz(x.dex), int: nz(x.int), luk: nz(x.luk),
+        atk: nz(x.atk), def: nz(x.def), hp: nz(x.hp), mp: nz(x.mp),
+        strPct: nz(x.strPct), dexPct: nz(x.dexPct), intPct: nz(x.intPct), lukPct: nz(x.lukPct),
+        atkPct: nz(x.atkPct), defPct: nz(x.defPct), hpPct: nz(x.hpPct), mpPct: nz(x.mpPct),
+        allStatPct: nz(x.allStatPct)
+      };
+    }
+
+
+function normalizePotential(p) {
+      p = p && typeof p === 'object' ? clone(p) : {};
+      return {
+        lines: Array.isArray(p.lines) ? p.lines : [],
+        summary: normalizeSummary(p.summary),
+        tier: (p.tier ? String(p.tier) : 'R')
+      };
+    }
+
+    function normalizeState(s) {
+      s = s && typeof s === 'object' ? clone(s) : {};
+      var out = {
+        _ver: 41,
+        equips: {},
+        globalPotential: normalizePotential(s.globalPotential)
+      };
+      var ALL = getEquipTypes();
+      for (var i = 0; i < ALL.length; i++) {
+        var t = ALL[i];
+        out.equips[t] = normEquipNode(s.equips && s.equips[t], t);
+      }
+      return out;
+    }
+
+    // ✅ 修復器：舊存檔相容 + 新部位自動補齊 + 卷軸格自動同步 DEF_SLOTS
+    function repairState(out){
+      out = out && typeof out === 'object' ? out : emptyState();
+      out.equips = out.equips && typeof out.equips === 'object' ? out.equips : {};
+      var ALL = getEquipTypes();
+
+      for (var i=0;i<ALL.length;i++){
+        var t = ALL[i];
+        // 缺部位：補上
+        if (!out.equips[t]) out.equips[t] = freshEquipNode(t);
+
+        // 再正規化一次（確保 slotsMax/slotsUsed/名稱/基礎都更新）
+        out.equips[t] = normEquipNode(out.equips[t], t);
+      }
+
+      // 清掉不再存在於 DEF_BASE 的舊 key（保守：不刪，避免玩家資料遺失）
+      return out;
+    }
+
+    function emptyState() {
+      // 空狀態直接丟給 normalizeState 統一格式
+      return normalizeState({});
+    }
+
+    // --- 讀檔：從 SaveHub 取出（不存在就初始化） ---
+    function read() {
+      if (!global.SaveHub) {
+        console.warn('[equip_v4.1] SaveHub 未載入，使用空白狀態（不會存檔）');
+        return emptyState();
+      }
+
+      // 純讀，不傳 defaultObj → 不會自動寫檔
+      var raw = SaveHub.get(NS);
+      if (!raw) {
+        // 沒有節點時，用 getOrInit 建立初始節點並寫入 SaveHub
+        raw = SaveHub.getOrInit(NS, emptyState());
+      }
+      var st = normalizeState(raw);
+      st = repairState(st);
+      return st;
+    }
+
+    // --- 寫檔：寫回 SaveHub，同時清除 base/_baseVer ---
+    function write(next) {
+      if (!global.SaveHub) {
+        console.warn('[equip_v4.1] SaveHub 未載入，write 被忽略');
+        return null;
+      }
+
+      var cur = read();
+
+      // 1) 合併外部傳入的 equips（先正規化，再移除 base/_baseVer）
+      if (next && next.equips) {
+        for (var k in next.equips) {
+          if (!next.equips.hasOwnProperty(k)) continue;
+          var n = normEquipNode(next.equips[k], k);
+          if (n && typeof n === 'object') {
+            delete n.base;
+            delete n._baseVer;
+          }
+          cur.equips[k] = n;
+        }
+      }
+
+      // 2) 再保險：掃一次 cur，清掉任何殘留的 base / _baseVer
+      for (var t in cur.equips) {
+        if (!cur.equips.hasOwnProperty(t)) continue;
+        var eq = cur.equips[t];
+        if (eq && typeof eq === 'object') {
+          if ('base' in eq) delete eq.base;
+          if ('_baseVer' in eq) delete eq._baseVer;
+        }
+      }
+
+      // 3) 全域潛能合併，沿用舊邏輯
+      if (next && next.globalPotential) {
+        cur.globalPotential = {
+          lines: Array.isArray(next.globalPotential.lines)
+            ? next.globalPotential.lines
+            : (cur.globalPotential.lines || []),
+          summary: normalizeSummary(next.globalPotential.summary || cur.globalPotential.summary),
+          tier: next.globalPotential.tier
+            ? String(next.globalPotential.tier)
+            : (cur.globalPotential.tier || 'R')
+        };
+      }
+
+      // 4) 寫回 SaveHub
+      SaveHub.set(NS, cur, { replace: true });
+      return cur;
+    }
+
+    return { read: read, write: write };
+  })();
+  // ==== 物品 ====
+  var ITEM={
+    解放石:'裝備解放石',
+    衝星石:'衝星石',
+    恢復卷:'恢復卷軸',
+    完美卷:'完美重置卷軸',
+    // 統一卷軸（除手套/武器外）
+    屬60:'屬性強化卷60%',
+    屬10:'屬性強化卷10%',
+    屬攻45:'屬性攻擊強化卷45%',
+    屬攻7:'屬性攻擊強化卷7%',
+
+    // 手套專用
+    手60:'手套強化卷60%',
+    手30:'手套強化卷30%',
+    手7:'手套強化卷7%',
+
+    // 武器專用
+    武70:'武器強化卷70%',
+    武30:'武器強化卷30%',
+    武10:'武器強化卷10%',
+    武1:'武器強化卷1%',
+    混60標準:'混沌卷軸60%', 
+    混60高級:'高級混沌卷軸60%', 
+    混選:'混沌選擇券',
+    潛能方塊:'潛能方塊', 
+    上限卷:'卷軸上限提升', 
+    高級潛能方塊:'高級潛能方塊',
+    結合方塊:'結合方塊',
+    階級石:'裝備階級石',
+    星火:'星火',
+    高級星火:'高級星火',
+    永恆星火:'永恆星火',
+  
+  
+  };
+
+  // ==== 背包橋接 ====
+  function invCount(name){ try{ if (typeof global.getItemQuantity==='function') return global.getItemQuantity(name)|0; return (global.inventory&&global.inventory[name])|0; }catch(_){return 0;} }
+  function invUse(name,n){ n=n||1; if(invCount(name)<n) return false; try{ if(typeof global.removeItem==='function'){ global.removeItem(name,n); return true; } global.inventory=global.inventory||{}; global.inventory[name]=(global.inventory[name]|0)-n; if(global.inventory[name]<=0) delete global.inventory[name]; return true; }catch(_){ return false; } }
+  
+  
+
+function evolveEquipTier(type){
+  var st=Storage.read(), n=st.equips[type];
+  if(!n) return {ok:false,msg:'裝備不存在'};
+  if(n.locked) return {ok:false,msg:'裝備未解鎖'};
+
+  // --- Tier 設定（含 N） ---
+  var tierOrder=['N','R','SR','SSR','UR','LR','SLR'];
+  function tierLevel(t){
+    t=String(t||'N');
+    var i=tierOrder.indexOf(t);
+    return (i<0)?0:i; // N=0 ... SLR=6
+  }
+  var curLvl=tierLevel(n.tier);
+  if(curLvl>=tierOrder.length-1) return {ok:false,msg:'已達最高階級或資料異常'};
+
+  var nextLvl=curLvl+1;
+  var nextTier=tierOrder[nextLvl];
+
+  // --- 成本（以「目標階級」為索引） ---
+  // N->R->SR->SSR->UR->LR->SLR
+  var costTable=[0,2,5,10,20,40,100];
+  var cost=costTable[nextLvl]||0;
+  if(!invUse(ITEM.階級石,cost)) return {ok:false,msg:'缺少 '+ITEM.階級石+' ×'+cost};
+
+  // --- 史詩命名（升階會變名） ---
+  function hashStr(s){
+    s=String(s||''); var h=2166136261;
+    for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h = (h*16777619)>>>0; }
+    return h>>>0;
+  }
+  function pick(arr, seed, salt){
+    if(!arr||!arr.length) return '';
+    var x=(seed ^ hashStr(String(salt||'')))>>>0;
+    return arr[x % arr.length];
+  }
+  function ensureSeed(node){
+    if(!node._nameSeed){
+      // 保持可重現：第一次生成後寫入存檔
+      node._nameSeed = (hashStr(type)+'_'+(Date.now()>>>0)+'_'+((Math.random()*1e9)>>>0));
+    }
+    return node._nameSeed>>>0;
+  }
+  function genEpicName(tier, seed){
+    var base=getTypeName(type);
+    // Tier 風格：越高越「史詩」
+    var PFX={
+      N:  ['粗製','生鐵','舊制','破曉前','訓練用','野戰','工匠試作'],
+      R:  ['精鍛','銀紋','獵人','疾風','熾火','夜行','守望者'],
+      SR: ['王家','蒼雷','焰牙','霜誓','聖徽','影刃','星紋'],
+      SSR:['龍裔','不朽','深淵','天穹','神裁','永夜','耀日'],
+      UR: ['神域','審判','虹光','噬界','太初','黎明之冠','星海'],
+      LR: ['創世','終焉','萬象','天命','永恆','諸神黃昏','寰宇'],
+      SLR:['至高','無限','超越','太古','虛空王座','時空裂隙','群星支配者']
+    };
+    var MID={
+      N:  ['短刃','護符','布甲','皮革','指環','扣環','銘牌'],
+      R:  ['刃','護具','戰衣','護手','披風','戰靴','徽記'],
+      SR: ['誓約','咒印','聖痕','戰紋','龍骨','星核','審判印'],
+      SSR:['王印','神紋','深淵核','天穹印','永夜印','耀日心','龍皇痕'],
+      UR: ['神格','界痕','虹耀核','太初印','噬界痕','星海核','審判之心'],
+      LR: ['創世律','終焉印','萬象核','天命契','永恆痕','寰宇核','神代律'],
+      SLR:['無限律','超越印','太古核','虛空契','時空律','群星核','王座律']
+    };
+    var SFX={
+      N:  ['（試作）','（舊型）','（簡裝）','（磨損）','（未精煉）'],
+      R:  ['·疾襲','·守護','·斬鐵','·凝霜','·灼焰','·夜巡'],
+      SR: ['·破魔','·誓衛','·裁決','·流星','·龍息','·幽影'],
+      SSR:['·天罰','·深淵回響','·神諭','·星落','·永夜讚歌','·耀日審判'],
+      UR: ['·界滅','·神域審判','·虹光聖裁','·太初降臨','·噬界咆哮'],
+      LR: ['·創世序曲','·終焉宣告','·萬象歸一','·天命裁決','·永恆聖約'],
+      SLR:['·無限輪迴','·超越法則','·太古神裁','·虛空王權','·群星終章']
+    };
+    var p=pick(PFX[tier]||PFX.N, seed, 'pfx:'+tier);
+    var m=pick(MID[tier]||MID.N, seed, 'mid:'+tier);
+    var s=pick(SFX[tier]||SFX.N, seed, 'sfx:'+tier);
+    // 例：『創世｜寰宇核』＋『武器』＋『·創世序曲』
+    // 讓名稱看起來像「套裝名 + 部位名」
+    var pack = p + '「' + m + '」';
+    return pack + ' ' + base + ' ' + s;
+  }
+
+  var oldName = n.name;
+  var seed = ensureSeed(n);
+
+  // ==== 階級加成（目標總量法，避免累加誤差） ====
+  // lvl：N=0, R=1, SR=2, SSR=3, UR=4, LR=5, SLR=6
+  var prevApplied = tierLevel(n.tier);
+
+  // 目標總量
+  var target = { str:0, dex:0, int:0, luk:0, atk:0, def:0 };
+  if (type === 'weapon'){
+    target.atk = 8*nextLvl;
+    target.def = 2*nextLvl;
+    target.str = 3*nextLvl;
+    target.dex = 3*nextLvl;
+    target.int = 3*nextLvl;
+    target.luk = 3*nextLvl;
+  } else {
+    target.str = 2*nextLvl;
+    target.dex = 2*nextLvl;
+    target.int = 2*nextLvl;
+    target.luk = 2*nextLvl;
+  }
+
+  // 已套總量
+  var had = { str:0, dex:0, int:0, luk:0, atk:0, def:0 };
+  if (type === 'weapon'){
+    had.atk = 8*prevApplied;
+    had.def = 2*prevApplied;
+    had.str = 3*prevApplied;
+    had.dex = 3*prevApplied;
+    had.int = 3*prevApplied;
+    had.luk = 3*prevApplied;
+  } else {
+    had.str = 2*prevApplied;
+    had.dex = 2*prevApplied;
+    had.int = 2*prevApplied;
+    had.luk = 2*prevApplied;
+  }
+
+  // 增量
+  var delta = {
+    str: (target.str - had.str),
+    dex: (target.dex - had.dex),
+    int: (target.int - had.int),
+    luk: (target.luk - had.luk),
+    atk: (target.atk - had.atk),
+    def: (target.def - had.def)
+  };
+
+  // 寫入 enhance
+  n.enhance = n.enhance || {str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0};
+  n.enhance.str = (Number(n.enhance.str)||0) + delta.str;
+  n.enhance.dex = (Number(n.enhance.dex)||0) + delta.dex;
+  n.enhance.int = (Number(n.enhance.int)||0) + delta.int;
+  n.enhance.luk = (Number(n.enhance.luk)||0) + delta.luk;
+  n.enhance.atk = (Number(n.enhance.atk)||0) + delta.atk;
+  n.enhance.def = (Number(n.enhance.def)||0) + delta.def;
+
+  // 更新狀態
+  n.tier=nextTier;
+  n._tierLevelApplied = nextLvl;
+
+  // 名稱變化（只在升階後覆蓋）
+  n.name = equipNameByTier(type, nextTier);
+  if (nextTier === 'SLR') { __lastSlrUpgrade.type = type; __lastSlrUpgrade.at = Date.now(); }
+
+  var o={}; o[type]=n; Storage.write({equips:o}); syncAndPing();
+
+  var msgParts = ['進化成功：'+oldName+'（'+(n.tier||nextTier)+'） → '+n.name+'（'+nextTier+'）'];
+  var add = function(k,v){ if(v){ msgParts.push(k+'+'+v); } };
+  if (delta.atk) add('ATK', delta.atk);
+  if (delta.def) add('DEF', delta.def);
+  if (delta.str) add('STR', delta.str);
+  if (delta.dex) add('DEX', delta.dex);
+  if (delta.int) add('INT', delta.int);
+  if (delta.luk) add('LUK', delta.luk);
+  return {ok:true,msg:msgParts.join(' ｜ ')};
+}
+
+
+// =========================
+// 套裝規則 V2（N/SSR/UR/SLR）
+// - 百分比用小數：0.10 = 10%
+// - 規則：每個門檻只取最高等級（SLR > UR > SSR > N）
+// - 不同門檻可同時生效（累加）
+// =========================
+var SET_RULES_V2 = {
+  N: [
+    { pieces:2,  eff:{ hp:500, mp:30 } },
+    { pieces:3,  eff:{ atk:5, def:5 } },
+    { pieces:7,  eff:{ atk:5, def:5, hp:1000, mp:50 } },
+    { pieces:8,  eff:{ normalMobDamage:0.30 } }
+  ],
+  SSR: [
+    { pieces:2,  eff:{ allStat:4,  hp:700,  mp:40 } },
+    { pieces:3,  eff:{ allStat:10, atk:10 } },
+    { pieces:4,  eff:{ ignoreDefPct:0.10 } },
+    { pieces:5,  eff:{ totalDamage:0.05 } },
+    { pieces:6,  eff:{ bossDamage:0.15 } },
+    { pieces:7,  eff:{ atk:15, def:15, hp:1500, mp:70 } },
+    { pieces:8,  eff:{ normalMobDamage:0.30, atk:20, allStat:10 } },
+    { pieces:9,  eff:{ critMultiplier:0.15 } }
+  ],
+  UR: [
+    { pieces:2,  eff:{ allStat:8,  hp:800,  mp:45 } },
+    { pieces:3,  eff:{ allStat:15, atk:20 } },
+    { pieces:4,  eff:{ ignoreDefPct:0.20 } },
+    { pieces:5,  eff:{ totalDamage:0.10 } },
+    { pieces:6,  eff:{ bossDamage:0.25 } },
+    { pieces:7,  eff:{ atk:25, def:25, hp:2000, mp:100 } },
+    { pieces:8,  eff:{ normalMobDamage:0.30, atk:40, allStat:10 } },
+    { pieces:9,  eff:{ critMultiplier:0.15, bossDamage:0.20 } }
+  ],
+  SLR: [
+    { pieces:2,  eff:{ allStat:20, hp:3000, mp:80 } },
+    { pieces:3,  eff:{ allStat:50, atk:50 } },
+    { pieces:4,  eff:{ ignoreDefPct:0.30 } },
+    { pieces:5,  eff:{ totalDamage:0.30 } },
+    { pieces:6,  eff:{ bossDamage:0.35 } },
+    { pieces:7,  eff:{ atk:50, def:50, hp:3000, mp:80 } },
+    { pieces:8,  eff:{ normalMobDamage:0.30, atk:50, allStat:30 } },
+    { pieces:9,  eff:{ critMultiplier:0.15, bossDamage:0.20, totalDamage:0.20 } },
+    { pieces:10, eff:{ allStat:10, atk:20, def:20, hp:500, mp:50, totalDamage:0.02, bossDamage:0.05 } }
+  ]
+};
+
+// ===== 套裝 Overflow（可調表） =====
+// - startPieces: 從幾件開始計 overflow（10 表示 11 件起每多 1 件累積）
+// - grade: 只有當 bestTierFromState(st) == grade 才啟用（避免低階套裝吃到）
+// - perPiece: 每超過 1 件增加多少（平坦）
+var SET_OVERFLOW_RULES = {
+  enabled: true,
+  startPieces: 10,
+  grade: 'SLR', 
+  
+  perPiece: { allStat:50, atk:20, def:20, hp:500, mp:50 }
+};
+
+
+// tier -> 套裝等級（把 R/SR 視為 N；LR 視為 UR；SLR 保持 SLR）
+function setGradeFromTier(tier){
+  tier = String(tier||'R');
+  if (tier === 'SLR') return 'SLR';
+  if (tier === 'UR' || tier === 'LR') return 'UR';
+  if (tier === 'SSR') return 'SSR';
+  return 'N';
+}
+
+function countSetPiecesByGrade(st, setTypes){
+  var out = { N:0, SSR:0, UR:0, SLR:0, total:0 };
+  for (var i=0;i<setTypes.length;i++){
+    var n = st.equips[setTypes[i]];
+    if (!n || n.locked) continue;
+    out.total++;
+    var g = setGradeFromTier(n.tier);
+    out[g] = (out[g]||0) + 1;
+  }
+  return out;
+}
+
+// 取得「達標件數」（支援混搭）
+function setCountAtOrAbove(counts, grade){
+  if (grade === 'SLR') return counts.SLR|0;
+  if (grade === 'UR')  return (counts.UR|0) + (counts.SLR|0);
+  if (grade === 'SSR') return (counts.SSR|0) + (counts.UR|0) + (counts.SLR|0);
+  return (counts.total|0);
+}
+
+function getThresholdsFromRules(rules){
+  var m = {}, grades=['N','SSR','UR','SLR'];
+  for (var gi=0; gi<grades.length; gi++){
+    var arr = rules[grades[gi]] || [];
+    for (var i=0;i<arr.length;i++) m[arr[i].pieces|0] = 1;
+  }
+  var out = Object.keys(m).map(function(x){ return x|0; });
+  out.sort(function(a,b){ return a-b; });
+  return out;
+}
+
+function findEffFor(rules, grade, pieces){
+  var arr = rules[grade] || [];
+  for (var i=0;i<arr.length;i++){
+    if ((arr[i].pieces|0) === (pieces|0)) return arr[i].eff || null;
+  }
+  return null;
+}
+
+function mergeEffSum(sum, eff){
+  for (var k in eff) if (eff.hasOwnProperty(k)) sum[k] = (Number(sum[k])||0) + (Number(eff[k])||0);
+  return sum;
+}
+
+// 計算：每門檻只取最高等級（SLR>UR>SSR>N），不同門檻累加
+// 回傳：{ counts, applied:[{pieces,grade,eff}], sum }
+function computeSetBonusV2(st, setTypes){
+  var counts = countSetPiecesByGrade(st, setTypes);
+  var thresholds = getThresholdsFromRules(SET_RULES_V2);
+  var grades = ['SLR','UR','SSR','N'];
+
+  var sum = {
+    str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0,allStat:0,
+    ignoreDefPct:0,totalDamage:0,bossDamage:0,normalMobDamage:0,critMultiplier:0
+  };
+  var applied = [];
+  var overflowCount = 0;
+  var overflowEff = null;
+
+  for (var ti=0; ti<thresholds.length; ti++){
+    var p = thresholds[ti];
+    var chosen = null;
+
+    for (var gi=0; gi<grades.length; gi++){
+      var g = grades[gi];
+      if (setCountAtOrAbove(counts, g) < p) continue;
+      var eff = findEffFor(SET_RULES_V2, g, p);
+      if (!eff) continue;
+      chosen = { pieces:p, grade:g, eff:clone(eff) };
+      break;
+    }
+
+    if (chosen){
+      applied.push(chosen);
+      mergeEffSum(sum, chosen.eff);
+    }
+  }
+
+  // ===== SLR overflow：超過 startPieces 後每多 1 件累積（可調表） =====
+  try{
+    if (SET_OVERFLOW_RULES && SET_OVERFLOW_RULES.enabled){
+      var sp = (SET_OVERFLOW_RULES.startPieces|0) || 10;
+      var overflow = Math.max(0, (counts.SLR|0) - sp);
+      var needGrade = String(SET_OVERFLOW_RULES.grade||'SLR');
+      var best = bestTierFromState(st);
+      if (overflow > 0 && best === needGrade){
+        overflowCount = overflow;
+        var pp = SET_OVERFLOW_RULES.perPiece || {};
+        var overflowEff = {
+          allStat: (pp.allStat|0) * overflow,
+          atk: (pp.atk|0) * overflow,
+          def: (pp.def|0) * overflow,
+          hp: (pp.hp|0) * overflow,
+          mp: (pp.mp|0) * overflow
+        };
+        overflowEff = clone(overflowEff);
+        mergeEffSum(sum, overflowEff);
+        // UI 已改為只顯示最終累積，這裡不再追加 11/12/13 門檻列
+      }
+    }
+  }catch(_){ }
+
+
+  return { counts:counts, applied:applied, sum:sum, overflow:overflowCount, overflowEff:overflowEff };
+}
+
+// ==== 能力計算與同步 ====
+
+  function calcFinalStats(node){
+    var base;
+    if (global.EquipStatsV2 && global.EquipStatsV2.calcEquipFinal) base = global.EquipStatsV2.calcEquipFinal(node);
+    else base = { str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0, starAtkPctSum:0, atkFromStar:0, atkFlat:0 };
+
+    // 星火：加在裝備最終平砍（不吃%）
+    if (node && (node.flameFlat || node.flame)) {
+      var ff = node.flameFlat;
+      if (!ff && global.FlameCore && typeof global.FlameCore.linesToFlat === 'function') {
+        ff = global.FlameCore.linesToFlat(node.flame);
+        node.flameFlat = ff;
+      }
+      if (ff) {
+        base.str += (ff.str|0);
+        base.dex += ((ff.dex!=null?ff.dex:ff.agi)|0);
+        base.int += (ff.int|0);
+        base.luk += (ff.luk|0);
+        base.atk += (ff.atk|0);
+        base.def += (ff.def|0);
+        base.hp  += (ff.hp|0);
+        base.mp  += (ff.mp|0);
+        // 給 summary 用（你內部偶爾用 agi）
+        base.agi = (base.agi|0) + ((ff.agi!=null?ff.agi:ff.dex)|0);
+      }
+    }
+    return base;
+  }
+function computeEquipAggregate(){
+  var st = Storage.read();
+  var keys = resolveSetTypes(st);
+
+  // 先把每件裝備 → 最終(基礎+卷軸+星力) 做平砍合計
+  var sum = {str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0};
+  for (var i=0;i<keys.length;i++){
+    var s = calcFinalStats(st.equips[keys[i]]);
+    sum.str+=s.str; sum.dex+=s.dex; sum.int+=s.int; sum.luk+=s.luk;
+    sum.atk+=s.atk; sum.def+=s.def; sum.hp+=s.hp; sum.mp+= (s.mp||0);
+  }
+  // 套裝（V2：每門檻只取最高等級）
+  var setDetail = computeSetBonusV2(st, keys);
+  var setS = setDetail.sum || {};
+  var all = (setS.allStat|0);
+  var equipSetFlat = {
+    str:(setS.str|0)+all, dex:(setS.dex|0)+all, int:(setS.int|0)+all, luk:(setS.luk|0)+all,
+    atk:setS.atk|0, def:setS.def|0, hp:setS.hp|0, mp:setS.mp|0,
+    ignoreDefPct:+setS.ignoreDefPct||0, totalDamage:+setS.totalDamage||0,
+    bossDamage:+setS.bossDamage||0, normalMobDamage:+setS.normalMobDamage||0,
+    critMultiplier:+setS.critMultiplier||0
+  };
+
+  // 讀取全域潛能（R→LR→SLR 的合計），注意：DEX 潛能要「當作 AGI 匯入」
+  var gp = (st.globalPotential && st.globalPotential.summary) ? st.globalPotential.summary : {
+    str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0,
+    strPct:0,dexPct:0,intPct:0,lukPct:0,atkPct:0,defPct:0,hpPct:0,mpPct:0,allStatPct:0
+  };
+
+  // === 只把潛能加在「裝備合計 sum」上；不影響套裝 ===
+  // 這裡做 DEX→AGI 的映射：gp.dex / gp.dexPct 變成 agi / agiPct
+  var gpMapped = {
+    str: gp.str|0,  int: gp.int|0,  luk: gp.luk|0,
+    atk: gp.atk|0,  def: gp.def|0,  hp: gp.hp|0, mp: gp.mp|0,
+    strPct:+gp.strPct||0, intPct:+gp.intPct||0, lukPct:+gp.lukPct||0,
+    atkPct:+gp.atkPct||0, defPct:+gp.defPct||0, hpPct:+gp.hpPct||0, mpPct:+gp.mpPct||0,
+    allStatPct:+gp.allStatPct||0,
+    agi: gp.dex|0, agiPct:+gp.dexPct||0
+  };
+  // 小工具：把 % 與平砍套用到某個 base 值上
+  function apStat(baseVal, pct1, pctAll, flat){
+    var m = 1 + (Number(pct1)||0)/100 + (Number(pctAll)||0)/100;
+    return Math.floor((baseVal|0) * m) + (flat|0);
+  }
+  function apOnlyPct(baseVal, pct){
+    var m = 1 + (Number(pct)||0)/100;
+    return Math.floor((baseVal|0) * m);
+  }
+
+  // 潛能套用到「裝備合計」：DEX 的潛能當 AGI 吃
+  var afterPotential = {
+    str: apStat(sum.str, gpMapped.strPct, gpMapped.allStatPct, gpMapped.str),
+    agi: apStat(sum.dex, gpMapped.agiPct, gpMapped.allStatPct, gpMapped.agi), // 注意：用 sum.dex 當基底
+    int: apStat(sum.int, gpMapped.intPct, gpMapped.allStatPct, gpMapped.int),
+    luk: apStat(sum.luk, gpMapped.lukPct, gpMapped.allStatPct, gpMapped.luk),
+    atk: apOnlyPct(sum.atk, gpMapped.atkPct) + (gpMapped.atk|0),
+    def: apOnlyPct(sum.def, gpMapped.defPct) + (gpMapped.def|0),
+    hp : apOnlyPct(sum.hp,  gpMapped.hpPct)  + (gpMapped.hp|0),
+    mp : apOnlyPct(sum.mp,  gpMapped.mpPct)  + (gpMapped.mp|0)
+  };
+  // 潛能換算成「實際加成量」（讓外部用 PotentialBonus 加回去）
+  var potBonus = {
+    str: afterPotential.str - (sum.str|0),
+    agi: afterPotential.agi - (sum.dex|0), // dex 潛能當 agi
+    int: afterPotential.int - (sum.int|0),
+    luk: afterPotential.luk - (sum.luk|0),
+    atk: afterPotential.atk - (sum.atk|0),
+    def: afterPotential.def - (sum.def|0),
+    hp : afterPotential.hp  - (sum.hp |0),
+    mp : afterPotential.mp - (sum.mp|0)
+  };
+
+  // 同步到全域 PotentialBonus（避免潛能再被算進 coreBonus）
+  try{
+    var PB = ensurePotentialBonus();
+    PB.bonusData.globalPotential = {
+      hp: potBonus.hp|0,
+      mp: potBonus.mp|0,
+      atk: potBonus.atk|0,
+      def: potBonus.def|0,
+      str: potBonus.str|0,
+      agi: potBonus.agi|0,
+      int: potBonus.int|0,
+      luk: potBonus.luk|0
+    };
+  }catch(_){}
+
+  // 最終面板值（不含潛能）＝ 裝備合計 ＋ 套裝平砍；套裝的 % 類保留獨立欄位
+  var final = {
+    str: (sum.str|0) + (equipSetFlat.str|0),
+    agi: (sum.dex|0) + (equipSetFlat.dex|0),
+    int: (sum.int|0) + (equipSetFlat.int|0),
+    luk: (sum.luk|0) + (equipSetFlat.luk|0),
+    atk: (sum.atk|0) + (equipSetFlat.atk|0),
+    def: (sum.def|0) + (equipSetFlat.def|0),
+    hp : (sum.hp |0) + (equipSetFlat.hp |0),
+    mp : (sum.mp |0) + (equipSetFlat.mp |0),
+
+    // % 類保留（由外部統一加總）
+    ignoreDefPct: equipSetFlat.ignoreDefPct,
+    totalDamage:  equipSetFlat.totalDamage
+  };
+
+  // 寫回 coreBonus（只提供兩塊：equip=已含潛能；equipSet=套裝。不要再寫 potential/final 以免重複）
+  try{
+    if (global.player && global.player.coreBonus && global.player.coreBonus.bonusData){
+      var bd = global.player.coreBonus.bonusData;
+
+      // 裝備（已含潛能；敏捷用 agi）
+      bd.equip = {
+        str: afterPotential.str, agi: afterPotential.agi, int: afterPotential.int,
+        luk: afterPotential.luk, atk: afterPotential.atk, def: afterPotential.def, hp: afterPotential.hp, mp: afterPotential.mp
+      };
+      // 套裝（平砍；% 類獨立）
+      bd.equipSet = {
+        // 平坦
+        str: (equipSetFlat.str|0),
+        agi: (equipSetFlat.dex|0),
+        int: (equipSetFlat.int|0),
+        luk: (equipSetFlat.luk|0),
+        atk: (equipSetFlat.atk|0),
+        def: (equipSetFlat.def|0),
+        hp : (equipSetFlat.hp|0),
+        mp : (equipSetFlat.mp|0),
+
+        // 百分比 / 特殊（key 必須與 coreBonus 一致）
+        ignoreDefPct: (+equipSetFlat.ignoreDefPct||0),
+        totalDamage:  (+equipSetFlat.totalDamage||0),
+        normalDamage: (+equipSetFlat.normalMobDamage||0),
+        bossDamage:   (+equipSetFlat.bossDamage||0),
+        critMultiplier:(+equipSetFlat.critMultiplier||0)
+      };
+
+      // 若你只拿 bd.equip + bd.equipSet，面板/戰鬥就自然吃到潛能（且不會重複加）
+    }
+    global.updateResourceUI && global.updateResourceUI();
+  }catch(_){}
+
+  // 回傳：sum=原裝備合計(未套潛能)、set=套裝、gp=潛能、final=面板值
+  return { sum:sum, set:setDetail, unlocked:(setDetail && setDetail.counts ? (setDetail.counts.total|0) : 0), gp:gp, potBonus:potBonus, afterPotential:afterPotential, equipSetFlat:equipSetFlat, final:final };
+}
+  function syncAndPing(){
+    computeEquipAggregate();
+
+    function fire(name){
+      try{
+        var evt;
+        try{ evt = new CustomEvent(name,{ detail:{ source:'equip' } }); }
+        catch(__){
+          try{ evt = document.createEvent('CustomEvent'); evt.initCustomEvent(name,true,true,{ source:'equip' }); }
+          catch(__2){ evt = document.createEvent('Event'); evt.initEvent(name,true,true); }
+        }
+        global.dispatchEvent && global.dispatchEvent(evt);
+      }catch(_){}
+    }
+
+    // 裝備變動（不含潛能）
+    fire('coreBonus:changed');
+    // 潛能獨立變動（PotentialBonus）
+    fire('potentialBonus:changed');
+  }
+
+  // ==== 操作 ====
+  function unlockEquip(type){
+    var st=Storage.read(), n=st.equips[type]; if(!n) return {ok:false,msg:'裝備不存在'};
+    if(!n.locked) return {ok:false,msg:'已解鎖'};
+    var need=unlockCostByType(type); if(!invUse(ITEM.解放石,need)) return {ok:false,msg:'缺少 裝備解放石 ×'+need};
+    n.locked=false; if(isNum(n._pendingStar)){ n.star=n._pendingStar|0; delete n._pendingStar; }
+    var o={}; o[type]=n; Storage.write({equips:o}); syncAndPing();
+    return {ok:true,msg:'已解鎖 '+n.name + (n.star? ('（從 '+n.star+'★ 開始）') : '') };
+  }
+  function canUseScroll(type){
+    // ✅ 自動化：是否可用卷軸只看 DEF_SLOTS（想禁止就把 DEF_SLOTS 設為 0）
+    return ((DEF_SLOTS[type]|0) > 0);
+  }
+function updateBestChaosEff(node, eff){
+    if (!eff) return node._bestChaosEff||null;
+    var keys=['str','dex','int','luk','atk','hp','def'], best=clone(node._bestChaosEff||{}), i,k,v;
+    for(i=0;i<keys.length;i++){ k=keys[i]; v=Number(eff[k]||0); if(v>0){ var cur=Number(best[k]||0); if(v>cur) best[k]=v; } }
+    return best;
+  }
+
+  function useScroll(type, name){
+    if (!global.ScrollForgeV2) return {ok:false,msg:'未載入 ScrollForgeV2'};
+    var st=Storage.read(), n=st.equips[type];
+    if (!canUseScroll(type)) return {ok:false,msg:'此部位不可使用卷軸'};
+    var chk=ScrollForgeV2.canUse(n,name);
+    if(!chk.ok){
+      var msg = chk.reason==='not_found' ? '沒有這種卷軸' : chk.reason==='locked' ? '裝備未解鎖' : chk.reason==='wrong_type' ? '卷軸不符合裝備' : '已無卷軸次數';
+      return {ok:false,msg:msg};
+    }
+    var isChaos=(name===ITEM.混60標準||name===ITEM.混60高級);
+    if(!isChaos){
+      if(!invUse(name,1)) return {ok:false,msg:'背包沒有：'+name};
+      var res=ScrollForgeV2.apply(n,name); var next=res.nextNode;
+      var o={}; o[type]=next; Storage.write({equips:o}); syncAndPing();
+      return {ok:true,success:res.success,msg:(res.success?'強化成功':'強化失敗')+'（成功率 '+res.rate+'%｜已用 '+next.slotsUsed+'/'+next.slotsMax+'）'};
+    }
+    if(!invUse(name,1)) return {ok:false,msg:'背包沒有：'+name};
+    var pv=ScrollForgeV2.chaosPreview(n,name);
+    if(!pv.ok){ return {ok:false,msg:'混沌檢定失敗（狀態不符）'}; }
+    if(!pv.success){
+      var nf=clone(n); nf.slotsUsed=(nf.slotsUsed|0)+1; var o1={}; o1[type]=nf; Storage.write({equips:o1}); syncAndPing();
+      return {ok:true,success:false,msg:name+' 失敗（卷軸次數 +1）｜已用 '+nf.slotsUsed+'/'+nf.slotsMax};
+    }
+    var hasTicket=invCount(ITEM.混選)>0, doApply=true;
+    if(hasTicket){ try{ doApply=confirm('混沌成功！是否套用？\n\n結果：'+JSON.stringify(pv.effPreview)+'\n\n是：套用並扣 1 次\n否：不套用、不扣次（混沌選擇券消耗）'); }catch(_){ doApply=true; } invUse(ITEM.混選,1); }
+    var cm=ScrollForgeV2.chaosCommit(n,name,pv.effPreview,doApply); var next=cm.nextNode;
+    if(doApply){ next._lastChaosEff=pv.effPreview||null; next._bestChaosEff=updateBestChaosEff(next,pv.effPreview); }
+    var o2={}; o2[type]=next; Storage.write({equips:o2}); syncAndPing();
+    var tip=doApply?'混沌成功並套用（+1 次）':'混沌成功但未套用（不扣次）';
+    return {ok:true,success:true,msg:tip+'｜已用 '+next.slotsUsed+'/'+next.slotsMax};
+  }
+
+  function restoreFailed(type){
+    if (!global.ScrollForgeV2) return {ok:false,msg:'未載入 ScrollForgeV2'};
+    var st=Storage.read(), n=st.equips[type];
+    if (!canUseScroll(type)) return {ok:false,msg:'此部位不可使用卷軸（無法恢復）'};
+    if (!invUse(ITEM.恢復卷,1)) return {ok:false,msg:'缺少 恢復卷軸 ×1'};
+    var r=ScrollForgeV2.recoverFailedOnce(n);
+    if(!r.ok) return {ok:false,msg:(r.reason==='locked'?'裝備未解鎖':'沒有可恢復的失敗次數')};
+    var o={}; o[type]=r.nextNode; Storage.write({equips:o}); syncAndPing();
+    return {ok:true,msg:(r.success?'恢復成功（-1 失敗次數）':'恢復失敗（機率 50%）')};
+  }
+  function perfectReset(type){
+    if (!global.ScrollForgeV2) return {ok:false,msg:'未載入 ScrollForgeV2'};
+    var st=Storage.read(), n=st.equips[type];
+    if (!invUse(ITEM.完美卷,1)) return {ok:false,msg:'缺少 完美重置卷軸 ×1'};
+    var r=ScrollForgeV2.perfectReset(n); r.nextNode._lastChaosEff=null; r.nextNode._bestChaosEff=null;
+    var o={}; o[type]=r.nextNode; Storage.write({equips:o}); syncAndPing();
+    return {ok:true,msg:'裝備已完美重置（卷軸與歸零）'};
+  }
+  function starAttempt(type){
+    if (!global.StarforceTableV1) return {ok:false,msg:'未載入 StarforceTableV1'};
+    var st=Storage.read(), n=st.equips[type]; if(!n) return {ok:false,msg:'裝備不存在'}; if(n.locked) return {ok:false,msg:'裝備未解鎖'};
+    // 允許卷軸未用完也能升星（依需求移除限制）
+    if (!invUse(ITEM.衝星石,1)) return {ok:false,msg:'缺少 衝星石 ×1'};
+    var r=StarforceTableV1.attempt(n.star|0,{maxStar:30,boomReset:{locked:true,pendingStar:12}});
+    if(r.boom){ n.locked=true; n._pendingStar=12; } else if(r.success){ n.star=r.next|0; }
+    var o={}; o[type]=n; Storage.write({equips:o}); syncAndPing();
+    return {ok:r.success, msg: r.boom?'★失敗並爆炸！需重新解鎖；重新解鎖後從 12★ 開始（卷軸能力保留）':(r.success?'星力成功 → '+n.star+'★':'星力失敗'), success:r.success, boom:r.boom};
+  }
+
+  // ==== 潛能（只升不降；強制套用）====
+  function emptySummary(){ return {str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,strPct:0,dexPct:0,intPct:0,lukPct:0,atkPct:0,hpPct:0,allStatPct:0}; }
+  function getGlobalPotential(){ var st=Storage.read(); return st.globalPotential || {lines:[],summary:emptySummary(),tier:'R'}; }
+
+  function applyGlobalPotentialWithTier(lines, tier){
+    var bonus=PotentialCoreV21.linesToBonus(lines||[]);
+    Storage.write({ globalPotential:{ lines:clone(lines||[]), summary:bonus, tier: tier||'R' } });
+    syncAndPing(); return {ok:true,msg:'已套用全域潛能'};
+  }
+
+  
+  // ==== 潛能洗方塊（由 PotentialCoreV21 方塊定義主導；彈窗操作）====
+  function cubeItemByCubeType(cubeType){
+    if (cubeType==='cube_combine') return ITEM.結合方塊;
+    return (cubeType==='cube_plus') ? ITEM.高級潛能方塊 : ITEM.潛能方塊;
+  }
+
+  function rollPotentialAndApplyCube(cubeType, silent){
+    if (!global.PotentialCoreV21){ alert('未載入 PotentialCoreV21'); return null; }
+    cubeType = (cubeType==='cube_plus') ? 'cube_plus' : 'cube';
+
+    var item = cubeItemByCubeType(cubeType);
+    if(!invUse(item,1)){ alert('缺少 '+item+' ×1'); return null; }
+
+    var st=Storage.read();
+    var curTier=(st.globalPotential&&st.globalPotential.tier)?st.globalPotential.tier:'R';
+    var res=PotentialCoreV21.rollThreeSessionFrom(curTier, cubeType); // {sessionTier, lines}
+    applyGlobalPotentialWithTier(res.lines, res.sessionTier);
+
+    if(!silent) alert('潛能已套用（本次等級：'+res.sessionTier+'；原：'+curTier+'）');
+    global.EquipHub&&global.EquipHub.requestRerender&&global.EquipHub.requestRerender();
+    return res;
+  }
+
+  // 高級方塊：先洗出「候選結果」但不立即套用（仍會消耗方塊）
+  function rollPotentialPreviewCube(cubeType){
+    if (!global.PotentialCoreV21){ alert('未載入 PotentialCoreV21'); return null; }
+    cubeType = (cubeType==='cube_plus') ? 'cube_plus' : 'cube';
+
+    var item = cubeItemByCubeType(cubeType);
+    if(!invUse(item,1)){ alert('缺少 '+item+' ×1'); return null; }
+
+    var st=Storage.read();
+    var curTier=(st.globalPotential&&st.globalPotential.tier)?st.globalPotential.tier:'R';
+    var curLines=(st.globalPotential&&st.globalPotential.lines)?clone(st.globalPotential.lines):[];
+    var res=PotentialCoreV21.rollThreeSessionFrom(curTier, cubeType); // {sessionTier, lines}
+    return {
+      curTier: curTier,
+      curLines: curLines,
+      nextTier: res.sessionTier,
+      nextLines: res.lines
+    };
+  }
+
+  // 兼容舊按鈕呼叫（若外部仍用 'normal'/'plus'）
+  function rollPotentialAndApply(kind){ // 'normal' | 'plus'
+    var cubeType = (kind==='plus') ? 'cube_plus' : 'cube';
+    return rollPotentialAndApplyCube(cubeType, false);
+  }
+
+  function Equip_showPotentialCubeModal(){
+    // local helpers (avoid scope issues)
+    function _div(css){ var d=document.createElement('div'); if(css) d.style.cssText=css; return d; }
+    function _txt(t){ return document.createTextNode(t); }
+    function _btn(label,on,kind){
+      var b=document.createElement('button'); b.textContent=label; b.onclick=on;
+      var bg = (kind==='primary') ? '#2563eb' : (kind==='secondary') ? '#334155' : '#1f2937';
+      b.style.cssText='padding:6px 10px;border:1px solid #334155;border-radius:10px;background:'+bg+';color:#fff;cursor:pointer;font-weight:800';
+      return b;
+    }
+    function _sel(){
+      var s=document.createElement('select');
+      s.style.cssText='padding:6px 8px;border:1px solid #334155;border-radius:10px;background:#0b1220;color:#e5e7eb;font-weight:800';
+      return s;
+    }
+    function _hr(){ var h=document.createElement('div'); h.style.cssText='height:1px;background:#243044;margin:10px 0'; return h; }
+
+    // blink style once
+    if(!document.getElementById('POT_MODAL_BLINK_STYLE')){
+      var st=document.createElement('style'); st.id='POT_MODAL_BLINK_STYLE';
+      st.textContent='@keyframes potBlink{0%{box-shadow:0 0 0 rgba(0,0,0,0);}50%{box-shadow:0 0 0 3px rgba(59,130,246,.65);}100%{box-shadow:0 0 0 rgba(0,0,0,0);}}';
+      document.head.appendChild(st);
+    }
+
+    if (!global.PotentialCoreV21){ alert('未載入 PotentialCoreV21'); return; }
+    if (!PotentialCoreV21.getCubeDefs || !PotentialCoreV21.flowInit || !PotentialCoreV21.flowView || !PotentialCoreV21.flowDispatch){
+      alert('潛能模組未提供 flow-driven API（需要更新 potential_core）');
+      return;
+    }
+
+    var defs = PotentialCoreV21.getCubeDefs();
+    if(!defs || !defs.length){ alert('沒有可用的方塊定義'); return; }
+
+    function readCurrent(){
+      var st=Storage.read();
+      var tier=(st.globalPotential&&st.globalPotential.tier)?st.globalPotential.tier:'R';
+      var lines=(st.globalPotential&&st.globalPotential.lines)?st.globalPotential.lines:[];
+      return { tier:tier, lines:lines };
+    }
+
+    // state
+    var cubeId = defs[0].id;
+    var base = readCurrent();
+    var ctx = PotentialCoreV21.flowInit(cubeId, base.tier, base.lines);
+
+    // overlay
+    var bd=_div('position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:10000;padding:12px;');
+    var w =_div('width:min(980px,96vw);max-height:92vh;overflow:auto;background:#111827;color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:12px;box-shadow:0 12px 36px rgba(0,0,0,.5)');
+
+    var head=_div('display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;font-weight:900');
+    var left=_div('display:flex;align-items:center;gap:8px;flex-wrap:wrap');
+    left.appendChild(_txt('🧊 潛能方塊'));
+
+    var sel=_sel();
+    var countEl=_div('margin-left:8px;opacity:.9;font-weight:900');
+    for(var i=0;i<defs.length;i++){
+      var opt=document.createElement('option');
+      opt.value=defs[i].id;
+      opt.textContent=defs[i].title || defs[i].id;
+      sel.appendChild(opt);
+    }
+    sel.value=cubeId;
+    left.appendChild(sel);
+    left.appendChild(countEl);
+
+    // update remaining count display for selected cube
+    function _cubeDefById(id){ for(var ii=0; ii<defs.length; ii++){ if(defs[ii].id===id) return defs[ii]; } return null; }
+    function _cubeItemName(def){
+      if(!def) return '';
+      try{
+        if(typeof cubeItemByCubeType==='function' && def.cubeType) return cubeItemByCubeType(def.cubeType);
+      }catch(_){ }
+      return def.itemName || def.item || def.title || def.id;
+    }
+    function _updateCount(){
+      var def=_cubeDefById(sel.value);
+      var nm=_cubeItemName(def);
+      var c=0; try{ c = (typeof invCount==='function') ? invCount(nm) : 0; }catch(_){ c=0; }
+      countEl.textContent = nm ? ('剩餘：'+nm+' x'+c) : '';
+    }
+    _updateCount();
+    sel.addEventListener('change', function(){ _updateCount(); });
+
+    var close=_btn('關閉', function(){ bd.remove(); }, 'secondary');
+    head.appendChild(left); head.appendChild(close);
+    w.appendChild(head);
+
+    var msg=_div('margin:6px 0 8px 0;opacity:.9;font-size:12px;line-height:1.4');
+    w.appendChild(msg);
+
+    var panelWrap=_div('display:flex;gap:10px;flex-wrap:wrap');
+    w.appendChild(panelWrap);
+
+    w.appendChild(_hr());
+
+    var actionBar=_div('display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end');
+    w.appendChild(actionBar);
+
+    function renderPanels(view){
+      panelWrap.innerHTML='';
+      var panels=view.panels||[];
+      for(var p=0;p<panels.length;p++){
+        var P=panels[p]||{};
+        var card=_div('flex:1 1 320px;min-width:260px;border:1px solid #263247;border-radius:12px;background:#0b1220;padding:10px');
+        var title=_div('font-weight:900;margin-bottom:8px;color:#93c5fd;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap');
+        var t=_div('font-weight:900'); t.textContent = (P.title||'');
+        var r=_div('opacity:.85'); r.textContent = '等級：'+(P.tier||'—');
+        title.appendChild(t); title.appendChild(r);
+        card.appendChild(title);
+
+        var lines=P.lines||[];
+        for(var li=0; li<3; li++){
+          var row=_div('padding:8px;border:1px solid #1f2a3a;border-radius:10px;margin:6px 0;background:#0f172a;');
+          if(P.highlightLine && (li+1)===P.highlightLine){
+            row.style.animation='potBlink 1s ease-in-out infinite';
+            row.style.borderColor='#3b82f6';
+          }
+          var L=lines[li]||{};
+          var tier = L.tier || '';
+          var label = L.label || '—';
+          var vv = (L.value!=null) ? Number(L.value) : null;
+          var unit = (L.unit==='pct' || L.unit==='allpct') ? '%' : '';
+          var valText = '';
+          if (vv!=null && !isNaN(vv)){
+            valText = unit ? (String(vv)+unit) : ('+'+String(vv));
+          }
+          var lineText = label + (valText ? (' ' + valText) : '');
+
+          // row layout: [tier badge] [text]
+          row.innerHTML='';
+          row.style.display='flex';
+          row.style.alignItems='center';
+          row.style.gap='8px';
+
+          var badge=document.createElement('span');
+          badge.textContent=tier;
+          // tier badge color
+          var _tier=tier;
+          var _tierMap={
+            'R': {bg:'rgba(148,163,184,.12)', bd:'#64748b', tx:'#e5e7eb'},
+            'SR':{bg:'rgba(96,165,250,.12)',  bd:'#60a5fa', tx:'#dbeafe'},
+            'SSR':{bg:'rgba(167,139,250,.14)', bd:'#a78bfa', tx:'#ede9fe'},
+            'UR':{bg:'rgba(52,211,153,.12)',  bd:'#34d399', tx:'#d1fae5'},
+            'LR':{bg:'rgba(250,204,21,.12)',   bd:'#facc15', tx:'#fef9c3'},
+            'SLR':{bg:'rgba(244,114,182,.14)', bd:'#f472b6', tx:'#ffe4f2'}
+          };
+          var _st=_tierMap[_tier] || {bg:'rgba(148,163,184,.10)', bd:'#334155', tx:'#e5e7eb'};
+          badge.style.cssText='min-width:44px;text-align:center;padding:2px 10px;border-radius:999px;border:1px solid '+_st.bd+';background:'+_st.bg+';color:'+_st.tx+';font-weight:950;font-size:11px;letter-spacing:.3px;';
+          row.appendChild(badge);
+
+          var tspan=document.createElement('span');
+          tspan.textContent=lineText;
+          tspan.style.flex='1';
+          row.appendChild(tspan);
+          card.appendChild(row);
+        }
+        panelWrap.appendChild(card);
+      }
+    }
+
+    function renderActions(view){
+      actionBar.innerHTML='';
+      var acts=view.actions||[];
+      for(var a=0;a<acts.length;a++){
+        (function(act){
+          var label = act.label || act.id;
+          if(act.cost && act.cost>0) label += ' (-'+act.cost+')';
+          var b=_btn(label, function(){ doAction(act); }, act.kind);
+          actionBar.appendChild(b);
+        })(acts[a]);
+      }
+    }
+
+    function refresh(){
+      // 同步目前潛能（避免外部同時更動）
+      var now=readCurrent();
+      ctx.curTier = now.tier;
+      ctx.curLines = (PotentialCoreV21.flowInit(cubeId, now.tier, now.lines).curLines); // cheap clone via init
+      var view = PotentialCoreV21.flowView(cubeId, ctx);
+      msg.textContent = view.message || '';
+      renderPanels(view);
+      renderActions(view);
+      _updateCount();
+    }
+
+    function doAction(act){
+      // 扣道具（由 flow action 決定何時扣、扣幾顆）
+      if(act.cost && act.cost>0){
+        var def=null;
+        for(var i=0;i<defs.length;i++){ if(defs[i].id===cubeId){ def=defs[i]; break; } }
+        var item = cubeItemByCubeType(def ? def.cubeType : 'cube');
+        if(!invUse(item, act.cost)){
+          alert('缺少 '+item+' ×'+act.cost);
+          return;
+        }
+      }
+
+      var out = PotentialCoreV21.flowDispatch(cubeId, ctx, act.id) || {};
+      ctx = out.ctx || ctx;
+      // optional fx metadata
+      if(out.fx) ctx.fx = out.fx;
+
+      // 套用 patch（由潛能檔案決定何時套用）
+      if(out.patch && out.patch.apply){
+        applyGlobalPotentialWithTier(out.patch.apply.lines, out.patch.apply.tier);
+        global.EquipHub&&global.EquipHub.requestRerender&&global.EquipHub.requestRerender();
+      }
+
+      refresh();
+    }
+
+    sel.onchange = function(){
+      cubeId = sel.value;
+      var now=readCurrent();
+      ctx = PotentialCoreV21.flowInit(cubeId, now.tier, now.lines);
+      refresh();
+    };
+
+    bd.appendChild(w);
+    bd.addEventListener('click',function(e){ if(e.target===bd) bd.remove(); });
+    document.body.appendChild(bd);
+
+    refresh();
+  }
+
+  global.Equip_showPotentialCubeModal = Equip_showPotentialCubeModal;
+
+
+  // ==== UI 小件 ====
+  function makeCard(p){ var d=document.createElement('div'); d.style.cssText="border:1px solid "+THEME.cardBorder+";background:"+THEME.cardBg+";border-radius:16px;padding:"+(p||"14px")+";color:"+THEME.text+";box-shadow:"+THEME.cardShadow+";font-size:14px;line-height:1.6;"; return d; }
+  function section(title){ var card=makeCard("12px"); var h=document.createElement('div'); h.style.cssText='font-weight:900;letter-spacing:.3px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center'; h.textContent=title; card.appendChild(h); return {card:card, head:h}; }
+  function chip(label,val){ var el=document.createElement('div'); el.style.cssText="background:"+THEME.pillBg+";border:1px solid "+THEME.pillBorder+";border-radius:999px;padding:8px 12px;font:800 13px ui-monospace,monospace;display:flex;gap:8px;align-items:center"; el.innerHTML='<span style="opacity:.85">'+label+'</span><span>'+val+'</span>'; return el; }
+  function pill(text,active,onclick){ var b=document.createElement('button'); b.textContent=text; b.style.cssText="border:1px solid "+(active?THEME.pillActiveBorder:THEME.pillBorder)+";background:"+(active?THEME.pillActiveBg:THEME.pillBg)+";color:#fff;border-radius:999px;padding:8px 14px;cursor:pointer;font-weight:900;font-size:14px"; if(onclick) b.onclick=onclick; return b; }
+  function btn(txt,fn,primary,disabled){ var b=document.createElement('button'); b.textContent=txt; b.style.cssText='padding:10px 14px;border:1px solid '+(primary?THEME.pillActiveBorder:THEME.pillBorder)+';border-radius:12px;background:'+(primary?THEME.pillActiveBg:THEME.pillBg)+';color:#fff;cursor:pointer;font-weight:900;font-size:14px'; if(disabled){ b.style.opacity='.5'; b.style.cursor='not-allowed'; } else if(fn){ b.onclick=fn; } return b; }
+  function line(){ var hr=document.createElement('div'); hr.style.cssText='height:1px;background:'+THEME.cardBorder+';margin:12px 0'; return hr; }
+  function badgeForTier(t){ var span=document.createElement('span'); span.className='tier-badge tier-'+t; span.textContent=t; span.title='潛能等級：'+t; return span; }
+
+  // ==== 機率視窗（顯示目前等級的升級機率＋本等級詞條池）====
+  function showRatesModal(){
+    var old = document.getElementById('equipRateModal');
+    if (old){ old.style.display='flex'; return; }
+
+    var st = Storage.read();
+    var curTier = (st.globalPotential && st.globalPotential.tier) ? st.globalPotential.tier : 'R';
+
+    var backdrop = document.createElement('div');
+    backdrop.id='equipRateModal';
+    backdrop.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:10000;padding:12px;';
+
+    var wrap = (function(){ var c=makeCard("14px"); c.style.cssText += ";width:min(920px,96vw);max-height:92vh;overflow:auto;"; return c; })();
+
+    // header
+    var head = document.createElement('div');
+    head.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px';
+    var title = document.createElement('div');
+    title.style.cssText='font-weight:900;letter-spacing:.4px';
+    title.textContent = '📊 機率資訊';
+    var tierBadge = badgeForTier(curTier);
+    tierBadge.style.marginLeft='8px';
+    tierBadge.title='目前潛能等級（從此等級檢定升級）';
+    var left = document.createElement('div'); left.style.cssText='display:flex;align-items:center';
+    left.appendChild(title); left.appendChild(tierBadge);
+    var closeBtn = document.createElement('button');
+    closeBtn.textContent='✕';
+    closeBtn.style.cssText='border:1px solid '+THEME.pillBorder+';background:'+THEME.pillBg+';color:#fff;border-radius:10px;padding:6px 10px;cursor:pointer;font-weight:900';
+    closeBtn.onclick=function(){ backdrop.remove(); };
+    head.appendChild(left); head.appendChild(closeBtn);
+    wrap.appendChild(head);
+
+    function section2(t){ var s=section(t); return s; }
+    function tableFrom(rows){
+      var t=document.createElement('table');
+      t.style.cssText='width:100%;border-collapse:collapse;font-size:13px;margin-top:8px';
+      for(var i=0;i<rows.length;i++){
+        var tr=document.createElement('tr'); if(i===0) tr.style.cssText='background:#0f172a';
+        for(var j=0;j<rows[i].length;j++){
+          var td=document.createElement(i?'td':'th');
+          td.textContent=rows[i][j];
+          td.style.cssText='border:1px solid '+THEME.cardBorder+';padding:6px;text-align:center';
+          tr.appendChild(td);
+        }
+        t.appendChild(tr);
+      }
+      return t;
+    }
+    function pct(n){ return (Number(n||0)*100).toFixed(2)+'%'; }
+
+    // ① 目前等級 → 下一階升級機率
+    if (global.PotentialCoreV21 && PotentialCoreV21.upgradeChanceFrom){
+      var r1 = PotentialCoreV21.upgradeChanceFrom(curTier,'cube');
+      var r2 = PotentialCoreV21.upgradeChanceFrom(curTier,'cube_plus');
+      var sec = section2('目前等級 → 下一階（升級機率）');
+      var rows = [['目前等級','一般方塊','高級方塊'],
+                  [curTier, pct(r1), pct(r2)]];
+      sec.card.appendChild(tableFrom(rows));
+      wrap.appendChild(sec.card);
+    }
+
+    // ② 本次等級的詞條池（已套倍率）
+    if (global.PotentialCoreV21 && PotentialCoreV21.effectTableForSession){
+      var list = PotentialCoreV21.effectTableForSession(curTier);
+      var sec2 = section2('本次等級詞條池（數值已套 '+curTier+' 倍率）');
+      var rows2 = [['詞條','數值','機率']];
+      for (var k=0;k<list.length;k++){
+        var e=list[k]; rows2.push([e.label, (e.value + (e.unit||'')), e.prob.toFixed(2)+'%']);
+      }
+      sec2.card.appendChild(tableFrom(rows2));
+      wrap.appendChild(sec2.card);
+    }
+
+    backdrop.appendChild(wrap);
+    backdrop.addEventListener('click', function(e){ if(e.target===backdrop) backdrop.remove(); });
+    document.body.appendChild(backdrop);
+  }
+  global.Equip_showRatesModal = showRatesModal;
+
+// ===== 詳細彈窗（套裝 / 能力 / 潛能）=====
+function Equip_showModal(titleText, buildBody){
+  try{
+    var bd=document.createElement('div');
+    bd.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:10000;padding:12px;';
+    var w=makeCard('14px');
+    w.style.cssText += ';width:min(980px,96vw);max-height:92vh;overflow:auto;';
+    // header
+    var head=document.createElement('div');
+    head.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-weight:900;letter-spacing:.3px';
+    var t=document.createElement('div'); t.textContent=titleText||'詳細';
+    var close=document.createElement('button');
+    close.textContent='關閉';
+    close.style.cssText='padding:6px 10px;border:1px solid '+THEME.pillBorder+';background:'+THEME.pillBg+';color:#fff;border-radius:10px;cursor:pointer;font-weight:900';
+    close.onclick=function(){ bd.remove(); };
+    head.appendChild(t); head.appendChild(close);
+    w.appendChild(head);
+
+    var body=document.createElement('div');
+    body.style.cssText='margin-top:6px';
+    if (typeof buildBody==='function') buildBody(body);
+    w.appendChild(body);
+
+    bd.appendChild(w);
+    bd.addEventListener('click',function(e){ if(e.target===bd) bd.remove(); });
+    document.body.appendChild(bd);
+  }catch(_){ }
+}
+
+function _effLine(eff){
+  eff = eff || {};
+  var out = [];
+  function fmtPct(v){ return (Math.round((Number(v)||0)*10000)/100)+'%'; }
+  function push(label, v, isPct){
+    if (v==null) return;
+    var n = Number(v)||0;
+    if (!n) return;
+    out.push(label + '+' + (isPct ? fmtPct(n) : String(n)));
+  }
+  if (eff.allStat) push('全屬', eff.allStat, false);
+  push('STR', eff.str, false);
+  push('DEX', eff.dex, false);
+  push('INT', eff.int, false);
+  push('LUK', eff.luk, false);
+  push('HP', eff.hp, false);
+  push('MP', eff.mp, false);
+  push('ATK', eff.atk, false);
+  push('DEF', eff.def, false);
+  push('無視防禦', eff.ignoreDefPct, true);
+  push('總傷害', eff.totalDamage, true);
+  push('BOSS傷害', eff.bossDamage, true);
+  push('一般怪傷害', eff.normalMobDamage, true);
+  push('爆擊傷害', eff.critMultiplier, true);
+  return out.length ? out.join('、') : '—';
+}
+
+function Equip_showSetDetailModal(){
+  Equip_showModal('套裝效果（詳細）', function(root){
+    var stNow = Storage.read();
+    var setTypes = resolveSetTypes(stNow);
+    var detail = computeSetBonusV2(stNow, setTypes);
+    var c = detail.counts || {total:0,N:0,SSR:0,UR:0,SLR:0};
+
+    var top = document.createElement('div');
+    top.style.cssText='opacity:.95;margin-bottom:10px';
+    top.innerHTML='件數：<b>'+c.total+'</b> ｜ N <b>'+c.N+'</b> ｜ SSR <b>'+c.SSR+'</b> ｜ UR <b>'+c.UR+'</b> ｜ SLR <b>'+c.SLR+'</b>';
+    root.appendChild(top);
+
+    // 門檻表
+    var thresholds = getThresholdsFromRules(SET_RULES_V2);
+    var pickMap = {};
+    var applied = detail.applied || [];
+    for (var i=0;i<applied.length;i++) pickMap[applied[i].pieces|0] = applied[i];
+
+    function gradeColor(g){
+      if (g==='SLR') return '#fff';
+      if (g==='UR')  return '#34d399';
+      if (g==='SSR') return '#a78bfa';
+      return '#94a3b8';
+    }
+
+    var table = document.createElement('div');
+    table.style.cssText='display:grid;grid-template-columns:80px 70px 1fr;gap:6px;align-items:start';
+    root.appendChild(table);
+
+    ['門檻','採用','效果'].forEach(function(t){
+      var h=document.createElement('div');
+      h.textContent=t;
+      h.style.cssText='font-weight:900;opacity:.85;padding:8px 10px;border:1px solid '+THEME.cardBorder+';border-radius:12px;background:'+THEME.pillBg;
+      table.appendChild(h);
+    });
+
+    for (var ti=0; ti<thresholds.length; ti++){
+      var p = thresholds[ti];
+      var picked = pickMap[p];
+
+      var a = document.createElement('div');
+      a.style.cssText='padding:8px 10px;border:1px solid '+THEME.cardBorder+';border-radius:12px;background:'+THEME.cardBg;
+      a.textContent = p + '件';
+      table.appendChild(a);
+
+      var b = document.createElement('div');
+      b.style.cssText='padding:8px 10px;border:1px solid '+THEME.cardBorder+';border-radius:12px;background:'+THEME.cardBg+';font-weight:950;color:'+gradeColor(picked?picked.grade:'N');
+      b.textContent = picked ? picked.grade : '—';
+      table.appendChild(b);
+
+      var c3 = document.createElement('div');
+      c3.style.cssText='padding:8px 10px;border:1px solid '+THEME.cardBorder+';border-radius:12px;background:'+THEME.cardBg+';opacity:'+(picked?1:.55);
+      c3.textContent = picked ? _effLine(picked.eff) : '未達成';
+      table.appendChild(c3);
+    }
+
+    // overflow（單一格子）
+    if ((detail.overflow|0) > 0 && detail.overflowEff){
+      var ov = document.createElement('div');
+      ov.style.cssText='margin-top:12px;padding:12px;border:1px solid '+THEME.cardBorder+';border-radius:14px;background:'+THEME.cardBg;
+      ov.innerHTML='<div style="font-weight:950;opacity:.9">SLR 額外累積（+'+(detail.overflow|0)+' 件）</div>' +
+                   '<div style="opacity:.95;line-height:1.6;margin-top:6px">'+_effLine(detail.overflowEff)+'</div>';
+      root.appendChild(ov);
+    }
+
+    // 最終累積
+    var sumCard = document.createElement('div');
+    sumCard.style.cssText='margin-top:12px;padding:12px;border:1px solid '+THEME.cardBorder+';border-radius:14px;background:'+THEME.pillBg;
+    sumCard.innerHTML='<div style="font-weight:950;opacity:.9;margin-bottom:6px">最終套裝加成（累加結果）</div>' +
+                      '<div style="opacity:.95;line-height:1.6">'+_effLine(detail.sum||{})+'</div>';
+    root.appendChild(sumCard);
+  });
+}
+global.Equip_showSetDetailModal = Equip_showSetDetailModal;
+
+function Equip_showEquipDetailModal(){
+  Equip_showModal('整體能力（詳細）', function(root){
+    var r = computeEquipAggregate();
+    var sum = r.sum || {};
+    var ap  = r.afterPotential || sum; // 含潛能的裝備合計
+    var set = r.equipSetFlat || {};
+    var pb  = r.potBonus || {};
+    var final = r.final || {};
+
+    function h(t){
+      var d=document.createElement('div');
+      d.textContent=t;
+      d.style.cssText='margin:10px 0 6px;font-weight:950;color:#93c5fd';
+      return d;
+    }
+
+    // 最終（含潛能 + 套裝平砍）
+    root.appendChild(h('最終面板（含潛能）'));
+    var chips1=document.createElement('div');
+    chips1.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
+    chips1.appendChild(chip('STR', fmt((ap.str|0) + (set.str|0) + (set.allStat|0))));
+    chips1.appendChild(chip('DEX', fmt((ap.agi!=null?ap.agi:ap.dex|0) + (set.dex|0) + (set.allStat|0))));
+    chips1.appendChild(chip('INT', fmt((ap.int|0) + (set.int|0) + (set.allStat|0))));
+    chips1.appendChild(chip('LUK', fmt((ap.luk|0) + (set.luk|0) + (set.allStat|0))));
+    chips1.appendChild(chip('ATK', fmt((ap.atk|0) + (set.atk|0))));
+    chips1.appendChild(chip('DEF', fmt((ap.def|0) + (set.def|0))));
+    chips1.appendChild(chip('HP',  fmt((ap.hp|0)  + (set.hp|0))));
+    chips1.appendChild(chip('MP',  fmt((ap.mp|0)  + (set.mp|0))));
+    root.appendChild(chips1);
+
+    var pctLine=document.createElement('div');
+    pctLine.style.cssText='margin-top:8px;opacity:.9;line-height:1.6';
+    var pctParts=[];
+    if (set.ignoreDefPct) pctParts.push('無視防禦+'+Math.round(set.ignoreDefPct*10000)/100+'%');
+    if (set.totalDamage)  pctParts.push('總傷害+'+Math.round(set.totalDamage*10000)/100+'%');
+    if (set.bossDamage)   pctParts.push('BOSS傷害+'+Math.round(set.bossDamage*10000)/100+'%');
+    if (set.normalMobDamage) pctParts.push('一般怪傷害+'+Math.round(set.normalMobDamage*10000)/100+'%');
+    if (set.critMultiplier)  pctParts.push('爆擊傷害+'+Math.round(set.critMultiplier*10000)/100+'%');
+    pctLine.textContent = pctParts.length ? ('套裝％類：' + pctParts.join(' ｜ ')) : '套裝％類：—';
+    root.appendChild(pctLine);
+
+    // 分解
+    root.appendChild(h('分解'));
+    var box=document.createElement('div');
+    box.style.cssText='display:grid;grid-template-columns:1fr;gap:8px;margin-top:4px';
+
+    function mini(title, text){
+      var c=makeCard('10px');
+      c.style.boxShadow='none';
+      c.style.borderColor=THEME.cardBorder;
+      var a=document.createElement('div'); a.style.cssText='font-weight:950;opacity:.9;margin-bottom:6px'; a.textContent=title;
+      var b=document.createElement('div'); b.style.cssText='opacity:.92;line-height:1.6;white-space:pre-line'; b.textContent=text;
+      c.appendChild(a); c.appendChild(b);
+      return c;
+    }
+
+    box.appendChild(mini('裝備合計（未含潛能/套裝）', 'STR '+fmt(sum.str)+' ｜ DEX '+fmt(sum.dex)+' ｜ INT '+fmt(sum.int)+' ｜ LUK '+fmt(sum.luk)+'\nATK '+fmt(sum.atk)+' ｜ DEF '+fmt(sum.def)+' ｜ HP '+fmt(sum.hp)+' ｜ MP '+fmt(sum.mp||0)));
+    box.appendChild(mini('潛能實際提升（加在裝備上）', 'STR +'+fmt(pb.str||0)+' ｜ DEX +'+fmt(pb.agi||0)+' ｜ INT +'+fmt(pb.int||0)+' ｜ LUK +'+fmt(pb.luk||0)+'\nATK +'+fmt(pb.atk||0)+' ｜ DEF +'+fmt(pb.def||0)+' ｜ HP +'+fmt(pb.hp||0)+' ｜ MP +'+fmt(pb.mp||0)));
+    box.appendChild(mini('套裝平砍（+%另計）', _effLine(set)));
+    root.appendChild(box);
+  });
+}
+global.Equip_showEquipDetailModal = Equip_showEquipDetailModal;
+
+function Equip_showPotentialDetailModal(){
+  Equip_showModal('潛能（詳細）', function(root){
+    var st=Storage.read();
+    var gp=st.globalPotential||{lines:[],summary:emptySummary(),tier:'R'};
+    var r=computeEquipAggregate();
+    var pb=r.potBonus||{};
+
+    var head=document.createElement('div');
+    head.style.cssText='opacity:.95;line-height:1.6;margin-bottom:10px';
+    head.innerHTML='目前等級：<b>'+String(gp.tier||'R')+'</b>';
+    root.appendChild(head);
+
+    var box=makeCard('10px');
+    box.style.boxShadow='none';
+
+    var t=document.createElement('div');
+    t.style.cssText='font-weight:950;margin-bottom:6px';
+    t.textContent='目前三條';
+    box.appendChild(t);
+
+    if(!gp.lines||!gp.lines.length){
+      var none=document.createElement('div'); none.style.cssText='opacity:.8'; none.textContent='（尚未設定）';
+      box.appendChild(none);
+    }else{
+      for(var i=0;i<gp.lines.length;i++){
+        var ln=gp.lines[i]||{};
+        var unit=(ln.unit==='pct'||ln.unit==='allpct')?'%':'';
+        var row=document.createElement('div');
+        row.style.cssText='display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.03);margin:6px 0';
+        var b=document.createElement('span'); b.className='tier-badge tier-'+(ln.tier||'R'); b.textContent=ln.tier||'R';
+        row.appendChild(b);
+        var s=document.createElement('span'); s.textContent=(ln.label||'—')+' +'+(ln.value!=null?ln.value:'')+unit;
+        row.appendChild(s);
+        box.appendChild(row);
+      }
+    }
+
+    var t2=document.createElement('div');
+    t2.style.cssText='font-weight:950;margin:10px 0 6px';
+    t2.textContent='潛能提升能力（實際加成）';
+    box.appendChild(t2);
+
+    var chips=document.createElement('div');
+    chips.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
+    chips.appendChild(chip('STR','+'+fmt(pb.str||0)));
+    chips.appendChild(chip('DEX','+'+fmt(pb.agi||0)));
+    chips.appendChild(chip('INT','+'+fmt(pb.int||0)));
+    chips.appendChild(chip('LUK','+'+fmt(pb.luk||0)));
+    chips.appendChild(chip('ATK','+'+fmt(pb.atk||0)));
+    chips.appendChild(chip('DEF','+'+fmt(pb.def||0)));
+    chips.appendChild(chip('HP','+'+fmt(pb.hp||0)));
+    chips.appendChild(chip('MP','+'+fmt(pb.mp||0)));
+    box.appendChild(chips);
+
+    // 機率資訊按鈕
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px';
+    row.appendChild(btn('機率資訊', function(){ global.Equip_showUnifiedRatesModal && global.Equip_showUnifiedRatesModal(); }, false));
+    box.appendChild(row);
+
+    root.appendChild(box);
+  });
+}
+global.Equip_showPotentialDetailModal = Equip_showPotentialDetailModal;
+
+// ===== 主頁：只顯示最終值（細節進彈窗）=====
+function renderSummaryCard(root){
+  var r = computeEquipAggregate();
+  var ap = r.afterPotential || r.sum || {};
+  var set = r.equipSetFlat || {};
+  var detail = r.set || {};
+  var cnt = r.unlocked|0;
+
+  // 1) 最終能力（含潛能 + 套裝平砍）
+  var sec = section('最終能力（含潛能）');
+  var chips = document.createElement('div');
+  chips.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:6px';
+
+  chips.appendChild(chip('STR', fmt((ap.str|0) + (set.str|0) + (set.allStat|0))));
+  chips.appendChild(chip('DEX', fmt((ap.agi!=null?ap.agi:ap.dex|0) + (set.dex|0) + (set.allStat|0))));
+  chips.appendChild(chip('INT', fmt((ap.int|0) + (set.int|0) + (set.allStat|0))));
+  chips.appendChild(chip('LUK', fmt((ap.luk|0) + (set.luk|0) + (set.allStat|0))));
+  chips.appendChild(chip('ATK', fmt((ap.atk|0) + (set.atk|0))));
+  chips.appendChild(chip('DEF', fmt((ap.def|0) + (set.def|0))));
+  chips.appendChild(chip('HP',  fmt((ap.hp|0)  + (set.hp|0))));
+  chips.appendChild(chip('MP',  fmt((ap.mp|0)  + (set.mp|0))));
+  sec.card.appendChild(chips);
+
+  var rowBtn=document.createElement('div');
+  rowBtn.style.cssText='display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:10px';
+  rowBtn.appendChild(btn('能力詳細', function(){ global.Equip_showEquipDetailModal && global.Equip_showEquipDetailModal(); }, false));
+  rowBtn.appendChild(btn('潛能詳細', function(){ global.Equip_showPotentialDetailModal && global.Equip_showPotentialDetailModal(); }, false));
+  sec.card.appendChild(rowBtn);
+
+  root.appendChild(sec.card);
+
+  // 2) 套裝效果（最終）
+  (function(){
+    var sec2 = section('最終套裝效果');
+    var stText = document.createElement('div');
+    stText.style.cssText='opacity:.95;line-height:1.6;margin-top:4px';
+    stText.textContent = _effLine((detail && detail.sum) ? detail.sum : {});
+    sec2.card.appendChild(stText);
+
+    // 概覽（件數）
+    var c = (detail && detail.counts) ? detail.counts : {total:0,N:0,SSR:0,UR:0,SLR:0};
+    var top = document.createElement('div');
+    top.style.cssText='opacity:.85;margin-top:8px;font-size:12px';
+    top.innerHTML='件數：<b>'+c.total+'</b> ｜ N <b>'+c.N+'</b> ｜ SSR <b>'+c.SSR+'</b> ｜ UR <b>'+c.UR+'</b> ｜ SLR <b>'+c.SLR+'</b>';
+    sec2.card.appendChild(top);
+
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;justify-content:flex-end;margin-top:10px';
+    row.appendChild(btn('套裝詳細', function(){ global.Equip_showSetDetailModal && global.Equip_showSetDetailModal(); }, false));
+    sec2.card.appendChild(row);
+    root.appendChild(sec2.card);
+  })();
+}
+
+
+  // ==== 分頁 ====
+var innerState = { current:(getEquipTypes()[0]||'hat'), gpOpen:false, setOpen:true, setOnlyAchieved:false, equipCat:null }; 
+function renderSwitcher(container){
+  var types=getEquipTypes();
+
+  // 分類：你要的四類
+  var CAT_ORDER=['武器類','防具類','飾品類','戒指類','特殊類'];
+  var CAT_MAP={
+    '武器類':['weapon','subweapon','energy'],
+    '防具類':['hat','suit','glove','cape','shoes','shoulder'],
+    '飾品類':['eye','face','earring','belt','ornament2','necklace2','badge'],
+    '戒指類':['ring1','ring2','ring3','ring4','gem1','gem2','gem3','gem4'],
+    '特殊類':['ornament','medal','pocket']
+  };
+
+  // ✅ 自動收納：若新增部位忘了加 CAT_MAP，也會自動出現在「飾品類」最後（避免新增後 UI 消失）
+  (function(){
+    var mapped = {};
+    for (var c in CAT_MAP){
+      if(!CAT_MAP.hasOwnProperty(c)) continue;
+      var arr = CAT_MAP[c] || [];
+      for (var i=0;i<arr.length;i++) mapped[arr[i]] = true;
+    }
+    var fallback = CAT_MAP['飾品類'] || (CAT_MAP['飾品類'] = []);
+    for (var ti=0; ti<types.length; ti++){
+      var t = types[ti];
+      if (!mapped[t]) fallback.push(t);
+    }
+  })();
+
+  // type -> category（找不到就丟到飾品類）
+  function catOfType(t){
+    for(var c in CAT_MAP){
+      if(!CAT_MAP.hasOwnProperty(c)) continue;
+      if(CAT_MAP[c].indexOf(t)>=0) return c;
+    }
+    return '飾品類';
+  }
+
+  // 初始化目前分類
+  if(!innerState.equipCat) innerState.equipCat = catOfType(innerState.current);
+
+  // 類別選單（上排）
+  var catRow=document.createElement('div');
+  catRow.style.cssText='display:flex;gap:10px;margin:10px 0 8px;flex-wrap:wrap;align-items:center';
+  for(var ci=0;ci<CAT_ORDER.length;ci++){
+    (function(cat){
+      // 沒有任何部位就不顯示（避免空分類）
+      var hasAny=false;
+      var list=CAT_MAP[cat]||[];
+      for(var j=0;j<list.length;j++){ if(types.indexOf(list[j])>=0){ hasAny=true; break; } }
+      if(!hasAny) return;
+
+      catRow.appendChild(
+        pill(cat, innerState.equipCat===cat, function(){
+          innerState.equipCat=cat;
+          // 切類別時，若目前部位不在該類，就自動跳到該類第一個可用部位
+          var arr=CAT_MAP[cat]||[];
+          var pick=null;
+          for(var k=0;k<arr.length;k++){ if(types.indexOf(arr[k])>=0){ pick=arr[k]; break; } }
+          if(pick && (arr.indexOf(innerState.current)<0)) innerState.current=pick;
+          global.EquipHub&&global.EquipHub.requestRerender&&global.EquipHub.requestRerender();
+        })
+      );
+    })(CAT_ORDER[ci]);
+  }
+  container.appendChild(catRow);
+
+  // 部位選單（下排：對齊格子）
+  var grid=document.createElement('div');
+  var isRingTab = (innerState.equipCat === '戒指類');
+  grid.style.cssText =
+    'display:grid;' +
+    (isRingTab
+      ? 'grid-template-columns:repeat(4, minmax(0, 1fr));'
+      : 'grid-template-columns:repeat(auto-fit, minmax(110px, 1fr));'
+    ) +
+    'gap:10px;margin:0 0 10px;align-items:stretch';
+  container.appendChild(grid);
+
+  var curCat=innerState.equipCat;
+  var showList=(CAT_MAP[curCat]||[]).filter(function(t){ return types.indexOf(t)>=0; });
+  // 若某分類空了（例如未來部位調整），保底用全部 types
+  if(!showList.length) showList=types.slice();
+
+  for(var i=0;i<showList.length;i++){
+    (function(t){
+      var b=pill(getTypeName(t), innerState.current===t, function(){
+        innerState.current=t;
+        innerState.equipCat=catOfType(t);
+        global.EquipHub&&global.EquipHub.requestRerender&&global.EquipHub.requestRerender();
+      });
+      // 讓每顆 pill 寬度一致、置中，看起來像格子
+      b.style.width='100%';
+      b.style.justifyContent='center';
+      b.style.textAlign='center';
+      grid.appendChild(b);
+    })(showList[i]);
+  }
+}
+
+
+  // ==== 潛能卡 ====
+  function summaryChips(sum){
+    var wrap=document.createElement('div'); wrap.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:6px';
+    function add(label,v,isPct){ var n=Number(v||0); if(!n) return; wrap.appendChild(chip(label, isPct?(n.toFixed(0)+'%'):fmt(n))); }
+    add('STR',sum.str); add('DEX',sum.dex); add('INT',sum.int); add('LUK',sum.luk);
+    add('ATK',sum.atk); add('DEF',sum.def); add('HP',sum.hp);
+    add('STR%',sum.strPct,true); add('DEX%',sum.dexPct,true); add('INT%',sum.intPct,true); add('LUK%',sum.lukPct,true);
+    add('ATK%',sum.atkPct,true); add('HP%',sum.hpPct,true); add('All%',sum.allStatPct,true);
+    if (!wrap.childNodes.length){ var none=document.createElement('div'); none.style.cssText='opacity:.75'; none.textContent='（尚未設定）'; wrap.appendChild(none); }
+    return wrap;
+  }
+
+  function renderGlobalPotentialCard(root){
+    var st=Storage.read(); var gp=st.globalPotential||{lines:[],summary:emptySummary(),tier:'R'};
+    var topTier=tierMax(gp.lines); var tc=TIER_COLOR[topTier]||TIER_COLOR.R;
+    var sec=section('全域潛能（可用：一般 x'+invCount(ITEM.潛能方塊)+'｜高級 x'+invCount(ITEM.高級潛能方塊)+'）');
+    sec.card.style.borderColor=tc.border; sec.card.style.boxShadow=(topTier==='SLR'? (TIER_COLOR.SLR.glow+', ') : (tc.glow+', '))+THEME.cardShadow;
+
+    // 目前等級徽章
+    var badge=badgeForTier(gp.tier); badge.title='目前潛能等級（下次洗從此等級檢定升階）'; sec.head.appendChild(badge);
+
+    var toggle=btn(innerState.gpOpen?'收合':'展開', function(){ innerState.gpOpen=!innerState.gpOpen; global.EquipHub&&global.EquipHub.requestRerender&&global.EquipHub.requestRerender(); }, false);
+    sec.head.appendChild(toggle);
+
+    if(!innerState.gpOpen){
+      var brief=document.createElement('div'); brief.style.cssText='opacity:.9';
+      if(!gp.lines||gp.lines.length===0){ brief.textContent='尚未設定（使用方塊抽取三條潛能）'; }
+      else{
+        var list=[], i, ln, unit;
+        for(i=0;i<gp.lines.length;i++){ ln=gp.lines[i]; unit=(ln.unit==='pct'||ln.unit==='allpct')?'%':''; list.push('['+ln.tier+'] '+ln.label+' +'+ln.value+unit); }
+        brief.textContent=list.join(' ｜ ');
+      }
+      sec.card.appendChild(brief); root.appendChild(sec.card); return;
+    }
+
+    var curBox=makeCard("10px"); curBox.style.marginTop='6px';
+    var head=document.createElement('div'); head.style.cssText='font-weight:900;margin-bottom:6px;display:flex;align-items:center;gap:8px'; head.textContent='目前三條 '; head.appendChild(badgeForTier(gp.tier)); curBox.appendChild(head);
+    if(!gp.lines||gp.lines.length===0){ var none=document.createElement('div'); none.style.cssText='opacity:.8'; none.textContent='尚未設定'; curBox.appendChild(none); }
+    else{
+      var i, row, ln, unit;
+      for(i=0;i<gp.lines.length;i++){
+        row = document.createElement('div');
+row.style.cssText = 'display:grid;grid-template-columns:46px 1fr;align-items:center;gap:8px;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.03)';
+        ln=gp.lines[i]; unit=(ln.unit==='pct'||ln.unit==='allpct')?'%':'';
+        var b=document.createElement('span'); b.className='tier-badge tier-'+ln.tier; b.textContent=ln.tier;
+        row.appendChild(b); var t=document.createElement('span'); t.textContent=ln.label+' +'+ln.value+unit; row.appendChild(t);
+        curBox.appendChild(row);
+      }
+    }
+    curBox.appendChild(line());
+    var h2=document.createElement('div'); h2.style.cssText='font-weight:900;margin-bottom:6px'; h2.textContent='合計（套用到最終面板）'; curBox.appendChild(h2);
+    var chipsWrap = document.createElement('div');
+chipsWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:6px';
+chipsWrap.appendChild(summaryChips(gp.summary || emptySummary()));
+curBox.appendChild(chipsWrap);
+    sec.card.appendChild(curBox);
+
+    var row = document.createElement('div');
+row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:10px';
+    var noCube = (invCount(ITEM.潛能方塊)<=0 && invCount(ITEM.高級潛能方塊)<=0);
+    row.appendChild(btn('洗潛能', function(){ global.Equip_showPotentialCubeModal && global.Equip_showPotentialCubeModal(); }, true, noCube));
+     
+    sec.card.appendChild(row);
+
+    root.appendChild(sec.card);
+  }
+
+  // ==== 單件卡 ====
+  function renderEquipCard(type){
+    var st=Storage.read(), node=st.equips[type];
+    var box=makeCard("16px"); box.style.marginBottom="14px";
+    var __justUpgraded = (node.tier==='SLR' && __lastSlrUpgrade.type===type && (Date.now()-__lastSlrUpgrade.at)<1500);
+    applyTierVisual(box, String(node.tier||'N'), {justUpgraded: __justUpgraded});
+    // 星數（移到名稱上方，字體放大＋依星數變色）
+    var starRow = document.createElement('div');
+    var sc = starColor(node.star);
+    starRow.style.cssText = 'margin-top:6px;margin-bottom:2px;font-weight:900;font-size:18px;letter-spacing:.2px;color:'+sc+';text-shadow:'+starGlow(node.star);
+    starRow.textContent = '星：' + (node.star||0) + '★';
+    box.appendChild(starRow);
+
+    var titleRow=document.createElement('div'); titleRow.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:8px';
+    var title=document.createElement('div'); title.style.cssText='font-weight:900;font-size:16px'; 
+    title.textContent='【'+node.name+'】 '+(node.locked?'🔒 未解鎖':'🔓 已解鎖');
+var tierBadge = document.createElement('span');
+tierBadge.className='tier-badge tier-'+(node.tier||'R');
+tierBadge.style.marginLeft='8px';
+tierBadge.textContent=node.tier||'R';
+applyTierVisual(tierBadge, String(node.tier||'N'));
+title.appendChild(tierBadge);
+    var badge=document.createElement('div'); badge.style.cssText='background:'+THEME.pillActiveBg+';border:1px solid '+THEME.pillActiveBorder+';color:#fff;border-radius:999px;padding:6px 10px;font:900 12px/1 ui-monospace,monospace;'; badge.textContent='強化成功 +'+(toInt(node.enhanceSuccess)||0);
+    titleRow.appendChild(title); titleRow.appendChild(badge);
+    box.appendChild(titleRow);
+// 卷軸資訊（保留在下方，小字）
+var meta=document.createElement('div');
+meta.style.cssText='font-size:12px;opacity:.9';
+var aug = node._slotAugSuccess|0;
+var sm = (node.slotsMax|0);
+if (sm>0) meta.textContent='卷軸：'+node.slotsUsed+'/'+sm+'（上限+'+aug+'/10）';
+else meta.textContent='卷軸：不可使用';
+box.appendChild(meta);
+    var p=(node.slotsMax|0)>0 ? Math.min(1,node.slotsUsed/Math.max(1,node.slotsMax)) : 1;
+    var bar=document.createElement('div'); bar.style.cssText='height:10px;background:#0a1220;border:1px solid '+THEME.cardBorder+';border-radius:999px;overflow:hidden;margin-top:8px'; var inr=document.createElement('div'); inr.style.cssText='height:100%;background:'+THEME.success+';width:'+(p*100).toFixed(1)+'%'; bar.appendChild(inr); box.appendChild(bar);
+
+    if(!node.locked){
+      var s=calcFinalStats(node);
+      var sec=section('能力總覽'); sec.card.style.marginTop="12px";
+      var big=document.createElement('div'); big.style.cssText='font:900 18px ui-monospace,monospace;letter-spacing:.3px;margin-bottom:8px';
+      big.innerHTML = '<span style="color:'+THEME.blue+'">ATK +'+fmt(s.atk)+'</span>　'+'<span style="color:'+THEME.success+'">DEF +'+fmt(s.def)+'</span>　'+'<span style="color:'+THEME.warn+'">HP +'+fmt(s.hp)+'</span>　'+'<span style="color:'+THEME.blue+'">MP +'+fmt(s.mp)+'</span>';
+      sec.card.appendChild(big);
+      var wrap=document.createElement('div'); wrap.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
+      wrap.appendChild(chip('STR',fmt(s.str))); wrap.appendChild(chip('DEX',fmt(s.dex))); wrap.appendChild(chip('INT',fmt(s.int))); wrap.appendChild(chip('LUK',fmt(s.luk)));
+      wrap.appendChild(chip('星力%累積',(s.starAtkPctSum||0)+'%')); wrap.appendChild(chip('星力加攻',fmt(s.atkFromStar||0)));
+      sec.card.appendChild(wrap); box.appendChild(sec.card);
+    }else{
+      var hint=document.createElement('div'); hint.style.cssText='opacity:.85;margin-top:10px'; hint.textContent='（未解鎖，無能力）'; box.appendChild(hint);
+    }
+
+    // —— 加一段樣式（只加一次）——
+(function injectEquipStyle(){
+  if (document.getElementById('equip-style')) return;
+  var css = `
+  .equip-row{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:14px; margin-top:12px;
+  }
+  .equip-btn{
+    white-space:pre-line;                /* 之後標籤字串可用 \\n 分行 */
+    padding:12px 14px; border-radius:12px;
+    border:1px solid rgba(255,255,255,.12);
+    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.12));
+    box-shadow:0 1px 2px rgba(0,0,0,.05);
+    text-align:left; line-height:1.25;
+    transition:transform .06s ease, box-shadow .2s ease, background .2s ease, opacity .2s ease;
+  }
+  .equip-btn:hover{ transform:translateY(-1px); box-shadow:0 6px 16px rgba(0,0,0,.15); }
+  .equip-btn:active{ transform:translateY(0); box-shadow:0 2px 6px rgba(0,0,0,.12); }
+
+  /* 主/次/幽靈/危險 變體 */
+  .equip-btn.primary{
+    background:linear-gradient(180deg,rgba(64,128,255,.22),rgba(64,128,255,.12));
+    border-color:rgba(64,128,255,.35);
+  }
+  .equip-btn.secondary{
+    background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(0,0,0,.12));
+  }
+  .equip-btn.ghost{
+    background:transparent; border-style:dashed; opacity:.9;
+  }
+  .equip-btn.danger{
+    background:linear-gradient(180deg,rgba(255,96,96,.18),rgba(255,96,96,.10));
+    border-color:rgba(255,96,96,.35);
+  }
+
+  /* 禁用態更清楚 */
+  .equip-btn[disabled], .equip-btn.disabled{
+    opacity:.45; filter:saturate(.6); cursor:not-allowed;
+    box-shadow:none; transform:none;
+  }
+  `;
+  var s=document.createElement('style'); s.id='equip-style'; s.textContent=css; document.head.appendChild(s);
+})();
+
+// —— 小工具：把你現有的 btn() 做外觀強化（不改它行為）——
+function prettyBtn(label, onclick, primary, disabled, variant){
+  var el = btn(label, onclick, primary, disabled);
+  el.classList && el.classList.add('equip-btn', variant || (primary?'primary':'secondary'));
+  if (disabled) el.classList && el.classList.add('disabled');
+  return el;
+}
+
+/* 一次性樣式補充：讓兩顆按鈕排成一行 */
+(function injectEquipInlineStyle(){
+  if (document.getElementById('equip-inline-style')) return;
+  var css = `
+  .equip-inline{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  `;
+  var s=document.createElement('style'); s.id='equip-inline-style'; s.textContent=css; document.head.appendChild(s);
+})();
+
+/* 群組工具：把兩顆按鈕裝成一行 */
+function groupTwo(a,b){
+  var g=document.createElement('div'); g.className='equip-inline';
+  g.appendChild(a); g.appendChild(b);
+  return g;
+}
+
+/* —— 你的原本 row —— */
+var row=document.createElement('div');
+row.classList.add('equip-row');
+
+if(node.locked){
+  var need=unlockCostByType(type);
+  row.appendChild(
+    prettyBtn('解鎖（'+invCount(ITEM.解放石)+'/'+need+'）',
+      function(){ var r=unlockEquip(type); alert(r.msg); global.EquipHub?.requestRerender?.(); },
+      true, invCount(ITEM.解放石)<need, 'primary')
+  );
+}else{
+  if (canUseScroll(type)){
+    // ★資料驅動卷軸按鈕：由 ScrollForgeV2.getUIActions(ctx) 決定顯示哪些卷軸
+    var canDD = !!(global.ScrollForgeV2 && typeof global.ScrollForgeV2.getUIActions === 'function');
+    if (!canDD){
+      // fallback：沒有資料驅動 API 就沿用舊版（避免整個 UI 消失）
+      // 不同部位對應卷軸
+      var s1=null, s2=null, s3=null, s4=null;
+      var chaos60=ITEM.混60標準, chaosAdv=ITEM.混60高級;
+      var isWeapon=(type==='weapon');
+      var isGlove=(type==='glove');
+      // 統一卷軸：除手套/武器外
+      var isUnified=(!isWeapon && !isGlove);
+      if(isUnified){
+        s1=ITEM.屬60; s2=ITEM.屬10; s3=ITEM.屬攻45; s4=ITEM.屬攻7;
+      } else if(isGlove){
+        s1=ITEM.手60; s2=ITEM.手30; s3=ITEM.手7;
+      } else if(isWeapon){
+        s1=ITEM.武70; s2=ITEM.武30; s3=ITEM.武10; s4=ITEM.武1;
+      }
+
+      var blocked=(node.slotsMax>0&&node.slotsUsed>=node.slotsMax);
+
+      // 一般卷按鈕（最多兩行，每行兩顆）
+      function mkBtn(label, itemName){
+        return prettyBtn(label+'（'+invCount(itemName)+'）',
+          ()=>{ var r=useScroll(type,itemName); alert(r.msg); global.EquipHub?.requestRerender?.(); },
+          false, blocked||invCount(itemName)<=0, 'secondary');
+      }
+      if(s1 && s2){
+        row.appendChild(groupTwo(mkBtn(s1.replace('強化','') , s1), mkBtn(s2.replace('強化',''), s2)));
+      }
+      if(s3 && s4){
+        row.appendChild(groupTwo(mkBtn(s3.replace('強化',''), s3), mkBtn(s4.replace('強化',''), s4)));
+      } else if(s3 && !s4){
+        // 只有第三顆（例如手套 7%）
+        row.appendChild(groupTwo(mkBtn(s3.replace('強化',''), s3), prettyBtn('', function(){}, false, true, 'ghost')));
+      }
+
+      // 混沌卷：標準 / 高級
+      if(chaos60 && chaosAdv){
+        var c1=prettyBtn('混沌卷60%（'+invCount(chaos60)+'）',
+          ()=>{ var r=useScroll(type,chaos60); alert(r.msg); global.EquipHub?.requestRerender?.(); },
+          false, blocked||invCount(chaos60)<=0, 'secondary');
+        var c2=prettyBtn('高級混沌卷60%（'+invCount(chaosAdv)+'）',
+          ()=>{ var r=useScroll(type,chaosAdv); alert(r.msg); global.EquipHub?.requestRerender?.(); },
+          false, blocked||invCount(chaosAdv)<=0, 'secondary');
+        row.appendChild(groupTwo(c1,c2));
+      }
+
+      // 恢復卷 / 重置卷 一行
+      var r1=prettyBtn('恢復卷（'+invCount(ITEM.恢復卷)+'）',
+        ()=>{ var r=restoreFailed(type); alert(r.msg); global.EquipHub?.requestRerender?.(); },
+        false, invCount(ITEM.恢復卷)<=0, 'danger');
+      var r2=prettyBtn('重置卷（'+invCount(ITEM.完美卷)+'）',
+        ()=>{ var r=perfectReset(type); alert(r.msg); global.EquipHub?.requestRerender?.(); },
+        false, invCount(ITEM.完美卷)<=0, 'ghost');
+      row.appendChild(groupTwo(r1,r2));
+    } else {
+      // 資料驅動：從卷軸檔案拿 actions 直接渲染按鈕
+      var actions = global.ScrollForgeV2.getUIActions({ node: node, invCount: invCount, invUse: invUse }) || [];
+      function runAction(act){
+        var res = act.run({ node: node, invCount: invCount, invUse: invUse });
+        if (res && res.msg) alert(res.msg);
+        if (res && res.nextNode){
+          var o={}; o[type]=res.nextNode; Storage.write({ equips:o }); syncAndPing();
+        }
+        global.EquipHub?.requestRerender?.();
+      }
+      // 兩顆一行
+      for (var i=0;i<actions.length;i+=2){
+        var a=actions[i], b=actions[i+1];
+        function mk(act){
+          if(!act) return prettyBtn('', function(){}, false, true, 'ghost');
+          var need = act.itemCount|0; if (!need) need = 1;
+          var cnt = invCount(act.itemName)||0;
+          var disabled = !!act.disabledReason || cnt < need;
+          var label = act.label + '（' + cnt + '）';
+          return prettyBtn(label, function(){ runAction(act); }, false, disabled, act.style || 'secondary');
+        }
+        row.appendChild(groupTwo(mk(a), mk(b)));
+      }
+    }
+  }
+
+  // 升星：單獨一行一顆
+  row.appendChild(
+    prettyBtn('升星（'+invCount(ITEM.衝星石)+'）',
+      ()=>{
+        if (!global.StarforceTableV1 || typeof StarforceTableV1.openStarforceModal!=='function') { alert('未載入 StarforceTableV1'); return; }
+        var st=Storage.read();
+        var node=st.equips[type];
+        if(!node){ alert('裝備不存在'); return; }
+        // 直接由星力核心驅動 UI 與邏輯
+        StarforceTableV1.openStarforceModal(node, {
+          getStoneCount: function(){ return invCount(ITEM.衝星石); },
+          spendStone: function(n){ return invUse(ITEM.衝星石, n); },
+          onSave: function(updatedNode){ var o={}; o[type]=updatedNode; Storage.write({equips:o}); syncAndPing(); },
+          onRerender: function(){ global.EquipHub && global.EquipHub.requestRerender && global.EquipHub.requestRerender(); },
+          onMsg: function(t){ try{ toast(t); } catch(e){ /* fallback */ } }
+        }); },
+      true, invCount(ITEM.衝星石)<=0, 'primary')
+  );
+if ((node.tier||'R')!=='SLR') row.appendChild(prettyBtn('階級進化（'+(node.tier||'R')+'→下一階）',
+  function(){ var r=evolveEquipTier(type); alert(r.msg); global.EquipHub?.requestRerender?.(); },
+  false, invCount(ITEM.階級石)<=0, 'secondary'));
+
+  // 星火：一行（普通/高級/永恆）— 完全交由 FlameCore 處理（UI/選擇/規則皆在星火檔案）
+  (function(){
+    if (!global.FlameCore || typeof global.FlameCore.applyToEquip !== 'function') return;
+
+    var normal = ITEM.星火, adv = ITEM.高級星火, et = ITEM.永恆星火;
+
+    function run(itemName){
+      global.FlameCore.applyToEquip({
+        itemName: itemName,
+        equipType: type,
+        getNode: function(){
+          var st = Storage.read();
+          return st && st.equips ? st.equips[type] : null;
+        },
+        saveNode: function(node){
+          var o = {}; o[type] = node;
+          Storage.write({ equips: o });
+          syncAndPing();
+          if (global.EquipHub && global.EquipHub.requestRerender) global.EquipHub.requestRerender();
+        },
+        invCount: invCount,
+        invUse: invUse
+      });
+    }
+
+    var b1 = prettyBtn('星火（'+invCount(normal)+'）', function(){ run(normal); }, false, invCount(normal)<=0, 'secondary');
+    var b2 = prettyBtn('高級星火（'+invCount(adv)+'）', function(){ run(adv); }, false, invCount(adv)<=0, 'secondary');
+    var b3 = prettyBtn('永恆星火（'+invCount(et)+'）', function(){ run(et); }, false, invCount(et)<=0, 'secondary');
+
+    row.appendChild(groupTwo(b1,b2));
+    row.appendChild(groupTwo(b3, prettyBtn('', function(){}, false, true, 'ghost')));
+  })();
+
+// 卷軸上限 +1：單獨一行一顆
+  (function(){
+    var canApi=!!(global.ScrollForgeV2&&ScrollForgeV2.canAugmentSlots&&ScrollForgeV2.augmentSlots);
+    var chk=canApi?ScrollForgeV2.canAugmentSlots(node):{ok:false,reason:'no_api'};
+    var disabled=!canApi||!chk.ok||invCount(ITEM.上限卷)<=0;
+
+    row.appendChild(
+      prettyBtn('卷軸上限+1（'+invCount(ITEM.上限卷)+'）', function(){
+        if (!canApi){ alert('缺少 ScrollForgeV2：無法使用上限提升'); return; }
+        var chk2=ScrollForgeV2.canAugmentSlots(node);
+        if (!chk2.ok){
+          var map={locked:'裝備未解鎖',not_scrollable:'此部位不支援卷軸',cap:'已達上限 +10',no_node:'裝備不存在'};
+          alert(map[chk2.reason]||'不可提升'); return;
+        }
+        if (invCount(ITEM.上限卷)<=0){ alert('缺少 '+ITEM.上限卷+' ×1'); return; }
+        if (!invUse(ITEM.上限卷,1)){ alert('扣除道具失敗'); return; }
+        var rs=ScrollForgeV2.augmentSlots(node);
+        if (rs.success){
+          var o={}; o[type]=rs.nextNode; Storage.write({equips:o}); syncAndPing();
+          alert('成功！卷軸上限 +1（第 '+rs.step+' 次，成功率 '+Math.round(rs.chance*100)+'%）\n目前上限：'+rs.nextNode.slotsMax+'（已成功：'+(rs.nextNode._slotAugSuccess|0)+'/10）');
+        } else {
+          alert('失敗（第 '+rs.step+' 次，成功率 '+Math.round(rs.chance*100)+'%）');
+        }
+        global.EquipHub?.requestRerender?.();
+      }, false, disabled, 'secondary')
+    );
+  })();
+}
+
+box.appendChild(row);
+    // 混沌展示
+    var chaosSec=section('最近一次混沌卷結果'); chaosSec.card.style.marginTop='6px';
+    (function(){
+      var eff=node._lastChaosEff||null; var keys=['str','dex','int','luk','atk','hp','def'];
+      var wrap=document.createElement('div'); wrap.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:6px';
+      if(!eff){ var none=document.createElement('div'); none.style.cssText='opacity:.75;font-size:12px'; none.textContent='尚無混沌卷紀錄'; wrap.appendChild(none); }
+      else{
+        function small(label,val){ var n=Number(val||0); var col=n>0?THEME.success:(n<0?THEME.neg:THEME.zero); var b=document.createElement('div'); b.style.cssText='border:1px solid '+THEME.cardBorder+';background:'+THEME.pillBg+';border-radius:8px;padding:4px 8px;font:800 12px ui-monospace,monospace;color:'+col; b.textContent=label+(n>=0?'+':'')+n; return b; }
+        var i; for(i=0;i<keys.length;i++) if(eff.hasOwnProperty(keys[i])) wrap.appendChild(small(keys[i].toUpperCase(), eff[keys[i]]));
+      }
+      chaosSec.card.appendChild(wrap);
+    })();
+    box.appendChild(chaosSec.card);
+    // 星火展示
+    if (global.FlameCore){
+      var flameSec=section('星火'); flameSec.card.style.marginTop='6px';
+      (function(){
+        // 星火詞條（卡片化顯示）
+var lines = (node.flame && node.flame.lines) ? node.flame.lines : [];
+var wrapLines = document.createElement('div');
+wrapLines.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:6px';
+
+function pill(text, tone){
+  var b = document.createElement('div');
+  b.style.cssText =
+    'border:1px solid '+THEME.cardBorder+';background:'+THEME.pillBg+';border-radius:999px;' +
+    'padding:6px 10px;font:900 12px ui-monospace,monospace;letter-spacing:.2px;color:'+(tone||'#e5e7eb');
+  b.textContent = text;
+  return b;
+}
+
+if (!lines.length){
+  wrapLines.appendChild(pill('（無）', 'rgba(229,231,235,.85)'));
+} else {
+  for (var i=0;i<lines.length;i++){
+    var L = lines[i] || {};
+    var v = Number(L.value||0)||0;
+    var tier = (L.tier!=null) ? ('T'+L.tier) : '';
+    var label = String(L.label||L.key||'');
+    var sign = (v>=0?'+':'');
+    var txt = label + ' ' + sign + v + (tier?(' ('+tier+')'):'');
+    wrapLines.appendChild(pill(txt, THEME.success));
+  }
+}
+flameSec.card.appendChild(wrapLines);
+
+// 平砍加成摘要（若有 flameFlat）
+        if (node.flameFlat){
+          var f = node.flameFlat;
+          var wrap=document.createElement('div'); wrap.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:8px';
+          function small(label,val){ var n=Number(val||0); if(!n) return null; var col=n>0?THEME.success:(n<0?THEME.neg:THEME.zero); var b=document.createElement('div'); b.style.cssText='border:1px solid '+THEME.cardBorder+';background:'+THEME.pillBg+';border-radius:8px;padding:4px 8px;font:800 12px ui-monospace,monospace;color:'+col; b.textContent=label+(n>=0?'+':'')+n; return b; }
+          var arr=[small('STR',f.str), small('DEX',f.dex||f.agi), small('INT',f.int), small('LUK',f.luk), small('ATK',f.atk), small('DEF',f.def), small('HP',f.hp), small('MP',f.mp)];
+          for (var i=0;i<arr.length;i++) if (arr[i]) wrap.appendChild(arr[i]);
+          flameSec.card.appendChild(wrap);
+        }
+      })();
+      box.appendChild(flameSec.card);
+    }
+
+
+    var bestSec=section('歷史最高混沌加成（僅顯示正向）');
+    (function(){
+      var eff=node._bestChaosEff||null; var keys=['str','dex','int','luk','atk','hp','def'];
+      var wrap=document.createElement('div'); wrap.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:6px'; var any=false,i;
+      function small(label,val){ var n=Number(val||0); if(n<=0) return null; var b=document.createElement('div'); b.style.cssText='border:1px solid '+THEME.cardBorder+';background:'+THEME.pillBg+';border-radius:8px;padding:4px 8px;font:800 12px ui-monospace,monospace;color:'+THEME.success; b.textContent=label+'+'+n; return b; }
+      if(eff){ for(i=0;i<keys.length;i++){ var el=small(keys[i].toUpperCase(), eff[keys[i]]); if(el){ wrap.appendChild(el); any=true; } } }
+      if(!any){ var none=document.createElement('div'); none.style.cssText='opacity:.75;font-size:12px'; none.textContent='尚無正向加成記錄'; wrap.appendChild(none); }
+      bestSec.card.appendChild(wrap);
+    })();
+    box.appendChild(bestSec.card);
+
+    return box;
+  }
+
+// ===== 取代舊的規則卡：將按鈕事件指向 Equip_showUnifiedRatesModal =====
+function renderRuleCard(root){
+  var sec=section('規則摘要（v4.1）'); 
+  var b=document.createElement('div');
+  b.innerHTML=
+      '• 潛能：每次從「目前等級」出發檢定升階（只升不降），一次抽三條並直接套用。<br>'
+    + '• 混沌卷成功時，若持有「混沌選擇券」可選擇是否套用：套用扣 1 次；不套用不扣次；兩者皆消耗 1 張券。<br>'
+    + '• 可卷部位需卷軸用盡才可升星；不可卷部位可直接升星。';
+
+  var row=document.createElement('div'); 
+  row.style.cssText='display:flex;gap:10px;margin-top:8px';
+
+  var btnR=document.createElement('button'); 
+  btnR.textContent='機率資訊';
+  btnR.onclick=(window.Equip_showUnifiedRatesModal || function(){ alert('找不到 Equip_showUnifiedRatesModal'); });
+  btnR.style.cssText='padding:8px 12px;border-radius:10px;border:1px solid '+THEME.pillBorder+';background:'+THEME.pillBg+';color:#fff;font-weight:900;cursor:pointer';
+
+  row.appendChild(btnR); 
+  sec.card.appendChild(b); 
+  sec.card.appendChild(row); 
+  root.appendChild(sec.card);
+}
+
+  // ==== Tab ====
+  function renderTab(root){
+    var wrap=document.createElement('div');
+    renderRuleCard(wrap);
+    renderSummaryCard(wrap);
+    renderGlobalPotentialCard(wrap);                // 潛能卡在整體能力下方
+    var sw=document.createElement('div'); renderSwitcher(sw); wrap.appendChild(sw);
+    wrap.appendChild(line());
+    wrap.appendChild(renderEquipCard(innerState.current));
+    root.appendChild(wrap);
+  }
+
+  if (global.EquipHub && typeof global.EquipHub.registerTab==='function'){
+    global.EquipHub.registerTab({ id:'equip_core_v4_1', title:'裝備系統 v4.1', render:function(root){ renderTab(root); }, tick:function(){}, onOpen:function(){ syncAndPing(); } });
+  }
+  (function ensureReady(){ var tries=0, t=setInterval(function(){ if(global.player && global.player.coreBonus && global.player.coreBonus.bonusData){ clearInterval(t); syncAndPing(); } else if(++tries>200){ clearInterval(t); } }, 50); })();
+  
+})(this);
+// ===== 統一機率總覽視窗（潛能 / 卷軸 / 混沌 / 星力 / 卷軸上限提升）=====
+(function(global){
+  'use strict';
+
+  function div(s){ var d=document.createElement('div'); if(s) d.style.cssText=s; return d; }
+  function txt(t){ return document.createTextNode(t); }
+  function table(rows){
+    var t=document.createElement('table');
+    t.style.cssText='width:100%;border-collapse:collapse;font-size:12px;color:#e5e7eb';
+    for(var i=0;i<rows.length;i++){
+      var tr=document.createElement('tr'); if(i===0) tr.style.background='#0f172a';
+      for(var j=0;j<rows[i].length;j++){
+        var td=document.createElement(i?'td':'th');
+        td.textContent=rows[i][j];
+        td.style.cssText='border:1px solid #263247;padding:5px;text-align:center';
+        tr.appendChild(td);
+      }
+      t.appendChild(tr);
+    }
+    return t;
+  }
+  function btn(txt,on){ var b=document.createElement('button'); b.textContent=txt; b.onclick=on;
+    b.style.cssText='padding:6px 10px;border:1px solid #334155;border-radius:8px;background:#1f2937;color:#fff;cursor:pointer;font-weight:700'; return b; }
+  function h(title){ var x=div('margin:8px 0 6px 0;font-weight:800;color:#93c5fd'); x.appendChild(txt(title)); return x; }
+
+// === 潛能（純展示：直接讀 PotentialCoreV21.effectTableForSession）===
+function renderPotentialPage(root){
+  var P = window.PotentialCoreV21;
+  if(!P){ root.appendChild(document.createTextNode('⚠️ 潛能模組尚未載入')); return; }
+
+  function h(title){
+    var d=document.createElement('div');
+    d.textContent=title;
+    d.style.cssText='margin:10px 0 6px;font-weight:800;color:#93c5fd';
+    return d;
+  }
+  function tbl(rows){
+    var t=document.createElement('table');
+    t.style.cssText='width:100%;border-collapse:collapse;font-size:12px;color:#e5e7eb;border:1px solid #263247;border-radius:8px;overflow:hidden';
+    for(var i=0;i<rows.length;i++){
+      var tr=document.createElement('tr'); if(i===0) tr.style.background='#0f172a';
+      for(var j=0;j<rows[i].length;j++){
+        var td=document.createElement(i?'td':'th');
+        td.textContent=rows[i][j];
+        td.style.cssText='border:1px solid #263247;padding:6px;text-align:center';
+        tr.appendChild(td);
+      }
+      t.appendChild(tr);
+    }
+    return t;
+  }
+  function fmtPct(n){ n=Number(n)||0; return n.toFixed(2)+'%'; }
+
+  var TIERS = ['R','SR','SSR','UR','LR','SLR'];
+
+  // 升階機率（直接用 upgradeChanceFrom）
+  var upRows = [['等級','cube%','高級升階%']];
+  for (var i=0;i<TIERS.length;i++){
+    var t = TIERS[i];
+    if (t==='SLR'){ upRows.push([t,'—','—']); continue; }
+    var base = (P.upgradeChanceFrom(t,'cube')||0)*100;
+    var plus = (P.upgradeChanceFrom(t,'cube_plus')||0)*100;
+    upRows.push([t, base.toFixed(2)+'%', plus.toFixed(2)+'%']);
+  }
+  root.appendChild(h('潛能升階機率（動態）'));
+  root.appendChild(tbl(upRows));
+
+  // 每個等級的詞條機率（直接用 effectTableForSession）
+  for (var k=0;k<TIERS.length;k++){
+    var tier = TIERS[k];
+    var list = (typeof P.effectTableForSession==='function') ? P.effectTableForSession(tier) : null;
+    if (!Array.isArray(list) || !list.length) continue;
+
+    // 以 prob 總和正規化成百分比（你的 effectsR prob 代表權重）
+    var sum = 0; for (var x=0;x<list.length;x++) sum += Math.max(0, Number(list[x].prob)||0);
+    var rows = [['等級：'+tier,'詞條','數值','機率%']];
+    for (var m=0;m<list.length;m++){
+      var e = list[m];
+      var unit = e.unit || ''; // 已轉成 '%' 或 '' by effectTableForSession
+      var pct = sum>0 ? ( (Number(e.prob)||0) / sum * 100 ) : 0;
+      rows.push(['', e.label, (e.value + (unit||'')), fmtPct(pct)]);
+    }
+
+    root.appendChild(h('可洗出潛能（'+tier+'）'));
+    root.appendChild(tbl(rows));
+  }
+
+  // 第2/3條「依此類推分配」的規則提示（純文字）
+  var tip=document.createElement('div');
+  tip.style.cssText='margin-top:8px;opacity:.85';
+  tip.innerHTML = '說明：單次抽三條；第1條固定為該回合等級。第2/3條依次級分配：'+
+    ')。';
+  root.appendChild(tip);
+}
+
+  // === 卷軸（一般卷） ===
+  function renderScrollBasics(root){
+    var S=global.ScrollForgeV2;
+    if(!S){root.appendChild(txt('⚠️ 找不到卷軸模組'));return;}
+    var def=S.def||{};
+    var rows=[['卷軸名稱','成功率%','效果']];
+    for(var k in def){
+      if(!def.hasOwnProperty(k))continue;
+      var d=def[k];
+      if(d.effGen)continue; // 混沌卷由另一頁顯示
+      var effL=[],e=d.eff||{};for(var kk in e)if(e.hasOwnProperty(kk))effL.push(kk.toUpperCase()+'+'+e[kk]);
+      rows.push([k,d.rate!=null?String(d.rate):'—',effL.join('、')||'—']);
+    }
+    root.appendChild(h('一般卷軸成功率 / 效果')); root.appendChild(table(rows));
+  }
+
+function renderChaos(root){
+  var S=global.ScrollForgeV2;
+  if(!S){root.appendChild(txt('⚠️ 找不到卷軸模組'));return;}
+
+  var def=S.def||{};
+  var list=[];
+  for(var k in def){
+    if(!def.hasOwnProperty(k)) continue;
+    var d=def[k];
+    if(d && d.chaosView) list.push({ key:k, d:d, v:d.chaosView });
+  }
+
+  if(!list.length){
+    root.appendChild(txt('⚠️ 沒有找到帶 chaosView 的混沌卷（請在 ScrollForgeV2.def 的混沌卷加入 chaosView）'));
+    return;
+  }
+
+  function toRowsSingle(v){
+    var fn = S[v.source];
+    var arr = (typeof fn==='function') ? fn.apply(S, v.args||[]) : [];
+    var rows=[v.header || ['數值','機率%']];
+    for(var i=0;i<arr.length;i++){
+      rows.push([String(arr[i].v), (arr[i].p*100).toFixed(2)]);
+    }
+    if(v.notes && v.notes.length){
+      for(var n=0;n<v.notes.length;n++) rows.push(v.notes[n]);
+    }
+    return rows;
+  }
+
+  function toRowsDual(v){
+    var mainFn=S[v.mainSource], atkFn=S[v.atkSource];
+    var main=(typeof mainFn==='function')? mainFn.call(S): [];
+    var atk =(typeof atkFn==='function')?  atkFn.call(S):  [];
+
+    var mm={}, aa={}, minV=9999, maxV=-9999, i;
+    for(i=0;i<main.length;i++){ mm[main[i].v]=main[i].p*100; minV=Math.min(minV, main[i].v); maxV=Math.max(maxV, main[i].v); }
+    for(i=0;i<atk.length;i++){  aa[atk[i].v] =atk[i].p*100;  minV=Math.min(minV, atk[i].v);  maxV=Math.max(maxV, atk[i].v);  }
+    if(minV===9999){ minV=0; maxV=0; }
+
+    var rows=[v.header || ['數值','主屬%','ATK%']];
+    for(var val=minV; val<=maxV; val++){
+      var mp=(mm[val]!=null)? mm[val].toFixed(2): '—';
+      var ap=(aa[val]!=null)? aa[val].toFixed(2): '—';
+      rows.push([String(val), String(mp), String(ap)]);
+    }
+    if(v.footer && v.footer.length) rows.push(v.footer);
+    return rows;
+  }
+
+  var tabs=div('display:flex;gap:8px;margin:6px 0;flex-wrap:wrap');
+  var content=div();
+
+  function show(item){
+    content.innerHTML='';
+    var v=item.v;
+    var rows = (v.type==='dual') ? toRowsDual(v) : toRowsSingle(v);
+    content.appendChild(table(rows));
+  }
+
+  root.appendChild(h('混沌卷軸：分佈機率（自動抓取 def.chaosView）'));
+  root.appendChild(tabs);
+  root.appendChild(content);
+
+  for(var i=0;i<list.length;i++){
+    (function(item){
+      var title = (item.v && item.v.title) ? item.v.title : (item.d && item.d.name) ? item.d.name : item.key;
+      var b=btn(title, function(){ show(item); });
+      tabs.appendChild(b);
+    })(list[i]);
+  }
+
+  show(list[0]);
+}
+
+  // === 星力 ===
+  function renderStar(root){
+    var SF=global.StarforceTableV1;
+    if(!SF){root.appendChild(txt('⚠️ 找不到星力模組'));return;}
+    var rows=[['星數','成功率%','破壞率%']];
+    for(var i=1;i<=30;i++){
+      var s=SF.successRate?SF.successRate(i):0;
+      var b=SF.boomRate?SF.boomRate(i):0;
+      rows.push([i,String(s.toFixed?s.toFixed(1):s),String(b.toFixed?b.toFixed(1):b)]);
+    }
+    root.appendChild(h('星力成功/破壞率')); root.appendChild(table(rows));
+  }
+
+  // === 卷軸上限提升（讀取 ScrollForgeV2.getAugmentChances ） ===
+  function renderAugment(root){
+    var S=global.ScrollForgeV2;
+    if(!S){root.appendChild(txt('⚠️ 找不到卷軸模組'));return;}
+    var steps=[];
+    if (typeof S.getAugmentChances === 'function') steps = S.getAugmentChances();
+    else if (S.augmentChances && S.augmentChances.slice) steps = S.augmentChances.slice();
+    else if (S.config && S.config.augmentChances && S.config.augmentChances.slice) steps = S.config.augmentChances.slice();
+
+    if (!steps || !steps.length){
+      root.appendChild(txt('⚠️ 尚未提供卷軸上限提升機率（請在 scroll_core_v2.js 暴露 getAugmentChances）'));
+      return;
+    }
+    var rows=[['第幾次成功','成功率%']];
+    for(var i=0;i<steps.length;i++){
+      rows.push([String(i+1), String(steps[i])]);
+    }
+    root.appendChild(h('卷軸上限提升（成功率表）'));
+    root.appendChild(table(rows));
+    var note=div('opacity:.8;margin-top:6px;font-size:12px;');
+    note.appendChild(txt('說明：成功後裝備可使用的卷軸次數 +1；最多 +'+steps.length+' 次（不能對不可卷的部位使用）。'));
+    root.appendChild(note);
+  }
+
+  // === 主窗口 ===
+  function Equip_showUnifiedRatesModal(){
+    var bd=div('position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:10000;padding:12px;');
+    var w =div('width:min(960px,96vw);max-height:92vh;overflow:auto;background:#111827;color:#e5e7eb;border:1px solid #334155;border-radius:12px;padding:12px;box-shadow:0 12px 36px rgba(0,0,0,.5)');
+    var head=div('display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-weight:900');
+    head.appendChild(txt('📊 機率總覽'));
+    var close=btn('關閉',function(){ bd.remove(); }); close.style.background='#334155';
+    head.appendChild(close); w.appendChild(head);
+
+    var tabs=div('display:flex;gap:8px;margin-bottom:8px'); var content=div();
+    function show(which){
+      content.innerHTML='';
+      if(which==='pot')  renderPotentialPage(content);
+      else if(which==='scr') renderScrollBasics(content);
+      else if(which==='chaos') renderChaos(content);
+      else if(which==='star')  renderStar(content);
+      else if(which==='aug')   renderAugment(content);
+    }
+    var b1=btn('潛能',function(){show('pot');});
+    var b2=btn('卷軸',function(){show('scr');});
+    var b3=btn('混沌',function(){show('chaos');});
+    var b4=btn('星力',function(){show('star');});
+    var b5=btn('卷軸上限提升',function(){show('aug');});
+    tabs.appendChild(b1); tabs.appendChild(b2); tabs.appendChild(b3); tabs.appendChild(b4); tabs.appendChild(b5);
+    w.appendChild(tabs); w.appendChild(content);
+    show('pot');
+
+    bd.appendChild(w);
+    bd.addEventListener('click',function(e){ if(e.target===bd) bd.remove(); });
+    document.body.appendChild(bd);
+  }
+
+  // 對外（讓你的按鈕直接用）
+  global.Equip_showUnifiedRatesModal = Equip_showUnifiedRatesModal;
+})(this);

@@ -1,0 +1,124 @@
+/* slr_rainbow_border_v2.css
+   Adds:
+   - Hover accelerates rainbow flow
+   - Selected pulse (supports .is-selected / .selected / .active / [aria-selected="true"] / [data-selected="1"])
+   - Upgrade activation burst (.slr-activate)
+*/
+
+/* === UR/LR simple glow === */
+.border-ur { box-shadow: 0 0 6px #ff9800; }
+.border-lr { box-shadow: 0 0 8px #ff5722; }
+
+/* === SLR rainbow moving border === */
+.border-slr-rainbow{
+  position: relative;
+  border-radius: 12px;
+  isolation: isolate; /* keep pseudo elements behind content */
+}
+
+.border-slr-rainbow::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    270deg,
+    #ff004c,
+    #ff8a00,
+    #ffe600,
+    #2bff00,
+    #00ffd5,
+    #0066ff,
+    #b300ff,
+    #ff004c
+  );
+  background-size: 400% 400%;
+  animation: rainbowFlow 4s linear infinite;
+  filter: saturate(1.1) brightness(1.05);
+  z-index: -1;
+  pointer-events:none;
+}
+
+/* Keep content above */
+.border-slr-rainbow > *{ position: relative; z-index: 1; }
+
+@keyframes rainbowFlow{
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+/* === Hover: speed up & slightly intensify === */
+.border-slr-rainbow:hover::before{
+  animation-duration: 1.2s;
+  filter: saturate(1.25) brightness(1.12);
+}
+
+/* === Selected pulse (many selector variants) === */
+.is-selected.border-slr-rainbow,
+.selected.border-slr-rainbow,
+.active.border-slr-rainbow,
+[aria-selected="true"].border-slr-rainbow,
+[data-selected="1"].border-slr-rainbow{
+  animation: slrPulse 1.25s ease-in-out infinite;
+}
+
+@keyframes slrPulse{
+  0%, 100% { transform: translateZ(0) scale(1); }
+  50%      { transform: translateZ(0) scale(1.02); }
+}
+
+/* Add a soft outer glow pulse without changing layout */
+.is-selected.border-slr-rainbow::after,
+.selected.border-slr-rainbow::after,
+.active.border-slr-rainbow::after,
+[aria-selected="true"].border-slr-rainbow::after,
+[data-selected="1"].border-slr-rainbow::after{
+  content:"";
+  position:absolute;
+  inset:-6px;
+  border-radius: inherit;
+  z-index:-2;
+  pointer-events:none;
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.22), rgba(255,255,255,0) 65%);
+  animation: slrGlow 1.25s ease-in-out infinite;
+  filter: blur(6px);
+}
+
+@keyframes slrGlow{
+  0%, 100% { opacity: .35; transform: scale(1); }
+  50%      { opacity: .8;  transform: scale(1.03); }
+}
+
+/* === Upgrade activation burst (apply .slr-activate to the node) === */
+.slr-activate{
+  animation: slrActivatePop 650ms ease-out 1;
+}
+
+@keyframes slrActivatePop{
+  0%   { transform: scale(.92); }
+  55%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+.slr-activate.border-slr-rainbow::before{
+  animation-duration: .75s; /* burst faster */
+  filter: saturate(1.35) brightness(1.22);
+}
+
+.slr-activate.border-slr-rainbow::after{
+  content:"";
+  position:absolute;
+  inset:-18px;
+  border-radius: inherit;
+  z-index:-3;
+  pointer-events:none;
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.45), rgba(255,255,255,0) 70%);
+  filter: blur(10px);
+  animation: slrBurstGlow 650ms ease-out 1;
+}
+
+@keyframes slrBurstGlow{
+  0%   { opacity: 0; transform: scale(.92); }
+  35%  { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 0; transform: scale(1.12); }
+}

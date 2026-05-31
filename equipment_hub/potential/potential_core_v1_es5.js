@@ -1,0 +1,1660 @@
+// =======================================================
+// potential_core_v2_es5.js — 潛能規則核心（V2：每個裝備槽獨立潛能 + 指定部位潛能）
+// ES5
+//
+// 依賴：window.SaveHub（可選）
+//      window.getItemQuantity / window.removeItem（inventory.js，可選）
+//      window.player.PotentialBonus（可選：用於匯入加成）
+//
+// 規則摘要：
+// - 9 個裝備槽各自獨立存 主/附潛能（外框 tier + pity + 3 排）
+// - 洗一次：抽 3 排
+//   * 第 1 排：同外框階級
+//   * 第 2/3 排：預設低一階；各自 1% 機率同階
+// - 外框升階：主/附各自規則（含保底）
+// - 指定部位潛能：只有「傳說↑」才會進入抽池；唯一 = 傳說的 3 倍
+//   * 手套：爆擊傷害 +8%（1.5%）/ 攻擊速度 +20%（3%）
+//   * 鞋子：迴避率 +5%（預設權重）
+//   * 武器：Boss +30/35/40%（2.2% 三抽一）/ 無視 10/15%（2.8% 二抽一）/ 總傷 +6%（2%）
+//   * 飾品：掉寶/金幣/經驗 +30%（2% 三抽一）  ← 你已確認只有三個
+//
+// 注意：
+// - 全域池（GLOBAL_POOL）依 tier.mult 套用倍數
+// - 指定部位池（SLOT_POOLS）不吃 tier.mult；只吃「傳說固定 / 唯一三倍」
+// =======================================================
+(function (w) {
+  "use strict";
+  if (!w) return;
+  if (w.PotentialCoreV2) return;
+
+  // ---- utils ----
+  function n(x) { return Number(x || 0); }
+  function clamp(v, a, b) { v = n(v); return Math.max(a, Math.min(b, v)); }
+  function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function weightedPick(items) {
+    var total = 0, i, wgt;
+    for (i = 0; i < items.length; i++) {
+      wgt = n(items[i].w != null ? items[i].w : items[i].weight);
+      if (wgt > 0) total += wgt;
+    }
+    if (total <= 0) return items[0];
+    var r = Math.random() * total, acc = 0;
+    for (i = 0; i < items.length; i++) {
+      wgt = n(items[i].w != null ? items[i].w : items[i].weight);
+      if (wgt <= 0) continue;
+      acc += wgt;
+      if (r <= acc) return items[i];
+    }
+    return items[items.length - 1];
+  }
+
+
+  // -----------------------------
+  // 固定機率（p）優先抽取：先吃掉 Σp 的區間，剩下走權重（w）
+  // - p: 0~1 絕對機率
+  // - w: 權重（相對）
+  // -----------------------------
+  function pickFixedThenWeighted(list, lineTier) {
+    var fixed = [];
+    var rest = [];
+    var psum = 0;
+    for (var i = 0; i < list.length; i++) {
+      var it = list[i];
+      if (!it) continue;
+      if (it.p != null && meetsMinTier(lineTier, it.minTier)) {
+        var p = n(it.p);
+        if (p > 0) { fixed.push(it); psum += p; continue; }
+      }
+      rest.push(it);
+    }
+    var r = Math.random();
+    if (psum > 0 && r < psum) {
+      var t = r / psum;
+      var acc = 0;
+      for (var j = 0; j < fixed.length; j++) {
+        acc += n(fixed[j].p) / psum;
+        if (t <= acc) return fixed[j];
+      }
+      return fixed[fixed.length - 1];
+    }
+    return weightedPick(rest);
+  }
+
+  function tierValueLookup(valuesByTier, lineTier) {
+    if (!valuesByTier) return 0;
+    var key = String(lineTier);
+    if (valuesByTier.hasOwnProperty(key)) return n(valuesByTier[key]);
+    // 往下找最近可用階級
+    var order = ["特殊", "稀有", "罕見", "傳說", "唯一", "永恆"];
+    for (var i = tierIndex(lineTier); i >= 0; i--) {
+      var tn = order[i];
+      if (valuesByTier.hasOwnProperty(tn)) return n(valuesByTier[tn]);
+    }
+    return 0;
+  }
+
+  // -----------------------------
+  // Slots（固定 9 格）
+  // -----------------------------
+  var SLOTS = (function () {
+    // 預設 9 格；若 UI 端有提供 window.POTENTIAL_SLOTS（陣列），就以它為準
+    var def = [
+      "weapon", "subWeapon",
+    "hat", "glove", "suit", "shoes",
+    "necklace", "earring", "ring"
+    ];
+    try {
+      var g = (typeof window !== "undefined") ? window : (typeof globalThis !== "undefined" ? globalThis : null);
+      var u = g && g.POTENTIAL_SLOTS;
+      if (u && u.length) {
+        var out = [];
+        for (var i = 0; i < u.length; i++) {
+          var s = String(u[i] || "").trim();
+          if (s && out.indexOf(s) < 0) out.push(s);
+        }
+        if (out.length) return out;
+      }
+    } catch (_) {}
+    return def;
+  })();
+
+  // -----------------------------
+  // SaveHub
+  // -----------------------------
+  function getSH() { return w.SaveHub || null; }
+  var NS = "potential_v2";
+
+  function freshPotNode() {
+    return { tier: "特殊", pity: 0, lines: [] };
+  }
+  function freshSlotPot() {
+    return { main: freshPotNode(), add: freshPotNode() };
+  }
+
+  function freshState() {
+    var pots = {};
+    for (var i = 0; i < SLOTS.length; i++) pots[SLOTS[i]] = freshSlotPot();
+
+    return {
+      _ver: 1,
+      pots: pots,
+
+      // 裝備資料先空（只是 UI 顯示用）
+      equip: {
+        weapon: null, subWeapon: null,
+        hat: null, glove: null, suit: null, shoes: null,
+        necklace: null, earring: null, ring: null
+      },
+
+      ui: { selectedSlot: "weapon" }
+    };
+  }
+
+  (function registerNS() {
+    var SH = getSH();
+    if (!SH) { setTimeout(registerNS, 50); return; }
+    try {
+      var schema = {
+        version: 1,
+        migrate: function (old) {
+          var st = freshState();
+          if (!old || typeof old !== "object") return st;
+
+          if (old.pots && typeof old.pots === "object") st.pots = old.pots;
+          if (old.equip && typeof old.equip === "object") st.equip = old.equip;
+          if (old.ui && typeof old.ui === "object") st.ui = old.ui;
+
+          if (!st.pots || typeof st.pots !== "object") st.pots = {};
+          for (var i = 0; i < SLOTS.length; i++) {
+            var s = SLOTS[i];
+            if (!st.pots[s]) st.pots[s] = freshSlotPot();
+            if (!st.pots[s].main) st.pots[s].main = freshPotNode();
+            if (!st.pots[s].add)  st.pots[s].add  = freshPotNode();
+
+            st.pots[s].main.tier = st.pots[s].main.tier || "特殊";
+            st.pots[s].add.tier  = st.pots[s].add.tier  || "特殊";
+            st.pots[s].main.pity = Math.max(0, Math.floor(n(st.pots[s].main.pity)));
+            st.pots[s].add.pity  = Math.max(0, Math.floor(n(st.pots[s].add.pity)));
+            if (!Array.isArray(st.pots[s].main.lines)) st.pots[s].main.lines = [];
+            if (!Array.isArray(st.pots[s].add.lines))  st.pots[s].add.lines  = [];
+          }
+
+          if (!st.ui) st.ui = { selectedSlot: "weapon" };
+          // allow dynamic slots; do not force reset to weapon
+return st;
+        }
+      };
+
+      if (typeof SH.registerNamespaces === "function") {
+        var pack = {}; pack[NS] = schema;
+        SH.registerNamespaces(pack);
+      } else if (typeof SH.registerNamespace === "function") {
+        SH.registerNamespace(NS, schema);
+      }
+    } catch (e) {
+      console && console.warn && console.warn("[PotentialCoreV2] SaveHub register failed:", e);
+    }
+  })();
+
+  function getStateOrInit() {
+    var SH = getSH();
+    if (!SH) {
+      if (!getStateOrInit._mem) getStateOrInit._mem = freshState();
+      return getStateOrInit._mem;
+    }
+    if (typeof SH.getOrInit === "function") return SH.getOrInit(NS, freshState());
+    var st = SH.get ? SH.get(NS, freshState()) : freshState();
+    return st || freshState();
+  }
+
+  function writeState(next) {
+    var SH = getSH();
+    if (!SH) { getStateOrInit._mem = deepClone(next); return; }
+    if (typeof SH.set === "function") SH.set(NS, next, { replace: true });
+  }
+
+  // -----------------------------
+  // Tier 規則（特殊/稀有/罕見/傳說/唯一）
+  // -----------------------------
+  var TIERS = ["特殊", "稀有", "罕見", "傳說", "唯一", "永恆"];
+  function tierIndex(t) {
+    var i = TIERS.indexOf(String(t || "特殊"));
+    return i < 0 ? 0 : i;
+  }
+  function tierNameByIndex(i) {
+    i = clamp(i, 0, TIERS.length - 1);
+    return TIERS[i];
+  }
+  function lowerTier(t) {
+    return tierNameByIndex(Math.max(0, tierIndex(t) - 1));
+  }
+  function nextTier(t) {
+    return tierNameByIndex(Math.min(TIERS.length - 1, tierIndex(t) + 1));
+  }
+
+  var MAIN_TIER_RULE = {
+  "特殊": { upChance: 0.05,    pity: 50,   mult: 1 },
+  "稀有": { upChance: 0.03,    pity: 150,  mult: 2 },
+  "罕見": { upChance: 0.01,    pity: 300,  mult: 3 },
+  // 傳說 -> 唯一：0.35% + 保底 1300
+  "傳說": { upChance: 0.0035,  pity: 1300, mult: 4 },
+  // 唯一 -> 永恆：0.01%（無保底）
+  "唯一": { upChance: 0.0001,  pity: 0,    mult: 6 },
+  "永恆": { upChance: 0,       pity: 0,    mult: 8 }
+};
+
+  // -----------------------------
+  // 附加潛能：獨立升階/保底規則（不再由主潛能衍生）
+  // -----------------------------
+  var ADD_TIER_RULE = {
+    "特殊": { upChance: 0.05,    pity: 120,  mult: 1 },
+    "稀有": { upChance: 0.03,    pity: 220,  mult: 2 },
+    "罕見": { upChance: 0.01,    pity: 550,  mult: 3 },
+    "傳說": { upChance: 0.0018,  pity: 2000, mult: 4 },
+    "唯一": { upChance: 0.00005, pity: 0,    mult: 6 },
+    "永恆": { upChance: 0,       pity: 0,    mult: 8 }
+  };
+
+
+  // expose tier rule table for UI (single source of truth)
+  function getTierRuleTable(which) {
+    which = String(which || "main");
+    var out = {};
+    for (var i = 0; i < TIERS.length; i++) {
+      var t = TIERS[i];
+      if (which === "add") out[t] = getAddRule(t);
+      else out[t] = MAIN_TIER_RULE[t] || MAIN_TIER_RULE["特殊"];
+    }
+    return out;
+  }
+
+
+  // 附加：機率=一半；保底=兩倍；基礎值=一半（對應 mult/2）
+  function getAddRule(tier) {
+    var r = MAIN_TIER_RULE[tier] || MAIN_TIER_RULE["特殊"];
+    return { upChance: r.upChance * 0.5, pity: r.pity ? (r.pity * 2) : 0, mult: r.mult / 2 };
+  }
+  function getRule(isAdd, tier) {
+    return isAdd ? getAddRule(tier) : (MAIN_TIER_RULE[tier] || MAIN_TIER_RULE["特殊"]);
+  }
+
+  // -----------------------------
+  // 能力池：全域池（依 mult 套用）
+  // -----------------------------
+  var DEFAULT_W = 0.05;
+
+  // -----------------------------
+// 全域能力池（所有裝備套用；未標註機率者使用 DEFAULT_W；吃 tier.mult）
+// 主屬性抽到時隨機一個：力/敏/智/幸
+// -----------------------------
+var GLOBAL_POOL = [
+  // 主屬性（%）
+  { id: "MAINSTAT_PCT_3", kind: "pct_stat", base: 0.03, w: 0.045 },
+  { id: "MAINSTAT_PCT_2", kind: "pct_stat", base: 0.02, w: DEFAULT_W },
+  { id: "MAINSTAT_PCT_1", kind: "pct_stat", base: 0.01, w: DEFAULT_W },
+
+  // 主屬性（+）
+  { id: "MAINSTAT_FLAT_10", kind: "flat_stat", base: 10, w: DEFAULT_W },
+  { id: "MAINSTAT_FLAT_5",  kind: "flat_stat", base: 5,  w: DEFAULT_W },
+  { id: "MAINSTAT_FLAT_3",  kind: "flat_stat", base: 3,  w: DEFAULT_W },
+
+  // 全屬性（%）
+  { id: "ALLSTAT_PCT_3", kind: "pct_all", base: 0.03, w: 0.033 },
+  { id: "ALLSTAT_PCT_2", kind: "pct_all", base: 0.02, w: DEFAULT_W },
+  { id: "ALLSTAT_PCT_1", kind: "pct_all", base: 0.01, w: DEFAULT_W },
+
+  // 全屬性（+）
+  { id: "ALLSTAT_FLAT_8", kind: "flat_all", base: 8, w: DEFAULT_W },
+  { id: "ALLSTAT_FLAT_4", kind: "flat_all", base: 4, w: DEFAULT_W },
+  { id: "ALLSTAT_FLAT_2", kind: "flat_all", base: 2, w: DEFAULT_W },
+
+  // 防禦力（% / +）
+  { id: "DEF_PCT_3",  kind: "pct",  stat: "def", base: 0.03, w: DEFAULT_W },
+  { id: "DEF_PCT_2",  kind: "pct",  stat: "def", base: 0.02, w: DEFAULT_W },
+  { id: "DEF_PCT_1",  kind: "pct",  stat: "def", base: 0.01, w: DEFAULT_W },
+  { id: "DEF_FLAT_20",kind: "flat", stat: "def", base: 20,   w: DEFAULT_W },
+  { id: "DEF_FLAT_10",kind: "flat", stat: "def", base: 10,   w: DEFAULT_W },
+  { id: "DEF_FLAT_5", kind: "flat", stat: "def", base: 5,    w: DEFAULT_W },
+
+  // HP / MP（%）
+  { id: "HP_PCT_3", kind: "pct", stat: "hp", base: 0.03, w: DEFAULT_W },
+  { id: "HP_PCT_2", kind: "pct", stat: "hp", base: 0.02, w: DEFAULT_W },
+  { id: "HP_PCT_1", kind: "pct", stat: "hp", base: 0.01, w: DEFAULT_W },
+  { id: "MP_PCT_3", kind: "pct", stat: "mp", base: 0.03, w: DEFAULT_W },
+  { id: "MP_PCT_2", kind: "pct", stat: "mp", base: 0.02, w: DEFAULT_W },
+  { id: "MP_PCT_1", kind: "pct", stat: "mp", base: 0.01, w: DEFAULT_W },
+
+  // HP / MP（+）
+  { id: "HP_FLAT_500",  kind: "flat", stat: "hp", base: 500,  w: DEFAULT_W },
+  { id: "HP_FLAT_1000", kind: "flat", stat: "hp", base: 1000, w: DEFAULT_W },
+  { id: "HP_FLAT_1500", kind: "flat", stat: "hp", base: 1500, w: DEFAULT_W },
+
+  { id: "MP_FLAT_50",  kind: "flat", stat: "mp", base: 50,  w: DEFAULT_W },
+  { id: "MP_FLAT_100", kind: "flat", stat: "mp", base: 100, w: DEFAULT_W },
+  { id: "MP_FLAT_150", kind: "flat", stat: "mp", base: 150, w: DEFAULT_W }
+];
+
+// -----------------------------
+// 武器基本池（僅武器/副武器；吃 tier.mult）
+// -----------------------------
+var WEAPON_BASE_POOL = [
+  { id: "WPN_ATK_PCT_3", kind: "pct",  stat: "atk", base: 0.03, w: 0.022 },
+  { id: "WPN_ATK_PCT_2", kind: "pct",  stat: "atk", base: 0.02, w: DEFAULT_W },
+  { id: "WPN_ATK_PCT_1", kind: "pct",  stat: "atk", base: 0.01, w: DEFAULT_W },
+
+  { id: "WPN_TOTAL_DMG_PCT_3", kind: "direct_pct", stat: "totalDamage", base: 0.03, w: 0.015 },
+  { id: "WPN_TOTAL_DMG_PCT_2", kind: "direct_pct", stat: "totalDamage", base: 0.02, w: DEFAULT_W },
+  { id: "WPN_TOTAL_DMG_PCT_1", kind: "direct_pct", stat: "totalDamage", base: 0.01, w: DEFAULT_W },
+
+  { id: "WPN_CRIT_RATE_3", kind: "direct_pct", stat: "critRate", base: 0.03, w: DEFAULT_W },
+
+  { id: "WPN_ATK_FLAT_20", kind: "flat", stat: "atk", base: 20, w: DEFAULT_W },
+  { id: "WPN_ATK_FLAT_10", kind: "flat", stat: "atk", base: 10, w: DEFAULT_W },
+  { id: "WPN_ATK_FLAT_5",  kind: "flat", stat: "atk", base: 5,  w: DEFAULT_W }
+];
+
+// -----------------------------
+// 附加潛能：全新抽池（有 p => 固定機率；無 p => 共用權重 DEFAULT_W）
+// 1) 共用（所有裝備）
+// 2) 武器類（包含能源）
+// 3) 手套限定
+// -----------------------------
+var ADD_GLOBAL_POOL = [
+  // 全屬性 flat（未寫機率 => 共用）
+  { id: "ALLSTAT_FLAT_3", kind: "by_tier_flat", stat: "allStat", w: DEFAULT_W,
+    valuesByTier: { "特殊": 3, "稀有": 6, "罕見": 9, "傳說": 9, "唯一": 9, "永恆": 9 } },
+
+  // 全屬性 %（固定機率）
+  { id: "ALLSTAT_PCT_2", kind: "pct", stat: "allStat", base: 0.02, p: 0.025 },
+  { id: "ALLSTAT_PCT_1", kind: "pct", stat: "allStat", base: 0.01, p: 0.019 },
+
+  // 主屬性 flat（共用）
+  { id: "MAINSTAT_FLAT_5", kind: "by_tier_mainstat_flat", w: DEFAULT_W,
+    valuesByTier: { "特殊": 5, "稀有": 7, "罕見": 10, "傳說": 22, "唯一": 40, "永恆": 60 } },
+
+  // 主屬性 %（固定機率）
+  { id: "MAINSTAT_PCT_2", kind: "pct_stat", base: 0.02, p: 0.04 },
+  { id: "MAINSTAT_PCT_1", kind: "pct_stat", base: 0.01, p: 0.07 },
+
+  // HP flat（共用）
+  { id: "HP_FLAT_300", kind: "by_tier_flat", stat: "hp", w: DEFAULT_W,
+    valuesByTier: { "特殊": 300, "稀有": 600, "罕見": 850, "傳說": 1200, "唯一": 2200, "永恆": 4400 } },
+
+  // HP %（共用）
+  { id: "HP_PCT_3", kind: "pct", stat: "hp", base: 0.03, w: DEFAULT_W },
+  { id: "HP_PCT_2", kind: "pct", stat: "hp", base: 0.02, w: DEFAULT_W },
+  { id: "HP_PCT_1", kind: "pct", stat: "hp", base: 0.01, w: DEFAULT_W },
+
+  // MP flat（共用）
+  { id: "MP_FLAT_35", kind: "by_tier_flat", stat: "mp", w: DEFAULT_W,
+    valuesByTier: { "特殊": 35, "稀有": 60, "罕見": 95, "傳說": 110, "唯一": 150, "永恆": 200 } },
+
+  // MP %（共用）
+  { id: "MP_PCT_3", kind: "pct", stat: "mp", base: 0.03, w: DEFAULT_W },
+  { id: "MP_PCT_2", kind: "pct", stat: "mp", base: 0.02, w: DEFAULT_W },
+  { id: "MP_PCT_1", kind: "pct", stat: "mp", base: 0.01, w: DEFAULT_W },
+
+  // 防禦 %（共用）
+  { id: "DEF_PCT_3", kind: "pct", stat: "def", base: 0.03, w: DEFAULT_W },
+  { id: "DEF_PCT_2", kind: "pct", stat: "def", base: 0.02, w: DEFAULT_W },
+  { id: "DEF_PCT_1", kind: "pct", stat: "def", base: 0.01, w: DEFAULT_W },
+
+  // 防禦 flat（共用）- 你給三段，傳說以上固定最後一段
+  { id: "DEF_FLAT_20", kind: "by_tier_flat", stat: "def", w: DEFAULT_W,
+    valuesByTier: { "特殊": 20, "稀有": 44, "罕見": 65, "傳說": 95, "唯一": 135, "永恆":235 } },
+
+  // 攻擊力 flat（固定機率）
+  { id: "ATK_FLAT_6", kind: "flat", stat: "atk", base: 6, p: 0.022 }
+];
+
+var ADD_WEAPON_POOL = [
+  // 攻擊力 %（固定機率）
+  { id: "WPN_ATK_PCT_4", kind: "pct", stat: "atk", base: 0.04, p: 0.0033 },
+  { id: "WPN_ATK_PCT_3", kind: "pct", stat: "atk", base: 0.03, p: 0.0145 },
+  { id: "WPN_ATK_PCT_2", kind: "pct", stat: "atk", base: 0.02, p: 0.0222 },
+  { id: "WPN_ATK_PCT_1", kind: "pct", stat: "atk", base: 0.01, p: 0.03 },
+
+  // 攻擊力 flat（共用）
+  { id: "WPN_ATK_FLAT_10", kind: "by_tier_flat", stat: "atk", w: DEFAULT_W,
+    valuesByTier: { "特殊": 10, "稀有": 22, "罕見": 35, "傳說": 50, "唯一": 80, "永恆": 150 } },
+
+  // 爆擊率 +3%（共用）
+  { id: "WPN_CRIT_RATE_3", kind: "direct_pct", stat: "critRate", base: 0.03, w: DEFAULT_W },
+
+  // 無視防禦（固定機率 2.7%，依階級固定值）
+  { id: "WEAPON_IGNORE_DEF", kind: "direct_pct_by_tier", stat: "ignoreDefPct", p: 0.027, minTier: "罕見",
+    valuesByTier: { "罕見": 0.03, "傳說": 0.07, "唯一": 0.10, "永恆": 0.15 } },
+
+  // Boss 傷害（固定機率 2.65%，能源不可）
+  { id: "WEAPON_BOSS_DMG", kind: "direct_pct_by_tier", stat: "bossDamage", p: 0.0265, minTier: "罕見",
+    valuesByTier: { "罕見": 0.12, "傳說": 0.18, "唯一": 0.24, "永恆": 0.30 } },
+
+  // 總傷害 +3%（固定機率）
+  { id: "WPN_TOTAL_DMG_PCT_3", kind: "direct_pct", stat: "totalDamage", base: 0.03, p: 0.0222 }
+];
+
+var ADD_GLOVE_POOL = [
+  // 爆擊傷害（固定機率 2%，依階級固定值）
+  { id: "GLOVE_CRIT_DMG", kind: "direct_pct_by_tier", stat: "critDamagePct", p: 0.02, minTier: "傳說",
+    valuesByTier: { "傳說": 0.03, "唯一": 0.05, "永恆": 0.09 } },
+
+  // 攻擊速度（固定機率）
+  { id: "GLOVE_ATK_SPEED_3", kind: "direct_pct", stat: "attackSpeedPct", base: 0.03, p: 0.03, minTier: "稀有" },
+  { id: "GLOVE_ATK_SPEED_6", kind: "direct_pct", stat: "attackSpeedPct", base: 0.06, p: 0.028, minTier: "稀有" }
+];
+
+
+// -----------------------------
+// 限制裝備的指定潛能（不吃 tier.mult）
+// 有備註「OO限定」：用 minTier 控制進池，並可用 valuesByTier 指定每個階級的固定數值
+// -----------------------------
+var SLOT_POOLS = {
+  glove: [
+    // 爆擊傷害（傳說/唯一/永恆）
+    { id: "GLOVE_CRIT_DMG", kind: "special_pct", stat: "critMultiplier", w: 0.023, minTier: "傳說",
+      valuesByTier: { "傳說": 0.08, "唯一": 0.16, "永恆": 0.30 } },
+
+    // 攻擊速度（稀有以上）
+    { id: "GLOVE_ATK_SPEED_5", kind: "special_pct", stat: "attackSpeedPct", w: DEFAULT_W, minTier: "稀有",
+      valuesByTier: { "稀有": 0.05, "罕見": 0.11, "傳說": 0.18, "唯一": 0.25, "永恆": 0.35 } }
+  ],
+
+  shoes: [
+    { id: "SHOES_DODGE_2", kind: "special_pct", stat: "dodgePercent", w: DEFAULT_W,
+      valuesByTier: { "特殊": 0.02, "稀有": 0.03, "罕見": 0.04, "傳說": 0.06, "唯一": 0.09, "永恆": 0.1 } }
+  ],
+
+  hat: [
+    // 被擊後恢復（視為特效資料：onHitHealChance / onHitHealHpPct）
+    { id: "HAT_ONHIT_HEAL", kind: "bundle", w: DEFAULT_W, minTier: "稀有", exclusiveTag: "ONE_LINE_EFFECT",
+      statsByTier: {
+        "稀有": { onHitHealChance: 0.03, onHitHealHpPct: 0.01 },
+        "傳說": { onHitHealChance: 0.03, onHitHealHpPct: 0.02 },
+        "唯一": { onHitHealChance: 0.04, onHitHealHpPct: 0.02 },
+        "永恆": { onHitHealChance: 0.04, onHitHealHpPct: 0.03 }
+      } }
+  ],
+
+
+  cape: [
+    // 被擊回復 MP（限定只能洗到一排）
+    { id: "CAPE_ONHIT_MP", kind: "bundle", p: 0.035, w: DEFAULT_W, minTier: "傳說", exclusiveTag: "ONE_LINE_EFFECT",
+      statsByTier: {
+        "傳說": { onHitHealChance: 0.04, onHitHealMpPct: 0.01 },
+        "唯一": { onHitHealChance: 0.07, onHitHealMpPct: 0.02 },
+        "永恆": { onHitHealChance: 0.09, onHitHealMpPct: 0.02 }
+      } }
+  ],
+
+  badge: [
+    // 攻擊時回復 HP（限定只能洗到一排）
+    { id: "BADGE_ONATTACK_HP", kind: "bundle", p: 0.03, w: DEFAULT_W, minTier: "傳說", exclusiveTag: "ONE_LINE_EFFECT",
+      statsByTier: {
+        "傳說": { onAttackHealChance: 0.03, onAttackHealHpPct: 0.01 },
+        "唯一": { onAttackHealChance: 0.04, onAttackHealHpPct: 0.01 },
+        "永恆": { onAttackHealChance: 0.05, onAttackHealHpPct: 0.015 }
+      } }
+  ],
+
+  bottom: [
+    // 攻擊時回復 MP（限定只能洗到一排）
+    { id: "BOTTOM_ONATTACK_MP", kind: "bundle", p: 0.03, w: DEFAULT_W, minTier: "傳說", exclusiveTag: "ONE_LINE_EFFECT",
+      statsByTier: {
+        "傳說": { onAttackHealChance: 0.03, onAttackHealMpPct: 0.01 },
+        "唯一": { onAttackHealChance: 0.04, onAttackHealMpPct: 0.02 },
+        "永恆": { onAttackHealChance: 0.04, onAttackHealMpPct: 0.03 }
+      } }
+  ],
+
+  accessory: [
+    // 經驗/金幣/掉落（三選一：抽到時僅隨機其中一種）
+    { id: "ACC_EXP_MESO_DROP", kind: "choice_direct_pct", w: 0.03, minTier: "傳說",
+      statsByTier: {
+        "傳說": { expRate: 0.20, mesoRate: 0.20, dropRate: 0.20 },
+        "唯一": { expRate: 0.50, mesoRate: 0.50, dropRate: 0.30 },
+        "永恆": { expRate: 1.00, mesoRate: 1.00, dropRate: 0.40 }
+      } }
+  ],
+
+  weapon: [
+    // Boss 傷害
+    { id: "WEAPON_BOSS_DMG", kind: "choice_pct_by_tier", stat: "bossDamage", w: 0.03,
+      choicesByTier: {
+        "罕見": [0.30],
+        "傳說": [0.35, 0.40],
+        "唯一": [0.40, 0.45, 0.50],
+        "永恆": [0.50, 0.60, 0.70, 0.80]
+      },
+      minTier: "罕見"
+    },
+
+    // 無視防禦
+    { id: "WEAPON_IGNORE_DEF", kind: "choice_pct_by_tier", stat: "ignoreDefPct", w: 0.032,
+      choicesByTier: {
+        "稀有": [0.15],
+        "罕見": [0.20],
+        "傳說": [0.20, 0.25],
+        "唯一": [0.25, 0.30],
+        "永恆": [0.30, 0.35]
+      },
+      minTier: "稀有"
+    }
+  ],
+
+  // 能源：等同武器限定池，但不包含 Boss 傷害
+  energy: [
+    // 無視防禦
+    { id: "WEAPON_IGNORE_DEF", kind: "choice_pct_by_tier", stat: "ignoreDefPct", w: 0.032,
+      choicesByTier: {
+        "稀有": [0.15],
+        "罕見": [0.20],
+        "傳說": [0.20, 0.25],
+        "唯一": [0.25, 0.30],
+        "永恆": [0.30, 0.35]
+      },
+      minTier: "稀有"
+    }
+  ]
+};
+
+  function isLegendOrAbove(tier) {
+    return tierIndex(tier) >= tierIndex("傳說");
+  }
+  function normalizeSlotGroup(slot) {
+    // UI / 外部可注入的部位群組映射（例如 subWeapon2 -> energy, ring1 -> accessory）
+    if (typeof window !== "undefined" && window.POTENTIAL_SLOT_GROUP_MAP && window.POTENTIAL_SLOT_GROUP_MAP[slot]) {
+      return window.POTENTIAL_SLOT_GROUP_MAP[slot];
+    }
+
+    if (slot === "subWeapon") return "weapon";
+
+    // 飾品（支援 ring1/ring2、necklace1... 這種動態命名）
+    if (/^(necklace|earring|ring)/.test(slot)) return "accessory";
+
+    // 能源（可用 subWeapon2 或 energy 當 slot key）
+    if (slot === "subWeapon2" || slot === "energy") return "energy";
+
+    return slot;
+  }
+
+  function specialValueByTier(lineTier, baseLegend) {
+    // 指定潛能：若沒提供 valuesByTier，沿用舊規則（傳說=baseLegend；唯一=3倍；永恆=4倍）
+    if (String(lineTier) === "永恆") return n(baseLegend) * 4;
+    if (String(lineTier) === "唯一") return n(baseLegend) * 3;
+    return n(baseLegend);
+  }
+
+  function specialValueFromProto(proto, lineTier) {
+    if (proto && proto.valuesByTier) {
+      var v = proto.valuesByTier[String(lineTier)];
+      if (typeof v === "number") return v;
+      // fallback：找最高可用值
+      var order = ["特殊", "稀有", "罕見", "傳說", "唯一", "永恆"];
+      for (var i = order.length - 1; i >= 0; i--) {
+        var k = order[i];
+        if (typeof proto.valuesByTier[k] === "number") return proto.valuesByTier[k];
+      }
+    }
+    return specialValueByTier(lineTier, proto.baseLegend);
+  }
+
+  function meetsMinTier(lineTier, minTier) {
+    if (!minTier) return true;
+    return tierIndex(lineTier) >= tierIndex(minTier);
+  }
+
+  // -----------------------------
+  // 三排階段規則
+  // -----------------------------
+  function rollLineTier(frameTier, lineIndex, isAdd) {
+    // lineIndex: 1-based
+    lineIndex = Math.max(1, Math.floor(n(lineIndex)));
+    if (lineIndex === 1) return frameTier;
+
+    // Backward compatible: previous signature (frameTier, isSecondOrThird)
+    if (typeof lineIndex === "boolean") {
+      var isSecondOrThird = lineIndex;
+      if (!isSecondOrThird) return frameTier;
+      // old behavior: 1% same-tier
+      if (Math.random() < 0.01) return frameTier;
+      return lowerTier(frameTier);
+    }
+
+    var same = 0;
+
+    if (isAdd) {
+      // 附加潛能：第2/3排 0.5% 同等級（其餘為次一階）
+      if (lineIndex === 2 || lineIndex === 3) same = 0.005;
+      else same = 0;
+    } else {
+      // 主潛能：第2排 20% 同等級；第3排 5% 同等級
+      if (lineIndex === 2) same = 0.20;
+      else if (lineIndex === 3) same = 0.05;
+      else same = 0;
+    }
+
+    if (same > 0 && Math.random() < same) return frameTier;
+    return lowerTier(frameTier);
+  }
+
+
+  // 外框升階（含保底）
+  function tryUpgradeFrame(isAdd, curTier, pity, upChanceMult) {
+    var rule = getRule(isAdd, curTier);
+    if (curTier === "永恆") return { tier: curTier, pity: 0, upgraded: false };
+
+    var canPity = n(rule.pity) > 0;
+    if (canPity && pity + 1 >= rule.pity) {
+      return { tier: nextTier(curTier), pity: 0, upgraded: true, by: "pity" };
+    }
+    upChanceMult = (upChanceMult == null) ? 1 : n(upChanceMult);
+    if (upChanceMult < 0) upChanceMult = 0;
+    var upChance = n(rule.upChance) * upChanceMult;
+    if (upChance > 1) upChance = 1;
+    if (Math.random() < upChance) {
+      return { tier: nextTier(curTier), pity: 0, upgraded: true, by: "chance" };
+    }
+    return { tier: curTier, pity: pity + 1, upgraded: false };
+  }
+
+  // 抽一條（全域池吃 mult；指定池只吃 傳說/唯一規則）
+  function rollAbilityLine(isAdd, lineTier, slot) {
+    var rule = getRule(isAdd, lineTier);
+    var mult = n(rule.mult);
+
+    // 合併抽池
+    var candidates = [];
+    if (isAdd) {
+      for (var i = 0; i < ADD_GLOBAL_POOL.length; i++) candidates.push(ADD_GLOBAL_POOL[i]);
+    } else {
+      for (var i = 0; i < GLOBAL_POOL.length; i++) candidates.push(GLOBAL_POOL[i]);
+    }
+
+    var slotKey = normalizeSlotGroup(slot);
+    if (slotKey === "weapon" || slotKey === "energy") {
+      if (isAdd) {
+        for (var wi = 0; wi < ADD_WEAPON_POOL.length; wi++) candidates.push(ADD_WEAPON_POOL[wi]);
+      } else if (WEAPON_BASE_POOL && WEAPON_BASE_POOL.length) {
+        for (var wi2 = 0; wi2 < WEAPON_BASE_POOL.length; wi2++) candidates.push(WEAPON_BASE_POOL[wi2]);
+      }
+    }
+
+    // 手套限定（附加）
+    if (isAdd && slotKey === "glove") {
+      for (var gi = 0; gi < ADD_GLOVE_POOL.length; gi++) candidates.push(ADD_GLOVE_POOL[gi]);
+    }
+
+    // 指定部位池：依 minTier 控制進池（不再強制「傳說↑」才加入）
+    if (SLOT_POOLS && SLOT_POOLS[slotKey] && SLOT_POOLS[slotKey].length) {
+      // 附加已全面重寫：武器/能源/手套不再吃舊的指定池
+      var skipOld = isAdd && (slotKey === "weapon" || slotKey === "energy" || slotKey === "glove");
+      if (!skipOld) {
+        for (var j = 0; j < SLOT_POOLS[slotKey].length; j++) {
+          var sp = SLOT_POOLS[slotKey][j];
+          if (sp && meetsMinTier(lineTier, sp.minTier)) candidates.push(sp);
+        }
+      }
+    }
+
+
+    // 主潛能：傳說以上取消非百分比（flat）
+    if (!isAdd && tierIndex(lineTier) >= tierIndex("傳說")) {
+      var kept = [];
+      for (var kk = 0; kk < candidates.length; kk++) {
+        var c = candidates[kk];
+        if (!c) continue;
+        var k = String(c.kind || "");
+        // 允許的：百分比/直接百分比/特殊百分比/選擇百分比等
+        var ok = (k.indexOf("pct") >= 0) || (k === "direct_pct") || (k === "choice_pct") || (k === "choice_pct_by_tier") || (k === "choice_direct_pct") || (k === "special_pct") || (k === "bundle") || (k === "effect");
+        if (ok) kept.push(c);
+      }
+      candidates = kept;
+
+      // 傳說以上：新增固定機率詞條
+      candidates.push({ id: "MAINSTAT_PCT_4", kind: "pct_stat", base: 0.04, p: 0.018, minTier: "傳說" });
+      candidates.push({ id: "ALLSTAT_PCT_4",  kind: "pct_all",  base: 0.04, p: 0.02,  minTier: "傳說" });
+      candidates.push({ id: "DEF_PCT_5",      kind: "pct",      stat: "def", base: 0.05, p: 0.019, minTier: "傳說" });
+
+      // 傳說以上：納入共用機率（不寫 p）
+      candidates.push({ id: "DEF_PCT_4", stat: "def", kind: "pct", base: 0.04, w: DEFAULT_W, minTier: "傳說" });
+      candidates.push({ id: "HP_PCT_5",  stat: "hp",  kind: "pct", base: 0.05, w: DEFAULT_W, minTier: "傳說" });
+      candidates.push({ id: "MP_PCT_5",  stat: "mp",  kind: "pct", base: 0.05, w: DEFAULT_W, minTier: "傳說" });
+
+      // 武器：傳說以上新增（固定機率）
+      if (slotKey === "weapon" || slotKey === "energy") {
+        candidates.push({ id: "WPN_ATK_PCT_4", kind: "pct", stat: "atk", base: 0.04, p: 0.015, minTier: "傳說" });
+        candidates.push({ id: "WPN_ATK_PCT_5", kind: "pct", stat: "atk", base: 0.05, p: 0.0066, minTier: "傳說" });
+      }
+    }
+
+    // 附加：能源不能洗 Boss 傷害
+    if (isAdd && slotKey === "energy") {
+      var kept2 = [];
+      for (var ee = 0; ee < candidates.length; ee++) {
+        var cc = candidates[ee];
+        if (!cc) continue;
+        if (String(cc.id) === "WEAPON_BOSS_DMG") continue;
+        kept2.push(cc);
+      }
+      candidates = kept2;
+    }
+
+    var proto = isAdd ? pickFixedThenWeighted(candidates, lineTier) : weightedPick(candidates);
+
+
+    // ---- by_tier：直接依階級取值（不吃 mult） ----
+    if (proto.kind === "by_tier_flat") {
+      return { kind: "stat", id: proto.id, tier: lineTier, value: tierValueLookup(proto.valuesByTier, lineTier), meta: { stat: proto.stat } };
+    }
+    if (proto.kind === "by_tier_mainstat_flat") {
+      var s2 = pick(["str", "agi", "int", "luk"]);
+      return { kind: "stat", id: proto.id, tier: lineTier, value: tierValueLookup(proto.valuesByTier, lineTier), meta: { stat: s2 } };
+    }
+    if (proto.kind === "direct_pct_by_tier") {
+      return { kind: "special", id: proto.id, tier: lineTier, value: tierValueLookup(proto.valuesByTier, lineTier), meta: { stat: proto.stat } };
+    }
+
+
+    // ---- by_tier：直接依階級取值（不吃 mult） ----
+    if (proto.kind === "by_tier_flat") {
+      return { kind: "stat", id: proto.id, tier: lineTier, value: tierValueLookup(proto.valuesByTier, lineTier), meta: { stat: proto.stat } };
+    }
+    if (proto.kind === "by_tier_mainstat_flat") {
+      var s2 = pick(["str","agi","int","luk"]);
+      return { kind: "stat", id: proto.id, tier: lineTier, value: tierValueLookup(proto.valuesByTier, lineTier), meta: { stat: s2 } };
+    }
+    if (proto.kind === "direct_pct_by_tier") {
+      return { kind: "special", id: proto.id, tier: lineTier, value: tierValueLookup(proto.valuesByTier, lineTier), meta: { stat: proto.stat } };
+    }
+
+    // ---- 指定部位：bundle（一次給多個 stat） ----
+    if (proto.kind === "bundle") {
+      var statsMap = (proto.statsByTier && proto.statsByTier[String(lineTier)]) || (proto.statsByTier && proto.statsByTier["傳說"]) || {};
+      return {
+        kind: "bundle",
+        id: proto.id,
+        tier: lineTier,
+        value: 1,
+        meta: { stats: statsMap }
+      };
+    }
+
+    
+
+// ---- 指定部位：choice_direct_pct（三選一：從 statsByTier 隨機挑一個 stat） ----
+if (proto.kind === "choice_direct_pct") {
+  var statsMap2 = (proto.statsByTier && proto.statsByTier[String(lineTier)]) || {};
+  if (!statsMap2 && proto.statsByTier) statsMap2 = proto.statsByTier["傳說"] || {};
+  var keys = [];
+  for (var k in statsMap2) { if (Object.prototype.hasOwnProperty.call(statsMap2, k)) keys.push(k); }
+  var pickKey = keys.length ? keys[(Math.random() * keys.length) | 0] : "";
+  var v2 = pickKey ? n(statsMap2[pickKey]) : 0;
+  return {
+    kind: "special",
+    id: proto.id,
+    tier: lineTier,
+    value: v2,
+    meta: { stat: pickKey }
+  };
+}
+
+// ---- 指定部位：choice_pct_by_tier ----
+    if (proto.kind === "choice_pct_by_tier") {
+      var arr = (proto.choicesByTier && proto.choicesByTier[String(lineTier)]) || [];
+      if (!arr.length && proto.choicesByTier) {
+        // 往下找最近可用階級
+        var order2 = ["特殊", "稀有", "罕見", "傳說", "唯一", "永恆"];
+        for (var oi = tierIndex(lineTier); oi >= 0; oi--) {
+          var tn = order2[oi];
+          if (proto.choicesByTier[tn] && proto.choicesByTier[tn].length) { arr = proto.choicesByTier[tn]; break; }
+        }
+      }
+      var choice = pick(arr);
+      return {
+        kind: "special",
+        id: proto.id,
+        tier: lineTier,
+        value: n(choice),
+        meta: { stat: proto.stat, choice: choice }
+      };
+    }
+
+    // ---- 指定部位：special_pct ----
+
+    if (proto.kind === "special_pct") {
+      var v = specialValueFromProto(proto, lineTier);
+      return {
+        kind: "special",
+        id: proto.id,
+        tier: lineTier,
+        value: v,
+        meta: { stat: proto.stat, baseLegend: proto.baseLegend }
+      };
+    }
+
+    // ---- 指定部位：choice_pct（choices 內是「傳說值」） ----
+    if (proto.kind === "choice_pct") {
+      var choice = pick(proto.choices || []);
+      var v2 = specialValueByTier(lineTier, choice);
+      return {
+        kind: "special",
+        id: proto.id,
+        tier: lineTier,
+        value: v2,
+        meta: { stat: proto.stat, choice: choice }
+      };
+    }
+
+    // ---- 指定部位：choice_pct_stat（stat 在 choices，值固定 valueLegend） ----
+    if (proto.kind === "choice_pct_stat") {
+      var statKey = pick(proto.choices || []);
+      var v3 = specialValueByTier(lineTier, proto.valueLegend);
+      return {
+        kind: "special",
+        id: proto.id,
+        tier: lineTier,
+        value: v3,
+        meta: { stat: statKey, valueLegend: proto.valueLegend }
+      };
+    }
+
+    // ---- 全域池（吃 mult） ----
+    var line = { kind: "stat", id: proto.id, tier: lineTier, value: 0, meta: {} };
+
+if (proto.kind === "direct_pct") {
+  return {
+    kind: "special",
+    id: proto.id,
+    tier: lineTier,
+    value: n(proto.base) * mult,
+    meta: { stat: proto.stat, base: proto.base }
+  };
+}
+
+    if (proto.kind === "flat_stat" || proto.kind === "pct_stat") {
+      var stat = pick(["str", "agi", "int", "luk"]);
+      line.meta.stat = stat;
+      line.meta.base = proto.base;
+      line.value = n(proto.base) * mult;
+      return line;
+    }
+    if (proto.kind === "flat_all" || proto.kind === "pct_all") {
+      line.meta.base = proto.base;
+      line.value = n(proto.base) * mult;
+      return line;
+    }
+    if (proto.kind === "pct_pick") {
+      var pickStat = pick(proto.pick || ["hp", "mp"]);
+      line.meta.stat = pickStat;
+      line.meta.base = proto.base;
+      line.value = n(proto.base) * mult;
+      return line;
+    }
+    if (proto.kind === "flat" || proto.kind === "pct") {
+      line.meta.stat = proto.stat;
+      line.meta.base = proto.base;
+      line.value = n(proto.base) * mult;
+      return line;
+    }
+
+    line.value = n(proto.base) * mult;
+    return line;
+  }
+
+  // -----------------------------
+  // 消耗方塊
+  // -----------------------------
+  var ITEM_MAIN = "潛能方塊";
+  var ITEM_ADD  = "附加方塊";
+  // 高級方塊（升階率加倍；其餘規則同普通）
+  var ITEM_MAIN_ADV = "高級潛能方塊";
+  var ITEM_ADD_ADV  = "高級附加方塊";
+  // 閃炫方塊（一次抽選多排後選擇保留）
+  var ITEM_MAIN_FLASHY = "閃炫方塊";
+  var ITEM_ADD_FLASHY  = "附加閃炫方塊";
+
+// 結合方塊（3抽1；外框固定不升階）
+var ITEM_MAIN_COMBINE = "結合方塊";
+var ITEM_ADD_COMBINE  = "附加結合方塊";
+
+
+  function canConsume(itemName, count) {
+    if (typeof w.getItemQuantity !== "function") return true;
+    return n(w.getItemQuantity(itemName)) >= n(count || 1);
+  }
+  function consume(itemName, count) {
+    if (typeof w.removeItem !== "function") return true;
+    w.removeItem(itemName, n(count || 1));
+    return true;
+  }
+
+  // -----------------------------
+  // Roll：指定 slot + 主/附
+  // -----------------------------
+  function ensureSlot(st, slot) {
+    if (!st.pots) st.pots = {};
+    if (!st.pots[slot]) st.pots[slot] = freshSlotPot();
+    if (!st.pots[slot].main) st.pots[slot].main = freshPotNode();
+    if (!st.pots[slot].add)  st.pots[slot].add  = freshPotNode();
+  }
+
+  function rollOnce(slot, which, opt) {
+    if (!slot) slot = "weapon";
+    var isAdd = (which === "add");
+    opt = opt || {};
+    var item = opt.itemName || (isAdd ? ITEM_ADD : ITEM_MAIN);
+    var upChanceMult = (opt.upChanceMult == null) ? 1 : n(opt.upChanceMult);
+
+    if (!canConsume(item, 1)) return { ok: false, reason: "no_item", item: item };
+
+    var st = getStateOrInit();
+    ensureSlot(st, slot);
+    var node = st.pots[slot][which];
+
+    consume(item, 1);
+
+    var curTier = node.tier || "特殊";
+    var pity = Math.max(0, Math.floor(n(node.pity)));
+    var up = tryUpgradeFrame(isAdd, curTier, pity, upChanceMult);
+
+    node.tier = up.tier;
+    node.pity = up.pity;
+
+    var t1 = rollLineTier(node.tier, 1, isAdd);
+    var t2 = rollLineTier(node.tier, 2, isAdd);
+    var t3 = rollLineTier(node.tier, 3, isAdd);
+
+    node.lines = [
+      rollAbilityLine(isAdd, t1, slot),
+      rollAbilityLine(isAdd, t2, slot),
+      rollAbilityLine(isAdd, t3, slot)
+    ];
+
+    st.pots[slot][which] = node;
+    writeState(st);
+
+    return { ok: true, slot: slot, which: which, upgraded: !!up.upgraded, upgradeBy: up.by || null, state: deepClone(st) };
+  }
+
+// -----------------------------
+// Roll：結合方塊（3 抽 1；外框固定、不升階）
+// - 每次只抽「單一排」的 3 個候選，UI 選 1 個立即套用該排
+// - lineIndex: 1~3（1-based）
+// - 主潛能：第2/3排 15% 同等級（其餘為次一階）
+// - 附加潛能：第2/3排 0.5% 同等級（其餘為次一階）
+function rollCombineCandidates(slot, which, lineIndex, opt) {
+  if (!slot) slot = "weapon";
+  var isAdd = (which === "add");
+  lineIndex = Math.max(1, Math.min(3, Math.floor(n(lineIndex || 1))));
+  opt = opt || {};
+
+  var item = opt.itemName || (isAdd ? ITEM_ADD_COMBINE : ITEM_MAIN_COMBINE);
+  if (!canConsume(item, 1)) return { ok: false, reason: "no_item", item: item };
+
+  var st = getStateOrInit();
+  ensureSlot(st, slot);
+  var node = st.pots[slot][which];
+
+  // consume but DO NOT change tier/pity (外框固定)
+  consume(item, 1);
+
+  var frameTier = node.tier || "特殊";
+  var same = 0;
+
+  if (lineIndex === 1) {
+    same = 1;
+  } else {
+    if (isAdd) same = 0.005;       // 附加結合：0.5%
+    else same = 0.15;              // 主結合：15%
+  }
+
+  var effTier = frameTier;
+  if (lineIndex !== 1) {
+    if (!(same > 0 && Math.random() < same)) effTier = lowerTier(frameTier);
+  }
+
+  var cands = [
+    rollAbilityLine(isAdd, effTier, slot),
+    rollAbilityLine(isAdd, effTier, slot),
+    rollAbilityLine(isAdd, effTier, slot)
+  ];
+
+  // persist consumed item / state (pots unchanged)
+  writeState(st);
+
+  return {
+    ok: true,
+    slot: slot,
+    which: which,
+    lineIndex: lineIndex,
+    frameTier: frameTier,
+    candidates: cands,
+    state: deepClone(st)
+  };
+}
+
+
+
+// -----------------------------
+// Combine Cube v2 (UI flow)
+// - 使用方塊：扣 1 顆，隨機抽選 1 排（33.33%*3）
+// - 重新抽選：再扣 1 顆重新隨機
+// - 確定使用：不扣，將選定的那排重新抽選潛能；外框不變、保底不變
+//   主潛能：15% 機率同外框等級，否則為次一階
+//   附加潛能：0.5% 機率同外框等級，否則為次一階
+function combineDrawLine(slot, which, opt) {
+  if (!slot) slot = "weapon";
+  var isAdd = (which === "add");
+  opt = opt || {};
+  var item = opt.itemName || (isAdd ? ITEM_ADD_COMBINE : ITEM_MAIN_COMBINE);
+  if (!canConsume(item, 1)) return { ok: false, reason: "no_item", item: item };
+
+  var st = getStateOrInit();
+  ensureSlot(st, slot);
+
+  // consume item (pots unchanged)
+  consume(item, 1);
+
+  // 33.33% * 3
+  var lineIndex = (Math.floor(Math.random() * 3) + 1);
+
+  writeState(st);
+
+  return {
+    ok: true,
+    slot: slot,
+    which: which,
+    item: item,
+    lineIndex: lineIndex,
+    state: deepClone(st)
+  };
+}
+
+function combineConfirmApply(slot, which, lineIndex, opt) {
+  if (!slot) slot = "weapon";
+  var isAdd = (which === "add");
+  lineIndex = Math.max(1, Math.min(3, Math.floor(n(lineIndex || 1))));
+  opt = opt || {};
+
+  var st = getStateOrInit();
+  ensureSlot(st, slot);
+
+  // ensure lines exist for this slot
+  try { ensureLinesExist(st); } catch (_) {}
+
+  var node = st.pots[slot][which];
+  if (!node.lines || node.lines.length < 3) {
+    node.lines = node.lines || [];
+    while (node.lines.length < 3) node.lines.push(rollAbilityLine(isAdd, node.tier || "特殊", slot));
+  }
+
+  var frameTier = node.tier || "特殊";
+  var sameChance = isAdd ? 0.005 : 0.15;
+  var effTier = (sameChance > 0 && Math.random() < sameChance) ? frameTier : lowerTier(frameTier);
+
+  var newLine = rollAbilityLine(isAdd, effTier, slot);
+  node.lines[lineIndex - 1] = newLine;
+
+  // 外框 / 保底完全不變（不動 node.tier / node.pity）
+  st.pots[slot][which] = node;
+  writeState(st);
+
+  try { applySelectedToPlayer(w.player, slot); } catch (_) {}
+
+  return {
+    ok: true,
+    slot: slot,
+    which: which,
+    lineIndex: lineIndex,
+    frameTier: frameTier,
+    effTier: effTier,
+    line: deepClone(newLine),
+    state: deepClone(st)
+  };
+}
+
+
+  // -----------------------------
+  // Roll：閃炫方塊（抽多排 → UI 選擇保留）
+  // - 主潛能：一次抽 6 排，UI 選 3 排
+  //   1/4：100% 同等級；2/5：20% 同等級；3/6：5% 同等級
+  // - 附加潛能：
+  //   第1排：2選1（同等級 100%）
+  //   第2/3排：三選二（次等級 100%）
+  // 回傳 candidates 供 UI 選擇；node.lines 預設放前3/套用版面（不代表已選）
+  // -----------------------------
+  function rollMainFlashy(slot, opt) {
+    if (!slot) slot = "weapon";
+    opt = opt || {};
+    var item = opt.itemName || ITEM_MAIN_FLASHY;
+    var upChanceMult = (opt.upChanceMult == null) ? 1 : n(opt.upChanceMult);
+
+    if (!canConsume(item, 1)) return { ok: false, reason: "no_item", item: item };
+
+    var st = getStateOrInit();
+    ensureSlot(st, slot);
+    var node = st.pots[slot].main;
+
+    consume(item, 1);
+
+    var curTier = node.tier || "特殊";
+    var pity = Math.max(0, Math.floor(n(node.pity)));
+    var up = tryUpgradeFrame(false, curTier, pity, upChanceMult);
+
+    node.tier = up.tier;
+    node.pity = up.pity;
+
+    // six line tiers
+    var tiers = [
+      node.tier,
+      (Math.random() < 0.20) ? node.tier : lowerTier(node.tier),
+      (Math.random() < 0.05) ? node.tier : lowerTier(node.tier),
+      node.tier,
+      (Math.random() < 0.20) ? node.tier : lowerTier(node.tier),
+      (Math.random() < 0.05) ? node.tier : lowerTier(node.tier)
+    ];
+
+    var candidates = [];
+    for (var i = 0; i < 6; i++) candidates.push(rollAbilityLine(false, tiers[i], slot));
+
+    // default preview = first 3
+    node.lines = [ candidates[0], candidates[1], candidates[2] ];
+    // stash candidates in state for UI convenience
+    node._flashy = { type: "main", candidates: candidates };
+
+    st.pots[slot].main = node;
+    writeState(st);
+
+    return {
+      ok: true,
+      slot: slot,
+      which: "main",
+      upgraded: !!up.upgraded,
+      upgradeBy: up.by || null,
+      state: deepClone(st),
+      candidates: deepClone(candidates)
+    };
+  }
+
+  function rollAddFlashy(slot, opt) {
+    if (!slot) slot = "weapon";
+    opt = opt || {};
+    var item = opt.itemName || ITEM_ADD_FLASHY;
+    var upChanceMult = (opt.upChanceMult == null) ? 1 : n(opt.upChanceMult);
+
+    if (!canConsume(item, 1)) return { ok: false, reason: "no_item", item: item };
+
+    var st = getStateOrInit();
+    ensureSlot(st, slot);
+    var node = st.pots[slot].add;
+
+    consume(item, 1);
+
+    var curTier = node.tier || "特殊";
+    var pity = Math.max(0, Math.floor(n(node.pity)));
+    var up = tryUpgradeFrame(true, curTier, pity, upChanceMult);
+
+    node.tier = up.tier;
+    node.pity = up.pity;
+
+    // line1: 2 candidates at same tier
+    var c1 = [ rollAbilityLine(true, node.tier, slot), rollAbilityLine(true, node.tier, slot) ];
+    // line2/3: 3 candidates at lower tier (100% 次等級)
+    var low = lowerTier(node.tier);
+    var c23 = [ rollAbilityLine(true, low, slot), rollAbilityLine(true, low, slot), rollAbilityLine(true, low, slot) ];
+
+    // default preview: pick first of each rule
+    node.lines = [ c1[0], c23[0], c23[1] ];
+    node._flashy = { type: "add", c1: c1, c23: c23 };
+
+    st.pots[slot].add = node;
+    writeState(st);
+
+    return {
+      ok: true,
+      slot: slot,
+      which: "add",
+      upgraded: !!up.upgraded,
+      upgradeBy: up.by || null,
+      state: deepClone(st),
+      candidates: { c1: deepClone(c1), c23: deepClone(c23) }
+    };
+  }
+  // 初始化：每個 slot 若沒 lines，就補一組（不扣方塊）
+  function ensureLinesExist() {
+    var st = getStateOrInit();
+    var changed = false;
+
+    var slots = (w.POTENTIAL_SLOTS && w.POTENTIAL_SLOTS.length) ? w.POTENTIAL_SLOTS.slice() : [];
+    // 兼容：若有動態新增 slot，但 core 載入時沒拿到 window.POTENTIAL_SLOTS，仍可從 st.pots 補齊
+    for (var sk in st.pots) if (Object.prototype.hasOwnProperty.call(st.pots, sk)) {
+      if (slots.indexOf(sk) < 0) slots.push(sk);
+    }
+    if (!slots.length) slots = SLOTS.slice();
+
+    for (var i = 0; i < slots.length; i++) {
+      var slot = slots[i];
+      ensureSlot(st, slot);
+
+      ["main", "add"].forEach(function (which) {
+        var isAdd = (which === "add");
+        var node = st.pots[slot][which];
+        if (!node.lines || !Array.isArray(node.lines) || node.lines.length !== 3) {
+          var tier = node.tier || "特殊";
+          node.lines = [
+            rollAbilityLine(isAdd, tier, slot),
+            rollAbilityLine(isAdd, lowerTier(tier), slot),
+            rollAbilityLine(isAdd, lowerTier(tier), slot)
+          ];
+          changed = true;
+        }
+      });
+    }
+
+    if (changed) writeState(st);
+    return deepClone(st);
+  }
+
+  // -----------------------------
+  // 匯入加成（優化：平坦走 core、指定 % 走潛能引擎）
+  //
+  // 本專案若只有「潛能系統」也仍可拆成兩條路徑：
+  // - 平坦（主屬/ATK/DEF/HP/MP）視為基礎值來源，寫入 player.coreBonus.bonusData.potentialFlat
+  // - 指定百分比潛能（主屬% / 全屬% / ATK% / DEF% / HP% / MP%）輸出成 xxxPct（整數百分比），
+  //   並交由全域 applyPotentialEngine(player) 使用 core-final 做 %->平坦換算後寫入 PotentialBonus
+  // - 其餘能力（例如總傷/無視/爆傷等）仍直接匯入 PotentialBonus
+  //
+  // 依賴（可選）：window.registerPotentialBonus / window.applyPotentialEngine（potential_engine_es5.js）
+  // -----------------------------
+  function getBaseForPercent(player) {
+    // ✅ 潛能百分比必須基於「core 計算後」的數值（不含潛能本身）。
+    // 依優先序嘗試：player.core（推薦）→ player.coreBonus（若 core 用此命名）→ baseStats/baseAtk... → player 本身。
+    // 注意：此函式只提供百分比折算用的 base，不會把 base 寫回任何地方。
+    var core = (player && (player.core || player.coreBonus)) ? (player.core || player.coreBonus) : null;
+    var bs = (player && player.baseStats) ? player.baseStats : null;
+
+    function read(obj, key) {
+      if (!obj || typeof obj !== "object") return null;
+      // 允許 getter
+      var v;
+      try { v = obj[key]; } catch (e) { v = null; }
+      return (v != null) ? v : null;
+    }
+
+    function pickVal(keys) {
+      var i, v;
+      for (i = 0; i < keys.length; i++) {
+        v = read(core, keys[i]);
+        if (v != null) return n(v);
+      }
+      for (i = 0; i < keys.length; i++) {
+        v = read(bs, keys[i]);
+        if (v != null) return n(v);
+      }
+      for (i = 0; i < keys.length; i++) {
+        v = read(player, keys[i]);
+        if (v != null) return n(v);
+      }
+      return 0;
+    }
+
+    return {
+      // 四維
+      str: pickVal(["str"]),
+      agi: pickVal(["agi", "dex"]),
+      int: pickVal(["int"]),
+      luk: pickVal(["luk"]),
+      // 基礎數值
+      atk: pickVal(["atk", "baseAtk"]),
+      def: pickVal(["def", "baseDef"]),
+      hp:  pickVal(["hp", "baseHp"]),
+      mp:  pickVal(["mp", "baseMp"])
+    };
+  }
+
+  // 確保存在可寫入的 coreBonus（本專案若未實作裝備系統，也能承接「平坦潛能走 core」）
+  function ensureCoreBonus(player) {
+    if (!player) return null;
+    if (player.coreBonus && player.coreBonus.bonusData) return player.coreBonus;
+
+    var bonusData = (player.coreBonus && player.coreBonus.bonusData) || {};
+    function calc(key) {
+      var sum = 0;
+      for (var src in bonusData) if (Object.prototype.hasOwnProperty.call(bonusData, src)) {
+        var o = bonusData[src];
+        if (o && typeof o === "object" && o[key] != null) sum += n(o[key]);
+      }
+      return sum;
+    }
+    player.coreBonus = {
+      bonusData: bonusData,
+      get hp()  { return calc("hp"); },
+      get mp()  { return calc("mp"); },
+      get atk() { return calc("atk"); },
+      get def() { return calc("def"); },
+      get str() { return calc("str"); },
+      get agi() { return calc("agi"); },
+      get int() { return calc("int"); },
+      get luk() { return calc("luk"); }
+    };
+    return player.coreBonus;
+  }
+
+  // 路由規則：
+  // - 平坦主屬/ATK/DEF/HP/MP -> coreFlat
+  // - 指定百分比（主屬%/全屬%/ATK%/DEF%/HP%/MP%）-> pctForEngine（xxxPct 整數）
+  // - 其他能力（totalDamage/critRate/...）-> otherBonus（寫入 PotentialBonus）
+  function routeLines(lines, acc) {
+    if (!Array.isArray(lines)) return;
+    acc = acc || {};
+    var coreFlat = acc.coreFlat || (acc.coreFlat = {});
+    var pct = acc.pct || (acc.pct = {});
+    var other = acc.otherBonus || (acc.otherBonus = {});
+
+    function addObj(dst, k, v) { dst[k] = n(dst[k]) + n(v); }
+    function addPct(dst, k, frac) {
+      // frac: 0.03 -> 3
+      var p = Math.round(n(frac) * 100);
+      if (!p) return;
+      dst[k] = Math.round(n(dst[k]) + p);
+    }
+
+    for (var i = 0; i < lines.length; i++) {
+      var L = lines[i] || {};
+      var id = String(L.id || "");
+      var val = n(L.value);
+      var meta = L.meta || {};
+      var stat = meta.stat || "";
+
+      // bundle：一次加多個
+      if (L.kind === "bundle" && meta.stats) {
+        var sm = meta.stats || {};
+        for (var k in sm) {
+          if (!sm.hasOwnProperty(k)) continue;
+          // bundle 視為其他加成（不強制走 core 或 pct 引擎）
+          addObj(other, k, sm[k]);
+        }
+        continue;
+      }
+
+      // 主屬
+      if (id.indexOf("MAINSTAT_FLAT_") === 0) {
+        if (stat) addObj(coreFlat, stat, Math.floor(val));
+        continue;
+      }
+      if (id.indexOf("MAINSTAT_PCT_") === 0) {
+        // 指定百分比潛能：交給潛能引擎（xxxPct，整數）
+        if (stat) addPct(pct, stat + "Pct", val);
+        continue;
+      }
+
+      // 全屬
+      if (id.indexOf("ALLSTAT_FLAT_") === 0) {
+        addObj(coreFlat, "str", Math.floor(val));
+        addObj(coreFlat, "agi", Math.floor(val));
+        addObj(coreFlat, "int", Math.floor(val));
+        addObj(coreFlat, "luk", Math.floor(val));
+        continue;
+      }
+      if (id.indexOf("ALLSTAT_PCT_") === 0) {
+        addPct(pct, "allStatPct", val);
+        continue;
+      }
+
+      // atk/def/hp/mp：flat / pct（pct 走 base 折算）
+      var m1 = id.match(/^(WPN_)?(ATK|DEF|HP|MP)_(FLAT|PCT)_/);
+      if (m1) {
+        var key = String(m1[2]).toLowerCase();
+        var typ = m1[3];
+        if (typ === "FLAT") addObj(coreFlat, key, Math.floor(val));
+        else addPct(pct, key + "Pct", val);
+        continue;
+      }
+
+      // 其他：直接加（% 類、特效類、武器/飾品限定等）
+      if (stat) {
+        addObj(other, stat, val);
+        continue;
+      }
+
+      // bundle / special 未提供 stat：略過
+    }
+  }
+
+  function applySelectedToPlayer(player, slot) {
+    player = player || w.player;
+    if (!player || !player.PotentialBonus || !player.PotentialBonus.bonusData) return false;
+
+    // 目前採用「全量重算」避免只更新單格而造成 coreFlat / pctForEngine 不一致。
+    //（單格更新要同步重算 coreFlat 與 pctForEngine，成本更高且較易出錯）
+    return applyAllToPlayer(player);
+  }
+
+  function applyAllToPlayer(player) {
+    player = player || w.player;
+    if (!player || !player.PotentialBonus || !player.PotentialBonus.bonusData) return false;
+
+    var st = getStateOrInit();
+    var bd = player.PotentialBonus.bonusData;
+    var coreBonus = ensureCoreBonus(player);
+
+    // ⚠️ 注意：不要把彙總 potential_all 放進 bonusData，否則聚合器會把它再加一次造成翻倍
+    // 改為只給 UI 使用的彙總：player.PotentialBonus.uiTotal
+    if (bd.potential_all) { try { delete bd.potential_all; } catch(e){} }
+    var uiTotal = player.PotentialBonus.uiTotal || (player.PotentialBonus.uiTotal = {});
+    // reset uiTotal
+    for (var kk in uiTotal) if (Object.prototype.hasOwnProperty.call(uiTotal, kk)) delete uiTotal[kk];
+
+    // 先累積（1）平坦走 core、（2）指定 % 走引擎、（3）其他加成走 PotentialBonus
+    var totalCoreFlat = {};
+    var totalPct = {};
+    function addObj(dst, src) {
+      for (var k in src) if (Object.prototype.hasOwnProperty.call(src, k)) dst[k] = n(dst[k]) + n(src[k]);
+    }
+
+    // 動態 slot：優先使用 window.POTENTIAL_SLOTS，並補齊 st.pots 內已存在的 slot（避免新增 slot 沒被套用）
+var slotsToApply = [];
+var seenSlot = {};
+function pushSlot(s) { if (!s || seenSlot[s]) return; seenSlot[s] = 1; slotsToApply.push(s); }
+
+if (w.POTENTIAL_SLOTS && typeof w.POTENTIAL_SLOTS.length === "number") {
+  for (var si = 0; si < w.POTENTIAL_SLOTS.length; si++) pushSlot(w.POTENTIAL_SLOTS[si]);
+} else {
+  for (var si2 = 0; si2 < SLOTS.length; si2++) pushSlot(SLOTS[si2]);
+}
+if (st && st.pots) {
+  for (var sk in st.pots) if (Object.prototype.hasOwnProperty.call(st.pots, sk)) pushSlot(sk);
+}
+
+for (var i = 0; i < slotsToApply.length; i++) {
+  var slot = slotsToApply[i];
+      ensureSlot(st, slot);
+
+      var km = "potential_" + slot + "_main";
+      var ka = "potential_" + slot + "_add";
+
+      var accM = { coreFlat: {}, pct: {}, otherBonus: {} };
+      var accA = { coreFlat: {}, pct: {}, otherBonus: {} };
+      routeLines(st.pots[slot].main.lines, accM);
+      routeLines(st.pots[slot].add.lines,  accA);
+
+      // 其他加成（不屬於平坦核心 / 指定百分比）才寫入 PotentialBonus
+      bd[km] = accM.otherBonus;
+      bd[ka] = accA.otherBonus;
+
+      addObj(totalCoreFlat, accM.coreFlat);
+      addObj(totalCoreFlat, accA.coreFlat);
+      addObj(totalPct, accM.pct);
+      addObj(totalPct, accA.pct);
+    }
+
+    // 1) 平坦潛能：寫入 coreBonus
+    if (coreBonus && coreBonus.bonusData) coreBonus.bonusData.potentialFlat = totalCoreFlat;
+
+    // 2) 指定百分比潛能：交給 potential_engine（若存在）
+    //    - 只輸出 xxxPct（整數）
+    //    - 引擎會寫入 player.PotentialBonus.bonusData.potentialEngine（平坦）
+    if (typeof w.registerPotentialBonus === "function") {
+      try {
+        w.registerPotentialBonus(player, "potentialV2Pct", totalPct);
+      } catch (_) {}
+    } else {
+      // 最低限度：至少存起來給 UI 或其他系統讀
+      player._potentialPct = totalPct;
+    }
+
+    if (typeof w.applyPotentialEngine === "function") {
+      try { w.applyPotentialEngine(player); } catch (_) {}
+    } else {
+      // fallback：沒有引擎時，這裡就地做 %->平坦（寫入 PotentialBonus.bonusData.potentialEngine）
+      var base2 = getBaseForPercent(player);
+      var pe = {};
+      var strPct = n(totalPct.strPct), agiPct = n(totalPct.agiPct), intPct = n(totalPct.intPct), lukPct = n(totalPct.lukPct);
+      var allStatPct = n(totalPct.allStatPct);
+      var hpPct = n(totalPct.hpPct), mpPct = n(totalPct.mpPct), atkPct = n(totalPct.atkPct), defPct = n(totalPct.defPct);
+      pe.str = Math.floor(n(base2.str) * (strPct + allStatPct) / 100);
+      pe.agi = Math.floor(n(base2.agi) * (agiPct + allStatPct) / 100);
+      pe.int = Math.floor(n(base2.int) * (intPct + allStatPct) / 100);
+      pe.luk = Math.floor(n(base2.luk) * (lukPct + allStatPct) / 100);
+      pe.hp  = Math.floor(n(base2.hp)  * hpPct  / 100);
+      pe.mp  = Math.floor(n(base2.mp)  * mpPct  / 100);
+      pe.atk = Math.floor(n(base2.atk) * atkPct / 100);
+      pe.def = Math.floor(n(base2.def) * defPct / 100);
+      bd.potentialEngine = pe;
+    }
+
+    // 3) uiTotal：只用於 UI summary（避免翻倍），包含：平坦潛能（core）+ %->平坦（potentialEngine）
+    var peOut = (bd.potentialEngine && typeof bd.potentialEngine === "object") ? bd.potentialEngine : {};
+    var keys = ["str","agi","int","luk","atk","def","hp","mp"];
+    for (var j = 0; j < keys.length; j++) {
+      var kk2 = keys[j];
+      uiTotal[kk2] = n(totalCoreFlat[kk2]) + n(peOut[kk2]);
+    }
+    return true;
+  }
+
+  function setSelectedSlot(slot) {
+    var st = getStateOrInit();
+    if (!slot) return false;
+    st.ui = st.ui || {};
+    st.ui.selectedSlot = slot;
+    writeState(st);
+    return true;
+  }
+
+  function getState() { return deepClone(getStateOrInit()); }
+
+  // -----------------------------
+  // Export
+  // -----------------------------
+  w.PotentialCoreV2 = {
+    SLOTS: SLOTS.slice(),
+    TIERS: TIERS.slice(),
+    ITEM_MAIN: ITEM_MAIN,
+    ITEM_ADD: ITEM_ADD,
+    ITEM_MAIN_ADV: ITEM_MAIN_ADV,
+    ITEM_ADD_ADV: ITEM_ADD_ADV,
+    ITEM_MAIN_FLASHY: ITEM_MAIN_FLASHY,
+    ITEM_ADD_FLASHY: ITEM_ADD_FLASHY,
+    ITEM_MAIN_COMBINE: ITEM_MAIN_COMBINE,
+    ITEM_ADD_COMBINE: ITEM_ADD_COMBINE,
+
+    getState: getState,
+    setSelectedSlot: setSelectedSlot,
+    ensureLinesExist: ensureLinesExist,
+    getTierRuleTable: getTierRuleTable,
+
+
+    rollMain: function (slot, opt) {
+      var r = rollOnce(slot, "main", opt);
+      try { applySelectedToPlayer(w.player, slot); } catch (_) {}
+      return r;
+    },
+    rollAdd: function (slot, opt) {
+      var r = rollOnce(slot, "add", opt);
+      try { applySelectedToPlayer(w.player, slot); } catch (_) {}
+      return r;
+    },
+    rollMainFlashy: function (slot, opt) {
+      var r = rollMainFlashy(slot, opt);
+      try { applySelectedToPlayer(w.player, slot); } catch (_) {}
+      return r;
+    },
+    rollAddFlashy: function (slot, opt) {
+      var r = rollAddFlashy(slot, opt);
+      try { applySelectedToPlayer(w.player, slot); } catch (_) {}
+      return r;
+    },
+
+rollMainCombine: function (slot, lineIndex, opt) {
+  opt = opt || {};
+  opt.itemName = ITEM_MAIN_COMBINE;
+  return rollCombineCandidates(slot, "main", lineIndex, opt);
+},
+rollAddCombine: function (slot, lineIndex, opt) {
+  opt = opt || {};
+  opt.itemName = ITEM_ADD_COMBINE;
+  return rollCombineCandidates(slot, "add", lineIndex, opt);
+},
+
+// Combine Cube v2 (draw -> confirm)
+drawMainCombine: function (slot, opt) {
+  opt = opt || {};
+  opt.itemName = ITEM_MAIN_COMBINE;
+  return combineDrawLine(slot, "main", opt);
+},
+drawAddCombine: function (slot, opt) {
+  opt = opt || {};
+  opt.itemName = ITEM_ADD_COMBINE;
+  return combineDrawLine(slot, "add", opt);
+},
+confirmMainCombine: function (slot, lineIndex, opt) {
+  opt = opt || {};
+  return combineConfirmApply(slot, "main", lineIndex, opt);
+},
+confirmAddCombine: function (slot, lineIndex, opt) {
+  opt = opt || {};
+  return combineConfirmApply(slot, "add", lineIndex, opt);
+},
+
+
+    // 允許 UI 回滾/套用指定結果（用於「前後選擇」）
+setSlotPotential: function (slot, which, node) {
+  if (!slot) slot = "weapon";
+  if (which !== "main" && which !== "add") which = "main";
+  var st = getStateOrInit();
+  ensureSlot(st, slot);
+  st.pots[slot][which] = deepClone(node || freshPotNode());
+  writeState(st);
+  try { applySelectedToPlayer(w.player, slot); } catch (_) {}
+  return true;
+},
+
+applySelectedToPlayer: applySelectedToPlayer,
+    applyAllToPlayer: applyAllToPlayer
+  };
+
+
+  // -----------------------------
+  // Auto-apply on refresh (when player becomes available)
+  // -----------------------------
+  (function autoApplyPotential() {
+    var tries = 0;
+    var maxTries = 80; // ~12s at 150ms
+    function tick() {
+      tries++;
+      try {
+        if (w.PotentialCoreV2 && w.player) {
+          if (typeof w.PotentialCoreV2.ensureLinesExist === "function") w.PotentialCoreV2.ensureLinesExist();
+          if (typeof w.PotentialCoreV2.applyAllToPlayer === "function") w.PotentialCoreV2.applyAllToPlayer(w.player);
+          return;
+        }
+      } catch (e) {}
+      if (tries < maxTries) setTimeout(tick, 150);
+    }
+    setTimeout(tick, 0);
+  })();
+
+})(window);
