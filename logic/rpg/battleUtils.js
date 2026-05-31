@@ -6,9 +6,9 @@ if (typeof window.logPrepend !== "function") {
     // ⭐ 技能 / 戰鬥這回合有使用自訂文字，讓 Rpg_玩家 不再印預設總結行
     window._skillCustomLoggedThisTurn = true;
 
-    var log = document.getElementById("battleLog");
+    const log = document.getElementById("battleLog");
     if (!log) return;
-    var entry = document.createElement("div");
+    const entry = document.createElement("div");
     entry.textContent = text;
     log.insertBefore(entry, log.firstChild);
   };
@@ -17,7 +17,7 @@ if (typeof window.logPrepend !== "function") {
 // ===== UI：怪物面板倒數 =====
 if (typeof window.showRespawnCountdownUI !== "function") {
   window.showRespawnCountdownUI = function (sec) {
-    var box = document.getElementById("monsterInfo");
+    const box = document.getElementById("monsterInfo");
     if (!box) return;
     box.innerHTML =
       '<div style="padding:10px 8px; border:1px dashed #666; border-radius:8px; text-align:center;">' +
@@ -29,7 +29,7 @@ if (typeof window.showRespawnCountdownUI !== "function") {
 }
 if (typeof window.clearMonsterInfo !== "function") {
   window.clearMonsterInfo = function () {
-    var box = document.getElementById("monsterInfo");
+    const box = document.getElementById("monsterInfo");
     if (box) box.textContent = "尚未遭遇怪物";
   };
 }
@@ -37,22 +37,22 @@ if (typeof window.clearMonsterInfo !== "function") {
 // ===== UI：HP 列倒數 =====
 if (typeof window.showDeathCountdownUI !== "function") {
   window.showDeathCountdownUI = function (sec) {
-    var hpEl = document.getElementById("hp");
+    const hpEl = document.getElementById("hp");
     if (!hpEl) return;
-    var maxHp = (window.player && window.player.totalStats && window.player.totalStats.hp) ? window.player.totalStats.hp : 0;
+    const maxHp = (window.player && window.player.totalStats && window.player.totalStats.hp) ? window.player.totalStats.hp : 0;
     hpEl.textContent = '0 / ' + maxHp + '（復活倒數 ' + sec + 's）';
-    var abilitySection = hpEl.closest && hpEl.closest(".section");
+    const abilitySection = hpEl.closest && hpEl.closest(".section");
     if (abilitySection) abilitySection.style.opacity = 0.6;
   };
 }
 if (typeof window.restoreAbilityUI !== "function") {
   window.restoreAbilityUI = function () {
-    var hpEl = document.getElementById("hp");
+    const hpEl = document.getElementById("hp");
     if (!hpEl) return;
-    var maxHp = (window.player && window.player.totalStats && window.player.totalStats.hp) ? window.player.totalStats.hp : 0;
-    var curHp = (window.player && typeof window.player.currentHP === "number") ? window.player.currentHP : 0;
+    const maxHp = (window.player && window.player.totalStats && window.player.totalStats.hp) ? window.player.totalStats.hp : 0;
+    const curHp = (window.player && typeof window.player.currentHP === "number") ? window.player.currentHP : 0;
     hpEl.textContent = curHp + ' / ' + maxHp;
-    var abilitySection = hpEl.closest && hpEl.closest(".section");
+    const abilitySection = hpEl.closest && hpEl.closest(".section");
     if (abilitySection) abilitySection.style.opacity = "";
   };
 }
@@ -66,16 +66,16 @@ if (typeof window.deathTimer   === "undefined") window.deathTimer   = null;
   if (window.BattleGate) return;
   window.BattleGate = {
     _manualLock: false,
-    lock:   function() { this._manualLock = true;  },
-    unlock: function() { this._manualLock = false; },
+    lock() { this._manualLock = true;  },
+    unlock() { this._manualLock = false; },
 
-    isLocked: function () {
+    isLocked () {
       return !!this._manualLock || !!window.respawnTimer || !!window.deathTimer;
     },
-    canAutoSpawn: function () {
+    canAutoSpawn () {
       return !this.isLocked() && !!window.autoEnabled && !window.isDead && !window.currentMonster;
     },
-    requestAutoSpawn: function () {
+    requestAutoSpawn () {
       if (this.canAutoSpawn() && typeof window.spawnNewMonster === "function") {
         window.spawnNewMonster();
         return true;
@@ -92,14 +92,14 @@ window.startRespawnCountdown = function (delaySec) {
   if (window.respawnTimer) return;     // 單例：已在倒數中就不重啟
   BattleGate.lock();                    // 倒數期間鎖住戰鬥
 
-  var t = Number(delaySec);
+  let t = Number(delaySec);
   if (!isFinite(t)) t = Number(window.RESPAWN_DELAY_SEC);
   if (!isFinite(t)) t = 3;
   t = Math.max(0, Math.floor(t));
 
   if (typeof window.showRespawnCountdownUI === "function") window.showRespawnCountdownUI(t);
 
-  window.respawnTimer = setInterval(function () {
+  window.respawnTimer = setInterval(() => {
     t--;
     if (t <= 0) {
       clearInterval(window.respawnTimer);

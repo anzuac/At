@@ -4,22 +4,22 @@
   "use strict";
 
   // ===== 基本設定 =====
-  var MEDAL_NAME = "怪物獎牌";
-  var COST_PER_PULL = 10;
+  const MEDAL_NAME = "怪物獎牌";
+  const COST_PER_PULL = 10;
 
   // ===== 工具 =====
   function randint(a, b){ return Math.floor(Math.random()*(b-a+1))+a; }
   function toPct(p){ return (Math.round(p*10000)/100).toFixed(2) + "%"; }
   function pad2(n){ return (n<10?"0":"")+n; }
   function nowHms(){
-    var d = new Date();
+    const d = new Date();
     return pad2(d.getHours())+":"+pad2(d.getMinutes())+":"+pad2(d.getSeconds());
   }
 
 // ===== 獎池 =====
   // 上半部：機率寫死（百分比改成小數）
   // 下半部：使用剩餘機率，依 weight 比例自動分配，未來新增不用東扣西扣
-  var FIXED_POOL = [
+  const FIXED_POOL = [
     // === 機率寫死區 ===
     // 鑽石 1-50 機率 0.3%
     { name: "鑽石", type: "gem", min: 1, max: 50, prob: 0.003 },
@@ -60,7 +60,7 @@
 
   // 下半部：吃剩下的機率，不寫死機率，只給 weight（相對權重）
   // 目前三個：金幣 / 強化石 / 強化道具兌換券
-  var FLEX_POOL = [
+  const FLEX_POOL = [
     {
       name: "楓幣",
       type: "gold",
@@ -86,37 +86,37 @@
   ];
 
   // 最終獎池（normalize 時組合）
-  var POOL = [];
+  let POOL = [];
 
   // 正規化（固定機率 + 剩餘機率按 weight 分給 FLEX_POOL）
   (function normalizePool(){
     // 1) 固定機率總和
-    var fixedSum = 0;
-    for (var i = 0; i < FIXED_POOL.length; i++) {
+    let fixedSum = 0;
+    for (let i = 0; i < FIXED_POOL.length; i++) {
       fixedSum += Number(FIXED_POOL[i].prob || 0);
     }
     if (fixedSum > 1) fixedSum = 1; // 安全保險，避免手滑超過 100%
 
     // 2) 剩餘機率
-    var leftover = 1 - fixedSum;
+    let leftover = 1 - fixedSum;
     if (leftover < 0) leftover = 0;
 
     // 3) FLEX 區：依 weight 分配剩餘機率
-    var weightSum = 0;
-    for (var j = 0; j < FLEX_POOL.length; j++) {
-      var wgt = Number(FLEX_POOL[j].weight || 1);
+    let weightSum = 0;
+    for (let j = 0; j < FLEX_POOL.length; j++) {
+      let wgt = Number(FLEX_POOL[j].weight || 1);
       if (wgt < 0) wgt = 0;
       FLEX_POOL[j].weight = wgt;
       weightSum += wgt;
     }
 
     if (weightSum > 0 && leftover > 0) {
-      for (var k = 0; k < FLEX_POOL.length; k++) {
+      for (let k = 0; k < FLEX_POOL.length; k++) {
         FLEX_POOL[k].prob = leftover * (FLEX_POOL[k].weight / weightSum);
       }
     } else {
       // 沒剩餘或沒 weight：FLEX_POOL 機率視為 0
-      for (var k2 = 0; k2 < FLEX_POOL.length; k2++) {
+      for (let k2 = 0; k2 < FLEX_POOL.length; k2++) {
         FLEX_POOL[k2].prob = 0;
       }
     }
@@ -125,33 +125,33 @@
     POOL = FIXED_POOL.concat(FLEX_POOL);
 
     // 5) 再做一次 _prob 正規化，避免浮點誤差
-    var sum = 0;
-    for (var m = 0; m < POOL.length; m++) sum += Number(POOL[m].prob || 0);
+    let sum = 0;
+    for (let m = 0; m < POOL.length; m++) sum += Number(POOL[m].prob || 0);
     if (sum <= 0) {
       POOL[0].prob = 1;
       sum = 1;
     }
-    for (var n = 0; n < POOL.length; n++) {
+    for (let n = 0; n < POOL.length; n++) {
       POOL[n]._prob = (POOL[n].prob || 0) / sum;
     }
   })();
 
   // 正規化（安全保險；總和若為 0 或浮點偏差，仍會得到有效 _prob）
   (function normalizePool(){
-    var sum = 0; for (var i=0;i<POOL.length;i++) sum += Number(POOL[i].prob||0);
+    let sum = 0; for (let i=0;i<POOL.length;i++) sum += Number(POOL[i].prob||0);
     if (sum <= 0) { POOL[0].prob = 1; sum = 1; }
-    for (var j=0;j<POOL.length;j++) POOL[j]._prob = (POOL[j].prob||0)/sum;
+    for (let j=0;j<POOL.length;j++) POOL[j]._prob = (POOL[j].prob||0)/sum;
   })();
 
   // ===== 內部狀態（僅此分頁用）=====
-  var state = {
+  const state = {
     history: [] // { t: numberSec, text: "..." }
   };
 
   // ===== 核心：抽一次 =====
   function rollOne(){
-    var x = Math.random(), acc = 0, pick = POOL[POOL.length-1];
-    for (var i=0;i<POOL.length;i++){
+    let x = Math.random(), acc = 0, pick = POOL[POOL.length-1];
+    for (let i=0;i<POOL.length;i++){
       acc += POOL[i]._prob;
       if (x <= acc){ pick = POOL[i]; break; }
     }
@@ -183,20 +183,20 @@
   // ===== 消耗 / 判斷 =====
   function canSpend(times){
     times = Math.max(1, Math.floor(times||1));
-    var need = COST_PER_PULL * times;
-    var have = (typeof w.getItemQuantity === "function") ? w.getItemQuantity(MEDAL_NAME) : 0;
+    const need = COST_PER_PULL * times;
+    const have = (typeof w.getItemQuantity === "function") ? w.getItemQuantity(MEDAL_NAME) : 0;
     return have >= need;
   }
   function spend(times){
     times = Math.max(1, Math.floor(times||1));
-    var need = COST_PER_PULL * times;
+    const need = COST_PER_PULL * times;
     if (typeof w.removeItem === "function") w.removeItem(MEDAL_NAME, need);
   }
 
   // ===== UI: 渲染 =====
   function renderOddsTable(){
-    var rows = POOL.map(function(p){
-      var range = (p.min===p.max)? (""+p.min) : (p.min+"~"+p.max);
+    const rows = POOL.map((p) =>{
+      const range = (p.min===p.max)? (""+p.min) : (p.min+"~"+p.max);
       return ''+
         '<div style="display:grid;grid-template-columns:1fr 90px 80px;gap:6px;padding:6px 8px;border-bottom:1px dashed #1f2937">'+
           '<div style="font-weight:600;color:#d3d7ff">'+p.name+'</div>'+
@@ -233,9 +233,9 @@
     if (!state.history.length){
       return '<div style="opacity:.6">（結果會顯示在這裡）</div>';
     }
-    var html = '';
-    for (var i=state.history.length-1;i>=0;i--){
-      var h = state.history[i];
+    let html = '';
+    for (let i=state.history.length-1;i>=0;i--){
+      const h = state.history[i];
       html += ''+
         '<div style="padding:8px 10px;border:1px solid #1f2937;border-radius:8px;margin-bottom:8px;background:rgba(30,41,59,.35)">'+
           '<div style="color:#aab;font-size:12px;margin-bottom:4px">['+h.tm+']</div>'+
@@ -246,7 +246,7 @@
   }
 
   function render(container){
-    var hasQty = (typeof w.getItemQuantity === "function") ? w.getItemQuantity(MEDAL_NAME) : 0;
+    const hasQty = (typeof w.getItemQuantity === "function") ? w.getItemQuantity(MEDAL_NAME) : 0;
 
     container.innerHTML =
       '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start">'+
@@ -261,10 +261,10 @@
       '</div>';
 
     // 綁定事件
-    var onceBtn = container.querySelector('#medalOnceBtn');
-    var tenBtn  = container.querySelector('#medalTenBtn');
-    var clrBtn  = container.querySelector('#medalClearBtn');
-    var resultBox = container.querySelector('#medalResultBox');
+    const onceBtn = container.querySelector('#medalOnceBtn');
+    const tenBtn  = container.querySelector('#medalTenBtn');
+    const clrBtn  = container.querySelector('#medalClearBtn');
+    const resultBox = container.querySelector('#medalResultBox');
 
     function pushHistory(lineHtml){
       state.history.push({ tm: nowHms(), text: lineHtml });
@@ -276,10 +276,10 @@
       onceBtn.onclick = function(){
         if (!canSpend(1)){ alert('需要 '+COST_PER_PULL+' 個「'+MEDAL_NAME+'」'); return; }
         spend(1);
-        var r = rollOne();
+        const r = rollOne();
         grant(r);
         w.updateResourceUI && w.updateResourceUI();
-        var line = '單抽 → <b>'+r.name+' × '+r.qty+'</b>';
+        const line = '單抽 → <b>'+r.name+' × '+r.qty+'</b>';
         pushHistory(line);
         if (typeof w.logPrepend === 'function') w.logPrepend('🎖️ 使用 '+MEDAL_NAME+' 抽獎：獲得「'+r.name+' × '+r.qty+'」');
         w.GachaHub && w.GachaHub.requestRerender && w.GachaHub.requestRerender();
@@ -290,21 +290,21 @@
       tenBtn.onclick = function(){
         if (!canSpend(10)){ alert('需要 '+(COST_PER_PULL*10)+' 個「'+MEDAL_NAME+'」'); return; }
         spend(10);
-        var results = [];
-        for (var i=0;i<10;i++){ var r = rollOne(); grant(r); results.push(r); }
+        const results = [];
+        for (let i=0;i<10;i++){ const r = rollOne(); grant(r); results.push(r); }
         w.updateResourceUI && w.updateResourceUI();
 
         // 彙總（同名合併）
-        var agg = {};
-        for (var j=0;j<results.length;j++){
-          var it = results[j];
+        const agg = {};
+        for (let j=0;j<results.length;j++){
+          const it = results[j];
           agg[it.name] = (agg[it.name] || 0) + it.qty;
         }
-        var summary = Object.keys(agg).map(function(k){ return '<b>'+k+' × '+agg[k]+'</b>'; }).join('、');
+        const summary = Object.keys(agg).map((k) =>{ return '<b>'+k+' × '+agg[k]+'</b>'; }).join('、');
 
         pushHistory('十連 → '+ summary);
         if (typeof w.logPrepend === 'function'){
-          w.logPrepend('🌟 十連結果：'+ results.map(function(r){ return r.name+' × '+r.qty; }).join('、'));
+          w.logPrepend('🌟 十連結果：'+ results.map((r) =>{ return r.name+' × '+r.qty; }).join('、'));
         }
         w.GachaHub && w.GachaHub.requestRerender && w.GachaHub.requestRerender();
       };
@@ -327,8 +327,8 @@
     w.GachaHub.registerTab({
       id: 'gacha_medal',
       title: '怪物獎牌',
-      render: render,
-      tick: tick
+      render,
+      tick
     });
   }
 
@@ -343,7 +343,7 @@
   w.medalGachaOnce = function(){
     if (!canSpend(1)) return null;
     spend(1);
-    var r = rollOne();
+    const r = rollOne();
     grant(r);
     w.updateResourceUI && w.updateResourceUI();
     state.history.push({ tm: nowHms(), text: '單抽 → <b>'+r.name+' × '+r.qty+'</b>' });
@@ -354,21 +354,21 @@
   w.medalGachaTen = function(){
     if (!canSpend(10)) return null;
     spend(10);
-    var results = [];
-    for (var i=0;i<10;i++){ var r = rollOne(); grant(r); results.push(r); }
+    const results = [];
+    for (let i=0;i<10;i++){ const r = rollOne(); grant(r); results.push(r); }
     w.updateResourceUI && w.updateResourceUI();
 
     // 彙總
-    var agg = {};
-    for (var j=0;j<results.length;j++){
-      var it = results[j];
+    const agg = {};
+    for (let j=0;j<results.length;j++){
+      const it = results[j];
       agg[it.name] = (agg[it.name] || 0) + it.qty;
     }
-    var line = '十連 → '+ Object.keys(agg).map(function(k){ return '<b>'+k+' × '+agg[k]+'</b>'; }).join('、');
+    const line = '十連 → '+ Object.keys(agg).map((k) =>{ return '<b>'+k+' × '+agg[k]+'</b>'; }).join('、');
 
     state.history.push({ tm: nowHms(), text: line });
     if (typeof w.logPrepend === 'function'){
-      w.logPrepend('🌟 十連結果：'+ results.map(function(r){ return r.name+' × '+r.qty; }).join('、'));
+      w.logPrepend('🌟 十連結果：'+ results.map((r) =>{ return r.name+' × '+r.qty; }).join('、'));
     }
     w.GachaHub && w.GachaHub.requestRerender && w.GachaHub.requestRerender();
     return results;

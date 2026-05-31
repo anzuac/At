@@ -184,13 +184,13 @@ function _cast(s, monster) {
     name: t.name || s.name || "技能",
     damage: dealt,
     // ✅ 真多段：若 hitDamages 有值，Rpg_玩家.actOnce() 會走逐段完整計算
-    hitDamages: hitDamages,
-    hits: hits,
+    hitDamages,
+    hits,
     maxTargets: s.maxTargets,
-    mul: mul,
-    flat: flat,
-    ignoreDefPct: ignoreDefPct,
-    abnormalEffect: abnormalEffect,
+    mul,
+    flat,
+    ignoreDefPct,
+    abnormalEffect,
     tag: tag || "",
     // 讓 rpg_1.js 可判斷技能自身設定（例如 ignoreDef）
     logic: s.logic || t.logic

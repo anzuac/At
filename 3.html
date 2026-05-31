@@ -5,11 +5,11 @@
   <title>RPG 自動戰鬥首頁</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-  
+
   </style>
 </head>
 <body>
-  
+
   <div id="gameSetupModal" class="setup-modal">
     <div class="setup-modal-content">
       <h2>設定角色</h2>
@@ -56,28 +56,28 @@
 <div class="container">
   <div class="section profile-card">
   <h2>角色資訊</h2>
-  
+
   <div class="profile-row">
     <span class="label">暱稱：</span>
     <span id="player-nickname" class="value"></span>
   </div>
-  
+
   <div class="profile-row job-row">
     <span class="label">職業：</span>
     <span id="player-job" class="value"></span>
     <button id="job-change-btn" class="job-btn">轉職</button>
   </div>
-  
+
   <div class="profile-row level-row">
     <span class="label">等級：</span>
     <span id="player-level" class="value">1</span>
   </div>
-  
+
   <div class="profile-row exp-row">
     <span class="label">經驗值：</span>
     <span id="player-exp" class="value">0 / 100</span>
   </div>
-  
+
   <progress id="exp-bar" value="0" max="100" class="exp-bar"></progress>
 </div>
 
@@ -92,9 +92,9 @@
     <button class="tab" role="tab" aria-selected="false" aria-controls="panel-skill" id="tab-skill">技能</button>
     <button class="tab" role="tab" aria-selected="false" aria-controls="panel-quest" id="tab-quest">任務 / 副本</button>
     <button class="tab" role="tab" aria-selected="false" aria-controls="panel-book" id="tab-book">怪物圖鑑</button>
-    
+
   </div>
-  
+
   <!-- 🪙 資源類 -->
   <div id="panel-res" class="tabpanel is-active" role="tabpanel" aria-labelledby="tab-res" tabindex="0">
     <div class="btn-grid">
@@ -105,7 +105,7 @@
       <button class="sys-btn" onclick="GachaHub.open()">🎰 抽獎中心</button>
     </div>
   </div>
-  
+
 <!-- ⚙️ 強化類 -->
 <div id="panel-enh" class="tabpanel" role="tabpanel" aria-labelledby="tab-enh" tabindex="0">
   <div class="btn-grid">
@@ -117,28 +117,28 @@
     <button class="sys-btn" onclick="PotentialUIV2.open()">🎲 潛能洗鍊</button>
   </div>
 </div>
-  
+
   <!-- 🌀 技能類 -->
   <div id="panel-skill" class="tabpanel" role="tabpanel" aria-labelledby="tab-skill" tabindex="0">
     <div class="btn-grid">
       <button class="sys-btn" onclick="SkillsHub.open()">🌀 技能</button>
     </div>
   </div>
-  
+
   <!-- 🗒️ 任務 / 副本類 -->
   <div id="panel-book" class="tabpanel" role="tabpanel" aria-labelledby="tab-book" tabindex="0">
     <div class="btn-grid">
     <button class="sys-btn" onclick="CollectionBook.open()">📘 收藏冊</butto>
     </div>
   </div>
-  
+
     <div id="panel-quest" class="tabpanel" role="tabpanel" aria-labelledby="tab-quest" tabindex="0">
     <div class="btn-grid">
       <button class="sys-btn" onclick="window.QuestCore.open('daily')">🗒️ 任務</button>
       <button class="sys-btn" onclick="DungeonHub.open()">🏰 副本中心</button>
     </div>
   </div>
-  
+
 
 </section>
   </div>
@@ -153,13 +153,13 @@
       <button id="toggleStatAllocBtn" class="mini-toggle" onclick="toggleStatAlloc()">隱藏</button>
     </div>
   </div>
-  
+
   <!-- 可分配點數 -->
   <div class="alloc-header">
     <span class="label">可分配點數</span>
     <span id="stat-points-display" class="points">0</span>
   </div>
-  
+
   <!-- 分配列 -->
   <div id="stat-alloc-area" class="alloc-grid">
     <div class="alloc-row">
@@ -170,7 +170,7 @@
         <button class="stat-btn ghost" onclick="allocateStat('str','all')">＋全部</button>
       </div>
     </div>
-    
+
     <div class="alloc-row">
       <div class="attr-name">敏捷</div>
       <div class="attr-value"><span id="agi-display">0</span></div>
@@ -179,7 +179,7 @@
         <button class="stat-btn ghost" onclick="allocateStat('agi','all')">＋全部</button>
       </div>
     </div>
-    
+
     <div class="alloc-row">
       <div class="attr-name">智力</div>
       <div class="attr-value"><span id="int-display">0</span></div>
@@ -188,7 +188,7 @@
         <button class="stat-btn ghost" onclick="allocateStat('int','all')">＋全部</button>
       </div>
     </div>
-    
+
     <div class="alloc-row">
       <div class="attr-name">幸運</div>
       <div class="attr-value"><span id="luk-display">0</span></div>
@@ -198,7 +198,7 @@
       </div>
     </div>
   </div>
-  
+
   <!-- 戰力區 -->
   <div class="cp-footer">
     <div class="cp-left">
@@ -211,10 +211,10 @@
       <button class="stat-btn ghost" onclick="openStatModal()">詳細數值</button>
     </div>
   </div>
-  
+
   <!-- 明細折疊 -->
   <div id="cp-detail" class="cp-detail" style="display:none;">
-    
+
   </div>
 </div>
 
@@ -274,7 +274,7 @@
 
 
 
-  
+
 
 
 <div class="row">
@@ -288,7 +288,7 @@
       <button id="btnToggleMode" onclick="toggleBattleMode()">單體模式</button>
       <button id="btnToggleDrops" class="btn ghost">顯示/隱藏掉落</button>
       <span id="diffQueuedBadge" class="badge" style="display:none;"></span>
-      
+
       <button id="toggleRewardBtn" type="button">
   📦 戰利品 / 掉落紀錄
 </button>
@@ -339,7 +339,7 @@
   <!-- 上排：玩家（左） -->
   <div class="battle-log-col player-log">
     <div class="battle-log-title">
-      玩家 
+      玩家
       <div class="aps-bar">
         <div id="playerApsFill" class="aps-fill" style="width:0%"></div>
       </div>
@@ -360,7 +360,7 @@
   <!-- 下排：怪物（整排寬） -->
   <div class="battle-log-col monster-log">
     <div class="battle-log-title">
-      怪物 
+      怪物
       <div class="aps-bar">
         <div id="monsterApsFill" class="aps-fill" style="width:0%"></div>
       </div>
@@ -377,7 +377,7 @@
         <script src="css/resource_delta.js"defer></script>
 
 
-  <script src="save/save_hub_es5.js"></script>
+  <script src="save/save_hub_es2020.js"></script>
 
   <script src="hub/clover/sp_potential.js"></script>
   <script src="stats_system/jobs.js"></script>
@@ -386,14 +386,14 @@
   <script src="stats_system/exp.js"></script>
   <script src="stats_system/player_stats_modal.js"></script>
   <script src="stats_system/resources.js"></script>
-  <script src="stats_system/potential_engine_es5.js"></script>
+  <script src="stats_system/potential_engine_es2020.js"></script>
   <script src="save/save_core.js"></script>
 
 
 <script src="item/inventory.js"></script>
 
-<script src="equipment_hub/flame/flame_core_es5.js"></script>
-<script src="equipment_hub/potential/potential_effects_es5.js"></script>
+<script src="equipment_hub/flame/flame_core_es2020.js"></script>
+<script src="equipment_hub/potential/potential_effects_es2020.js"></script>
 
 
     <script src="equipment_hub/starforce/equip_stats_calc_v2.js"></script>
@@ -403,10 +403,10 @@
       <script src="equipment_hub/equip_insight_v5.js"></script>
   <script src="stats_system/job_change.js"></script>
   <script src="hub/growth_hub.js"></script>
-  
+
   <script src="map/normal_monster_skills.js"></script>
   <script src="stats_system/pro_bonus_apply.js"></script>
-  
+
   <script src="map/monster_rt_skills.js"></script>
   <script src="map/map_data.js"></script>
   <script src="map/monster_data.js?v=20251021-1"></script>
@@ -414,16 +414,16 @@
   <script src="map/difficulty.js"></script>
   <script src="map/monster_utils.js?v=20251021-1"></script>
   <script src="map/ui_utils.js"></script>
-  
+
 <script src="item/shop_hub.js"></script>
 <script src="item/shop_system.js"></script>
 <script src="item/shop_material.js"></script>
 <script src="equipment_hub/equipment_hub.js"></script>
-  
 
 
 
-  
+
+
   <script src="hub/clover/equip_mastery.js"></script>
   <script src="logic/rpg/log_dual.js"></script>
   <script src="logic/rpg/rpg.js"></script>
@@ -434,7 +434,7 @@
   <script src="logic/rpg/battleUtils.js"></script>
   <script src="logic/rpg/ignore_defense.js"></script>
   <script src="logic/reward_tracker.js"></script>
-  
+
 <script src="logic/damage_power_inline.js"></script>
 <script src="logic/ui_skill_detail_log.js"></script>
 
@@ -447,7 +447,7 @@
 
 
     <script src="stats_system/job/skills_hub.js"></script>
- 
+
 
   <script src="hub/clover/clover.js"></script>
   <script src="hub/clover/sp_system.js"></script>
@@ -461,7 +461,7 @@
   <script src="modskill/boss_buffs_core.js"></script>
 
   <script src="modskill/statusEffects.js"></script>
-  <script src="logic/ui_updates.js"></script> 
+  <script src="logic/ui_updates.js"></script>
 
   <script src="logic/game_init.js"></script>
 
@@ -481,31 +481,31 @@
 
 
 
-  <script src="quest/quest_core_es5.js"></script>
-  <script src="quest/quest_daily_es5.js"></script>
+  <script src="quest/quest_core_es2020.js"></script>
+  <script src="quest/quest_daily_es2020.js"></script>
 
 
 
-  <script src="quest/quest_repeat_es5.js"></script>
+  <script src="quest/quest_repeat_es2020.js"></script>
 
 
-  <script src="quest/quest_achievements_es5.js"></script>
+  <script src="quest/quest_achievements_es2020.js"></script>
   <script src="floating.js"></script>
   <script src="stats_system/main.js"></script>
   <script src="gacha/gacha_hub.js"></script>
   <script src="gacha/gacha_medal.js"></script>
   <script src="gacha/gacha_diamond.js"></script>
-  
+
   <script src="css/log_dual.js"></script>
   <link rel="stylesheet" href="css/skills_panel.css">
   <link rel="stylesheet" href="css/battle_log.css">
   <script src="town/town_hub.js"></script>
-  
-  
 
 
 
-  
+
+
+
 <!-- ===================================================== -->
 <!-- Stock Hub -->
 <!-- ===================================================== -->
@@ -521,15 +521,15 @@
  <script src="stats_system/job/register.js"></script>
 
 
-    
+
   <script src="stats_system/combat_power.js"></script>
   <script src="stats_system/cp_ui.js"></script>
-  
+
   <script src="town/Advanced/high_explore_data.js"></script>
 
   <script src="town/Advanced/high_explore_main.js"></script>
     <script src="town/bank_savings_tab.js"></script>
-  
+
 <script src="dungeon/common/tickets.js"></script>
 <script src="dungeon/common/tickets_ui.js"></script>
 <script src="dungeon/dungeon_gate.js"></script>     <!-- 可選，但若要用 bindButtons 必須先載入 -->
@@ -537,19 +537,19 @@
 <script src="dungeon/dungeon_hub.js"></script>
 <script src="dungeon/dungeon_battle_core.js"></script>
 <script src="dungeon/waves_config.js"></script>
-<script src="dungeon/dungeon_tabs_challenge.js"></script> 
+<script src="dungeon/dungeon_tabs_challenge.js"></script>
 
-<script src="dungeon/dungeon/v13_config.js"></script> 
+<script src="dungeon/dungeon/v13_config.js"></script>
 <script src="dungeon/dungeon/dungeon_tabs_v13.js"></script>
     <script src="equipment_hub/accessory/equip_life_set.js"></script>
-    
- 
-    
-    
+
+
+
+
  <script src="equipment_hub/equip_core_tab.js"></script>
  <script src="hub/shield_system.js"></script>
- 
- 
+
+
  <script src="stats_system/job/job_passives_tab.js"></script>
  <script src="stats_system/job/job_passives_store.js"></script>
  <script src="stats_system/job/job_passives_aggregate.js"></script>
@@ -557,11 +557,11 @@
   <script src="stats_system/job/common_passives.js"></script>
   <script src="stats_system/job/job_skill_passives.js"></script>
   <script src="item/shop_exchange_tab.js"></script>
-  
+
       <script src="equipment_hub/accessory/equipment_accessory_ring.js"></script>
   <script src="hub/personal_potential_tab.js"></script>
-  
-  
+
+
   <script src="hub/collection_book.js"></script>
   <script src="map/boss/special_boss_gate.js"></script>
   <script src="map/boss/special_boss_index.js"></script>
@@ -570,8 +570,8 @@
   <script src="hub/card/CardSystem_Full_SingleFile.js"></script>
 
 
-  <script src="equipment_hub/potential/potential_core_v1_es5.js"></script>
-  <script src="equipment_hub/potential/potential_ui_v3_es5.js"></script>
+  <script src="equipment_hub/potential/potential_core_v1_es2020.js"></script>
+  <script src="equipment_hub/potential/potential_ui_v3_es2020.js"></script>
 
 
 

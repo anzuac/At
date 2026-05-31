@@ -63,13 +63,13 @@
   type: "attack",
   role: "attack",
   isBasic: false,
-  
+
   level: 1,
   maxLevel: 20,
-  
+
   currentTier: 0,
   evolveLevels: [10, 30, 50, 70, 100],
-  
+
   // 固定冷卻 90 秒（各階同CD）
   tiers: [
     { name: "共鳴爆發", mpCost: 40, cooldown: 90, logic: { damageMultiplier: 1.4, hits: 3, levelMultiplier: 0.06 } },
@@ -78,9 +78,9 @@
     { name: "共鳴狂潮", mpCost: 58, cooldown: 90, logic: { damageMultiplier: 2.4, minHits: 4, maxHits: 6, levelMultiplier: 0.09 } },
     { name: "萬象共鳴", mpCost: 64, cooldown: 90, logic: { damageMultiplier: 2.8, hits: 5, levelMultiplier: 0.10 } },
   ],
-  
+
   currentCooldown: 0,
-  
+
   // 依職業吃主屬性：STR/INT/AGI/LUK → 每點 +0.2% 傷害，上限 +200%
   _getMainStatBonus() {
     const cfg = (typeof SkillMath !== "undefined" && SkillMath.CONFIG && SkillMath.CONFIG.MAIN_STAT)
@@ -90,42 +90,42 @@
       ? SkillMath.mainStatBonus(player, cfg)
       : 0;
   },
-  
+
   use(monster) {
     const t = getActiveTier(this);
-    
+
     // 同步顯示資料
     this.name = t.name;
     this.cooldown = typeof t.cooldown === "number" ? t.cooldown : (this.cooldown ?? 0);
     const mpGrow = (t.logic?.mpCostLevelGrowth || 0) * Math.max(0, this.level - 1);
     const cost = (t.mpCost || 0) + mpGrow;
     this.mpCost = cost;
-    
+
     // 主屬性加成
     const mainStatBonus = this._getMainStatBonus(); // 0 ~ 2.0
-    
+
     // 傷害計算
     const perHitBase = t.logic.damageMultiplier + t.logic.levelMultiplier * (this.level - 1);
     const perHit = perHitBase * (1 + mainStatBonus);
     const base = Math.max(player.totalStats.atk - monster.def, 1);
-    
+
     const hasRange = (typeof t.logic.minHits === "number" && typeof t.logic.maxHits === "number");
     const hits = hasRange ? getRandomInt(t.logic.minHits, t.logic.maxHits) : (t.logic.hits || 1);
-    
+
     const dmg = Math.floor(base * perHit) * hits;
-    
+
     monster.hp -= dmg;
     const hitText = hasRange ? `${hits} 次` : `${t.logic.hits} 次`;
     logPrepend?.(`✨ ${t.name} 連擊 ${hitText}，共 ${dmg} 傷害！（主屬加成 ${Math.round(mainStatBonus*100)}%）`);
-    
+
     spendAndCooldown(this, cost);
     return dmg;
   },
-  
+
   getUpgradeCost() {
     return 20 + (this.level - 1) * 10;
   },
-  
+
   getDescription() {
     const t = getActiveTier(this);
     const per = (t.logic.damageMultiplier + t.logic.levelMultiplier * (this.level - 1)) * 100;
@@ -242,21 +242,21 @@
 // =======================
 
 function _skillComputeCd(t, lg) {
-  var base = Number(t.cooldown || 0);
-  var cdRed = Number(lg.masteryCdReduceSec || 0);
-  var cdZero = !!lg.masteryCdToZero;
+  const base = Number(t.cooldown || 0);
+  const cdRed = Number(lg.masteryCdReduceSec || 0);
+  const cdZero = !!lg.masteryCdToZero;
   return cdZero ? 0 : Math.max(0, base - cdRed);
 }
 
 function _skillComputeMp(t, lg, skillLv) {
-  var base = Number(t.mpCost || 0);
-  var grow = Number(lg.mpCostLevelGrowth || 0); // 由精通檔寫入（1 或 3）
+  const base = Number(t.mpCost || 0);
+  const grow = Number(lg.mpCostLevelGrowth || 0); // 由精通檔寫入（1 或 3）
   return base + grow * Math.max(1, (skillLv || 1)); // 「等級×1」概念
 }
 
 function _buildHitArray(hits, dmgNormal, dmgLast) {
-  var arr = new Array(hits);
-  for (var i=0;i<hits;i++) arr[i] = dmgNormal;
+  const arr = new Array(hits);
+  for (let i=0;i<hits;i++) arr[i] = dmgNormal;
   if (hits > 0) arr[hits-1] = dmgLast;
   return arr;
 }
@@ -284,37 +284,37 @@ registerJobSkill('warrior', {
   currentCooldown: 0,
 
   use(monster){
-    var t = getActiveTier(this);
-    var lg = (t && t.logic) ? t.logic : {};
-    var skillName = t.name + (getEvoLabel ? getEvoLabel(this) : "");
+    const t = getActiveTier(this);
+    const lg = (t && t.logic) ? t.logic : {};
+    const skillName = t.name + (getEvoLabel ? getEvoLabel(this) : "");
 
     this.name = skillName;
-    var baseTargets = t.maxTargets || this.maxTargets || 1;
-var bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
+    const baseTargets = t.maxTargets || this.maxTargets || 1;
+const bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
 this.maxTargets = baseTargets + bonusTargets;
 
     // CD / MP
     this.cooldown = _skillComputeCd(t, lg);
     this.mpCost = _skillComputeMp(t, lg, this.level);
 
-    var baseAtk  = Math.max(player.totalStats.atk || 1, 1);
-    var strBonus = (typeof SkillMath !== "undefined") ? SkillMath.mainStatBonus(player, { ...(SkillMath.CONFIG?.MAIN_STAT||{capBonus:2.0,K:9373,p:3}), statKey: "str" }) : 0;
+    const baseAtk  = Math.max(player.totalStats.atk || 1, 1);
+    const strBonus = (typeof SkillMath !== "undefined") ? SkillMath.mainStatBonus(player, { ...(SkillMath.CONFIG?.MAIN_STAT||{capBonus:2.0,K:9373,p:3}), statKey: "str" }) : 0;
 
     // basePct：戰士單段較高（Lv1 110%，每級+6% → Lv10=164%）
-    var basePct = 110 + 6 * Math.max(0, (this.level||1) - 1);
+    const basePct = 110 + 6 * Math.max(0, (this.level||1) - 1);
 
     // 精通加法%
-    var addPct = Number(lg.masteryAddPctPerHit || 0);
-    var perPct = basePct + addPct;
+    const addPct = Number(lg.masteryAddPctPerHit || 0);
+    const perPct = basePct + addPct;
 
-    var baseHits = 2;
-    var hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus || 0)));
+    const baseHits = 2;
+    const hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus || 0)));
 
     // 尾段額外%
-    var lastAdd = Number(lg.masteryLastHitAddPct || 0);
+    const lastAdd = Number(lg.masteryLastHitAddPct || 0);
 
-    var dmgNormal = Math.floor(baseAtk * (perPct/100) * (1 + strBonus));
-    var dmgLast   = Math.floor(baseAtk * ((perPct + lastAdd)/100) * (1 + strBonus));
+    const dmgNormal = Math.floor(baseAtk * (perPct/100) * (1 + strBonus));
+    const dmgLast   = Math.floor(baseAtk * ((perPct + lastAdd)/100) * (1 + strBonus));
 
     logPrepend?.(
       `⚔️ ${skillName}：${hits} Hit｜單段 ${Math.round(perPct)}%｜尾段 +${Math.round(lastAdd)}%｜MP ${this.mpCost}｜CD ${this.cooldown}s`
@@ -327,24 +327,24 @@ this.maxTargets = baseTargets + bonusTargets;
   getUpgradeCost(){ return 15 + (this.level - 1) * 10; },
 
 getDescription(){
-  var t = getActiveTier(this);
-  var lg = (t && t.logic) ? t.logic : {};
+  const t = getActiveTier(this);
+  const lg = (t && t.logic) ? t.logic : {};
 
-  var basePct = 110 + 6 * Math.max(0,(this.level||1)-1);
-  var perPct = basePct + Number(lg.masteryAddPctPerHit||0);
-  var lastAdd = Number(lg.masteryLastHitAddPct||0);
+  const basePct = 110 + 6 * Math.max(0,(this.level||1)-1);
+  const perPct = basePct + Number(lg.masteryAddPctPerHit||0);
+  const lastAdd = Number(lg.masteryLastHitAddPct||0);
 
-  var baseHits = 2;
-  var hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus||0)));
+  const baseHits = 2;
+  const hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus||0)));
 
   // ✅ 目標顯示：吃精通加成 + 硬上限6
-  var baseTargets = t.maxTargets || this.maxTargets || 1;
-  var bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
-  var targets = Math.min(6, baseTargets + bonusTargets);
+  const baseTargets = t.maxTargets || this.maxTargets || 1;
+  const bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
+  const targets = Math.min(6, baseTargets + bonusTargets);
 
-  var totalPct = perPct * (hits - 1) + (perPct + lastAdd);
-  var cd = _skillComputeCd(t, lg);
-  var mp = _skillComputeMp(t, lg, this.level);
+  const totalPct = perPct * (hits - 1) + (perPct + lastAdd);
+  const cd = _skillComputeCd(t, lg);
+  const mp = _skillComputeMp(t, lg, this.level);
 
   return (
     `${t.name}｜戰士主力技\n` +
@@ -383,32 +383,32 @@ registerJobSkill('mage', {
   currentCooldown: 0,
 
   use(monster){
-    var t = getActiveTier(this);
-    var lg = (t && t.logic) ? t.logic : {};
-    var skillName = t.name + (getEvoLabel ? getEvoLabel(this) : "");
+    const t = getActiveTier(this);
+    const lg = (t && t.logic) ? t.logic : {};
+    const skillName = t.name + (getEvoLabel ? getEvoLabel(this) : "");
 
     this.name = skillName;
-    var baseTargets = t.maxTargets || this.maxTargets || 1;
-var bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
+    const baseTargets = t.maxTargets || this.maxTargets || 1;
+const bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
 this.maxTargets = baseTargets + bonusTargets;
 
     this.cooldown = _skillComputeCd(t, lg);
     this.mpCost = _skillComputeMp(t, lg, this.level);
 
-    var baseAtk  = Math.max(player.totalStats.atk || 1, 1);
-    var intBonus = (typeof SkillMath !== "undefined") ? SkillMath.mainStatBonus(player, { ...(SkillMath.CONFIG?.MAIN_STAT||{capBonus:2.0,K:9373,p:3}), statKey: "int" }) : 0; // 你若沒有就當0
+    const baseAtk  = Math.max(player.totalStats.atk || 1, 1);
+    const intBonus = (typeof SkillMath !== "undefined") ? SkillMath.mainStatBonus(player, { ...(SkillMath.CONFIG?.MAIN_STAT||{capBonus:2.0,K:9373,p:3}), statKey: "int" }) : 0; // 你若沒有就當0
 
     // basePct：法師單段中等（Lv1 78%，每級+4% → Lv10=114%）
-    var basePct = 78 + 4 * Math.max(0,(this.level||1)-1);
-    var perPct = basePct + Number(lg.masteryAddPctPerHit||0);
+    const basePct = 78 + 4 * Math.max(0,(this.level||1)-1);
+    const perPct = basePct + Number(lg.masteryAddPctPerHit||0);
 
-    var baseHits = 3;
-    var hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus||0)));
+    const baseHits = 3;
+    const hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus||0)));
 
-    var lastAdd = Number(lg.masteryLastHitAddPct||0);
+    const lastAdd = Number(lg.masteryLastHitAddPct||0);
 
-    var dmgNormal = Math.floor(baseAtk * (perPct/100) * (1 + intBonus));
-    var dmgLast   = Math.floor(baseAtk * ((perPct + lastAdd)/100) * (1 + intBonus));
+    const dmgNormal = Math.floor(baseAtk * (perPct/100) * (1 + intBonus));
+    const dmgLast   = Math.floor(baseAtk * ((perPct + lastAdd)/100) * (1 + intBonus));
 
     logPrepend?.(
       `✨ ${skillName}：${hits} Hit｜單段 ${Math.round(perPct)}%｜尾段 +${Math.round(lastAdd)}%｜MP ${this.mpCost}｜CD ${this.cooldown}s`
@@ -421,24 +421,24 @@ this.maxTargets = baseTargets + bonusTargets;
   getUpgradeCost(){ return 15 + (this.level - 1) * 10; },
 
 getDescription(){
-  var t = getActiveTier(this);
-  var lg = (t && t.logic) ? t.logic : {};
+  const t = getActiveTier(this);
+  const lg = (t && t.logic) ? t.logic : {};
 
-  var basePct = 78 + 4 * Math.max(0,(this.level||1)-1);
-  var perPct = basePct + Number(lg.masteryAddPctPerHit||0);
-  var lastAdd = Number(lg.masteryLastHitAddPct||0);
+  const basePct = 78 + 4 * Math.max(0,(this.level||1)-1);
+  const perPct = basePct + Number(lg.masteryAddPctPerHit||0);
+  const lastAdd = Number(lg.masteryLastHitAddPct||0);
 
-  var baseHits = 3;
-  var hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus||0)));
+  const baseHits = 3;
+  const hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus||0)));
 
   // ✅ 目標顯示：吃精通加成 + 硬上限6
-  var baseTargets = t.maxTargets || this.maxTargets || 1;
-  var bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
-  var targets = Math.min(6, baseTargets + bonusTargets);
+  const baseTargets = t.maxTargets || this.maxTargets || 1;
+  const bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
+  const targets = Math.min(6, baseTargets + bonusTargets);
 
-  var totalPct = perPct * (hits - 1) + (perPct + lastAdd);
-  var cd = _skillComputeCd(t, lg);
-  var mp = _skillComputeMp(t, lg, this.level);
+  const totalPct = perPct * (hits - 1) + (perPct + lastAdd);
+  const cd = _skillComputeCd(t, lg);
+  const mp = _skillComputeMp(t, lg, this.level);
 
   return (
     `${t.name}｜法師主力技\n` +
@@ -478,32 +478,32 @@ registerJobSkill('archer', {
   currentCooldown: 0,
 
   use(monster){
-    var t = getActiveTier(this);
-    var lg = (t && t.logic) ? t.logic : {};
-    var skillName = t.name + (getEvoLabel ? getEvoLabel(this) : "");
+    const t = getActiveTier(this);
+    const lg = (t && t.logic) ? t.logic : {};
+    const skillName = t.name + (getEvoLabel ? getEvoLabel(this) : "");
 
     this.name = skillName;
-    var baseTargets = t.maxTargets || this.maxTargets || 1;
-var bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
+    const baseTargets = t.maxTargets || this.maxTargets || 1;
+const bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
 this.maxTargets = baseTargets + bonusTargets;
 
     this.cooldown = _skillComputeCd(t, lg);
     this.mpCost = _skillComputeMp(t, lg, this.level);
 
-    var baseAtk  = Math.max(player.totalStats.atk || 1, 1);
-    var agiBonus = (typeof SkillMath !== "undefined") ? SkillMath.mainStatBonus(player, { ...(SkillMath.CONFIG?.MAIN_STAT||{capBonus:2.0,K:9373,p:3}), statKey: "agi" }) : 0;
+    const baseAtk  = Math.max(player.totalStats.atk || 1, 1);
+    const agiBonus = (typeof SkillMath !== "undefined") ? SkillMath.mainStatBonus(player, { ...(SkillMath.CONFIG?.MAIN_STAT||{capBonus:2.0,K:9373,p:3}), statKey: "agi" }) : 0;
 
     // basePct：弓手中等（Lv1 85%，每級+4% → Lv10=121%）
-    var basePct = 85 + 4 * Math.max(0,(this.level||1)-1);
-    var perPct = basePct + Number(lg.masteryAddPctPerHit||0);
+    const basePct = 85 + 4 * Math.max(0,(this.level||1)-1);
+    const perPct = basePct + Number(lg.masteryAddPctPerHit||0);
 
-    var baseHits = 3;
-    var hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus||0)));
+    const baseHits = 3;
+    const hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus||0)));
 
-    var lastAdd = Number(lg.masteryLastHitAddPct||0);
+    const lastAdd = Number(lg.masteryLastHitAddPct||0);
 
-    var dmgNormal = Math.floor(baseAtk * (perPct/100) * (1 + agiBonus));
-    var dmgLast   = Math.floor(baseAtk * ((perPct + lastAdd)/100) * (1 + agiBonus));
+    const dmgNormal = Math.floor(baseAtk * (perPct/100) * (1 + agiBonus));
+    const dmgLast   = Math.floor(baseAtk * ((perPct + lastAdd)/100) * (1 + agiBonus));
 
     logPrepend?.(
       `🏹 ${skillName}：${hits} Hit｜單段 ${Math.round(perPct)}%｜尾段 +${Math.round(lastAdd)}%｜MP ${this.mpCost}｜CD ${this.cooldown}s`
@@ -516,24 +516,24 @@ this.maxTargets = baseTargets + bonusTargets;
   getUpgradeCost(){ return 15 + (this.level - 1) * 10; },
 
 getDescription(){
-  var t = getActiveTier(this);
-  var lg = (t && t.logic) ? t.logic : {};
+  const t = getActiveTier(this);
+  const lg = (t && t.logic) ? t.logic : {};
 
-  var basePct = 85 + 4 * Math.max(0,(this.level||1)-1);
-  var perPct = basePct + Number(lg.masteryAddPctPerHit||0);
-  var lastAdd = Number(lg.masteryLastHitAddPct||0);
+  const basePct = 85 + 4 * Math.max(0,(this.level||1)-1);
+  const perPct = basePct + Number(lg.masteryAddPctPerHit||0);
+  const lastAdd = Number(lg.masteryLastHitAddPct||0);
 
-  var baseHits = 3;
-  var hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus||0)));
+  const baseHits = 3;
+  const hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus||0)));
 
   // ✅ 目標顯示：吃精通加成 + 硬上限6
-  var baseTargets = t.maxTargets || this.maxTargets || 1;
-  var bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
-  var targets = Math.min(6, baseTargets + bonusTargets);
+  const baseTargets = t.maxTargets || this.maxTargets || 1;
+  const bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
+  const targets = Math.min(6, baseTargets + bonusTargets);
 
-  var totalPct = perPct * (hits - 1) + (perPct + lastAdd);
-  var cd = _skillComputeCd(t, lg);
-  var mp = _skillComputeMp(t, lg, this.level);
+  const totalPct = perPct * (hits - 1) + (perPct + lastAdd);
+  const cd = _skillComputeCd(t, lg);
+  const mp = _skillComputeMp(t, lg, this.level);
 
   return (
     `${t.name}｜弓手主力技\n` +
@@ -572,32 +572,32 @@ registerJobSkill('thief', {
   currentCooldown: 0,
 
   use(monster){
-    var t = getActiveTier(this);
-    var lg = (t && t.logic) ? t.logic : {};
-    var skillName = t.name + (getEvoLabel ? getEvoLabel(this) : "");
+    const t = getActiveTier(this);
+    const lg = (t && t.logic) ? t.logic : {};
+    const skillName = t.name + (getEvoLabel ? getEvoLabel(this) : "");
 
     this.name = skillName;
-    var baseTargets = t.maxTargets || this.maxTargets || 1;
-var bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
+    const baseTargets = t.maxTargets || this.maxTargets || 1;
+const bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
 this.maxTargets = baseTargets + bonusTargets;
 
     this.cooldown = _skillComputeCd(t, lg);
     this.mpCost = _skillComputeMp(t, lg, this.level);
 
-    var baseAtk  = Math.max(player.totalStats.atk || 1, 1);
-    var lukBonus = (typeof _getLuckBonusWithCap === "function") ? _getLuckBonusWithCap(1.0) : 0;
+    const baseAtk  = Math.max(player.totalStats.atk || 1, 1);
+    const lukBonus = (typeof _getLuckBonusWithCap === "function") ? _getLuckBonusWithCap(1.0) : 0;
 
     // basePct：盜賊單段低（Lv1 45%，每級+2% → Lv10=63%）
-    var basePct = 45 + 2 * Math.max(0,(this.level||1)-1);
-    var perPct = basePct + Number(lg.masteryAddPctPerHit||0);
+    const basePct = 45 + 2 * Math.max(0,(this.level||1)-1);
+    const perPct = basePct + Number(lg.masteryAddPctPerHit||0);
 
-    var baseHits = 5;
-    var hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus||0)));
+    const baseHits = 5;
+    const hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus||0)));
 
-    var lastAdd = Number(lg.masteryLastHitAddPct||0);
+    const lastAdd = Number(lg.masteryLastHitAddPct||0);
 
-    var dmgNormal = Math.floor(baseAtk * (perPct/100) * (1 + lukBonus));
-    var dmgLast   = Math.floor(baseAtk * ((perPct + lastAdd)/100) * (1 + lukBonus));
+    const dmgNormal = Math.floor(baseAtk * (perPct/100) * (1 + lukBonus));
+    const dmgLast   = Math.floor(baseAtk * ((perPct + lastAdd)/100) * (1 + lukBonus));
 
     logPrepend?.(
       `🗡️ ${skillName}：${hits} Hit｜單段 ${Math.round(perPct)}%｜尾段 +${Math.round(lastAdd)}%｜MP ${this.mpCost}｜CD ${this.cooldown}s`
@@ -610,24 +610,24 @@ this.maxTargets = baseTargets + bonusTargets;
   getUpgradeCost(){ return 15 + (this.level - 1) * 10; },
 
 getDescription(){
-  var t = getActiveTier(this);
-  var lg = (t && t.logic) ? t.logic : {};
+  const t = getActiveTier(this);
+  const lg = (t && t.logic) ? t.logic : {};
 
-  var basePct = 45 + 2 * Math.max(0,(this.level||1)-1);
-  var perPct = basePct + Number(lg.masteryAddPctPerHit||0);
-  var lastAdd = Number(lg.masteryLastHitAddPct||0);
+  const basePct = 45 + 2 * Math.max(0,(this.level||1)-1);
+  const perPct = basePct + Number(lg.masteryAddPctPerHit||0);
+  const lastAdd = Number(lg.masteryLastHitAddPct||0);
 
-  var baseHits = 5;
-  var hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus||0)));
+  const baseHits = 5;
+  const hits = baseHits + Math.max(0, Math.floor(Number(lg.masteryHitsBonus||0)));
 
   // ✅ 目標顯示：吃精通加成 + 硬上限6
-  var baseTargets = t.maxTargets || this.maxTargets || 1;
-  var bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
-  var targets = Math.min(6, baseTargets + bonusTargets);
+  const baseTargets = t.maxTargets || this.maxTargets || 1;
+  const bonusTargets = Math.max(0, Math.floor(Number(lg.masteryMaxTargetsBonus || 0)));
+  const targets = Math.min(6, baseTargets + bonusTargets);
 
-  var totalPct = perPct * (hits - 1) + (perPct + lastAdd);
-  var cd = _skillComputeCd(t, lg);
-  var mp = _skillComputeMp(t, lg, this.level);
+  const totalPct = perPct * (hits - 1) + (perPct + lastAdd);
+  const cd = _skillComputeCd(t, lg);
+  const mp = _skillComputeMp(t, lg, this.level);
 
   return (
     `${t.name}｜盜賊主力技\n` +

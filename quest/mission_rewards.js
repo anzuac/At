@@ -1,5 +1,5 @@
 // 任務獎勵配置（共用）— 新版（請先載入此檔，再載 quest_*）
-var missionRewards = {
+const missionRewards = {
   // 每 6 小時會從此池中抽任務（每次最多新增 3 個，未領任務到 10 個就不補）
   dailyTemplates: [
     {
@@ -7,21 +7,21 @@ var missionRewards = {
       type: "kills",
       targetMin: 5,
       targetMax: 20,
-      buildName: function(target){ return "擊敗 " + target + " 隻怪"; }
+      buildName(target){ return "擊敗 " + target + " 隻怪"; }
     },
     {
       templateId: "gold",
       type: "goldGain",
       targetMin: 100,
       targetMax: 300,
-      buildName: function(target){ return "獲得金幣 " + target; }
+      buildName(target){ return "獲得金幣 " + target; }
     },
     {
       templateId: "stone",
       type: "stoneGain",
       targetMin: 10,
       targetMax: 50,
-      buildName: function(target){ return "獲得強化石 " + target; }
+      buildName(target){ return "獲得強化石 " + target; }
     }
   ],
 
