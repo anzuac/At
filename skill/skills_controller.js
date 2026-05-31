@@ -36,7 +36,7 @@
   function getJobTierFromJobs(jobKey) {
     const map = window.jobs || {};
     let tier = 1;
-    let cur = String(jobKey || "").trim();
+    const cur = String(jobKey || "").trim();
     if (!cur) return tier;
 
     if (!map[cur]) {
@@ -50,7 +50,7 @@
     return tier;
   }
 
-  // 🔁 判斷「目前職業是否在某條職業線上（從 fromJobKey 往後的所有進階）」 
+  // 🔁 判斷「目前職業是否在某條職業線上（從 fromJobKey 往後的所有進階）」
   // 例：isJobInLineFrom("warrior_berserker5", "warrior_berserker3") === true
   function isJobInLineFrom(curJobKey, fromJobKey) {
     const map = window.jobs || {};

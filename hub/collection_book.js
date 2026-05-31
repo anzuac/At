@@ -22,7 +22,7 @@
     .pot-line { height: 28px; line-height: 28px; font-size: 14px; font-weight: 900; }
     .tier-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 900; margin-bottom: 4px; }
     .prob-info { font-size: 10px; color: #64748b; margin-bottom: 8px; }
-    
+
     .cb-section-title { font-size: 14px; font-weight: 900; letter-spacing: 0.3px; }
     .cb-muted { color: #94a3b8; font-size: 12px; }
     .ex-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px; border-radius:16px; background: rgba(255,255,255,0.04); border:1px solid rgba(148,163,184,0.18); }
@@ -33,7 +33,7 @@
     .ex-btn:disabled { opacity:0.45; cursor:not-allowed; }
 
     @media (max-width: 600px) { .cb-container { flex-direction: column !important; } .cb-sidebar { width: 100% !important; max-height: 220px !important; padding: 10px !important; border-bottom: 2px solid #1e293b; } }
-  
+
     /* 簡易彈窗 */
     .cb-popup-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; z-index:999999; }
     .cb-popup{ width:min(320px, calc(100vw - 40px)); background:#0b1220; border:1px solid rgba(255,255,255,.12); border-radius:14px; box-shadow:0 18px 50px rgba(0,0,0,.45); padding:14px; }
@@ -47,12 +47,12 @@
   document.head.appendChild(style);
 
   // [基礎設定]
-  var RARITIES = ["N", "R", "SR", "SSR", "UR", "LR", "SLR"];
-  var EXCHANGE_TAB = "EXCHANGE";
-  var NEXT_RARITY = { N:"R", R:"SR", SR:"SSR", SSR:"UR", UR:"LR", LR:"SLR", SLR:null };
-  
+  const RARITIES = ["N", "R", "SR", "SSR", "UR", "LR", "SLR"];
+  const EXCHANGE_TAB = "EXCHANGE";
+  const NEXT_RARITY = { N:"R", R:"SR", SR:"SSR", SSR:"UR", UR:"LR", LR:"SLR", SLR:null };
+
   // 潛能機率池 (w 以 10000 為總數方便計算百分比)
-  var POT_POOL = [
+  const POT_POOL = [
     { key: "allStatRate", label: "全屬性", suffix: "%", val: 1, w: 183 },
     { key: "strRate", label: "力量", suffix: "%", val: 1, w: 350 },
     { key: "agiRate", label: "敏捷", suffix: "%", val: 1, w: 350 },
@@ -66,9 +66,9 @@
     { key: "hpRegen", label: "HP恢復", suffix: "%", val: 0.2, w: 155 },
     { key: "mpRegen", label: "MP恢復", suffix: "%", val: 0.2, w: 122 }
   ];
-  
+
   // 固定數值類 (平攤機率)
-  var FIXED_STATS = [
+  const FIXED_STATS = [
     { key: "str", label: "力量", suffix: "", val: 5 },
     { key: "agi", label: "敏捷", suffix: "", val: 5 },
     { key: "int", label: "智力", suffix: "", val: 5 },
@@ -79,31 +79,31 @@
     { key: "mp", label: "魔力值", suffix: "", val: 40 }
   ];
 
-  var TIER_UP_CHANCE = { R: 0.1, SR: 0.05, SSR: 0.02, UR: 0.01, LR: 0.002 };
+  const TIER_UP_CHANCE = { R: 0.1, SR: 0.05, SSR: 0.02, UR: 0.01, LR: 0.002 };
 
-  var RARITY_CONFIG = { 
-    N: { maxLevel: 5, perLevel: { allStat: 1, atk: 1, def: 1, hp: 20 } }, 
-    R: { maxLevel: 15, perLevel: { allStat: 1.5, atk: 3, def: 2, hp: 50 } }, 
-    SR: { maxLevel: 15, perLevel: { allStat: 2, atk: 3, def: 3, hp: 75 } }, 
-    SSR: { maxLevel: 15, perLevel: { allStat: 4, atk: 4, def: 4, hp: 100 } }, 
-    UR: { maxLevel: 20, perLevel: { allStat: 5, atk: 5, def: 4, hp: 100 } }, 
-    LR: { maxLevel: 25, perLevel: { allStat: 6, atk: 6, def: 5, hp: 130 } }, 
-    SLR: { maxLevel: 30, perLevel: { allStat: 8, atk: 10, def: 8, hp: 200 } } 
+  const RARITY_CONFIG = {
+    N: { maxLevel: 5, perLevel: { allStat: 1, atk: 1, def: 1, hp: 20 } },
+    R: { maxLevel: 15, perLevel: { allStat: 1.5, atk: 3, def: 2, hp: 50 } },
+    SR: { maxLevel: 15, perLevel: { allStat: 2, atk: 3, def: 3, hp: 75 } },
+    SSR: { maxLevel: 15, perLevel: { allStat: 4, atk: 4, def: 4, hp: 100 } },
+    UR: { maxLevel: 20, perLevel: { allStat: 5, atk: 5, def: 4, hp: 100 } },
+    LR: { maxLevel: 25, perLevel: { allStat: 6, atk: 6, def: 5, hp: 130 } },
+    SLR: { maxLevel: 30, perLevel: { allStat: 8, atk: 10, def: 8, hp: 200 } }
   };
-  
-  var NS_KEY = "collectionBookV4_";
-  var state = null, isRolling = false, modalEl = null, activeRarity = "N";
+
+  const NS_KEY = "collectionBookV4_";
+  let state = null, isRolling = false, modalEl = null, activeRarity = "N";
 
   // [核心邏輯]
   function getRandomPot(tier) {
-    var totalRateW = POT_POOL.reduce((s, x) => s + x.w, 0);
-    var roll = Math.random() * 10000; // 以萬分比計
-    
+    const totalRateW = POT_POOL.reduce((s, x) => s + x.w, 0);
+    const roll = Math.random() * 10000; // 以萬分比計
+
     let selected = null;
     if (roll < totalRateW) {
       // 命中百分比類
       let curW = 0;
-      for (let p of POT_POOL) {
+      for (const p of POT_POOL) {
         curW += p.w;
         if (roll <= curW) { selected = {...p}; break; }
       }
@@ -111,28 +111,28 @@
       // 命中固定數值類 (平攤剩餘機率)
       selected = {...FIXED_STATS[Math.floor(Math.random() * FIXED_STATS.length)]};
     }
-    
+
     // 數值翻倍邏輯：R為1倍, SR為2倍... 剛好對應 index
     selected.value = parseFloat((selected.val * tier).toFixed(2));
     return selected;
   }
 
   function computeTotalStats() {
-    var base = { atk:0, hp:0, allStat:0, def:0 };
-    var potList = [];
+    const base = { atk:0, hp:0, allStat:0, def:0 };
+    const potList = [];
     RARITIES.forEach(r => {
-      var d = state.rarities[r], cfg = RARITY_CONFIG[r];
-      d.cards.forEach(c => { 
-        if (!c.unlocked) return; 
-        base.atk += cfg.perLevel.atk * c.level; 
-        base.hp += cfg.perLevel.hp * c.level; 
-        base.allStat += cfg.perLevel.allStat * c.level; 
-        base.def += (cfg.perLevel.def || 0) * c.level; 
+      const d = state.rarities[r], cfg = RARITY_CONFIG[r];
+      d.cards.forEach(c => {
+        if (!c.unlocked) return;
+        base.atk += cfg.perLevel.atk * c.level;
+        base.hp += cfg.perLevel.hp * c.level;
+        base.allStat += cfg.perLevel.allStat * c.level;
+        base.def += (cfg.perLevel.def || 0) * c.level;
       });
       [d.potential.line1, d.potential.line2].forEach(l => {
         if (!l) return;
-        var existing = potList.find(x => x.label === l.label && x.suffix === l.suffix);
-        if (existing) { existing.value += l.value; } 
+        const existing = potList.find(x => x.label === l.label && x.suffix === l.suffix);
+        if (existing) { existing.value += l.value; }
         else { potList.push({ label: l.label, value: l.value, suffix: l.suffix }); }
       });
     });
@@ -141,8 +141,8 @@
 
   function applyToPlayer() {
     if (!global.player) return;
-    var player = global.player;
-    var s = computeTotalStats();
+    const player = global.player;
+    const s = computeTotalStats();
 
     // 1) 圖鑑「永久平坦能力」：一律寫入 coreBonus（不走潛能通道）
     if (player.coreBonus && player.coreBonus.bonusData) {
@@ -168,10 +168,10 @@
     delete player.PotentialBonus.bonusData.collectionBook;
 
     // 走「潛能專用」payload：只放潛能線（不包含圖鑑永久平坦能力）
-    var payload = {};
+    const payload = {};
 
     // %→平坦：用整數百分比（10 = 10%）
-    var pct = {
+    const pct = {
       allStatPct: 0,
       strPct: 0,
       agiPct: 0,
@@ -184,14 +184,14 @@
     };
 
     // 直接倍率（小數，0.1 = 10%）
-    var totalDamageMul = 0;
+    let totalDamageMul = 0;
 
     RARITIES.forEach(r => {
       [state.rarities[r].potential.line1, state.rarities[r].potential.line2, state.rarities[r].potential.line3].forEach(l => {
         if (!l) return;
 
         if (l.suffix === "%") {
-          var v = (l.value || 0);
+          const v = (l.value || 0);
           if (l.key === "allStatRate") pct.allStatPct += v;
           else if (l.key === "strRate") pct.strPct += v;
           else if (l.key === "agiRate") pct.agiPct += v;
@@ -212,7 +212,7 @@
     });
 
     // 合併 %→平坦鍵
-    for (var k in pct) {
+    for (const k in pct) {
       if (!pct.hasOwnProperty(k)) continue;
       if (pct[k]) payload[k] = pct[k];
     }
@@ -235,10 +235,10 @@
   }
 
   // [UI 相關]
-  
+
 
   // 簡易彈窗（不足提示等）
-  var popupEl = null;
+  let popupEl = null;
   function showPopup(title, msg) {
     try {
       if (!modalEl) { global.alert ? global.alert(msg) : console.log(msg); return; }
@@ -269,27 +269,27 @@
   function hidePopup() { if (popupEl) popupEl.style.display = "none"; }
 
   function renderExchangeMain() {
-    var container = modalEl.querySelector("#main-scroll");
+    const container = modalEl.querySelector("#main-scroll");
     container.innerHTML = "";
 
-    var title = document.createElement("div");
+    const title = document.createElement("div");
     title.style.cssText = "display:flex; flex-direction:column; gap:6px; align-items:flex-start; margin-bottom:14px;";
     title.innerHTML = `<div class="cb-section-title">硬幣交換</div>
       <div class="cb-muted">規則：低階硬幣 <b>×20</b> 可換高一階硬幣 <b>×1</b>（最高到 SLR）。</div>`;
     container.appendChild(title);
 
-    var wrap = document.createElement("div");
+    const wrap = document.createElement("div");
     wrap.style.cssText = "display:flex; flex-direction:column; gap:10px;";
     container.appendChild(wrap);
 
     RARITIES.forEach(r => {
-      var next = NEXT_RARITY[r];
+      const next = NEXT_RARITY[r];
       if (!next) return;
 
-      var have = getCoin(r);
-      var times = Math.floor(have / 20);
+      const have = getCoin(r);
+      const times = Math.floor(have / 20);
 
-      var row = document.createElement("div");
+      const row = document.createElement("div");
       row.className = "ex-row";
 
       row.innerHTML = `
@@ -303,12 +303,12 @@
         </div>
       `;
 
-      var oneBtn = row.querySelector('[data-act="one"]');
-      var allBtn = row.querySelector('[data-act="all"]');
+      const oneBtn = row.querySelector('[data-act="one"]');
+      const allBtn = row.querySelector('[data-act="all"]');
 
       function updateDisabled() {
-        var h = getCoin(r);
-        var t = Math.floor(h / 20);
+        const h = getCoin(r);
+        const t = Math.floor(h / 20);
         oneBtn.disabled = t < 1;
         allBtn.disabled = t < 1;
         row.querySelector('.ex-left .cb-muted').innerHTML =
@@ -323,8 +323,8 @@
       };
 
       allBtn.onclick = () => {
-        var h = getCoin(r);
-        var t = Math.floor(h / 20);
+        const h = getCoin(r);
+        const t = Math.floor(h / 20);
         if (t <= 0) return;
         if (!spendCoin(r, t * 20)) return;
         addCoin(next, t);
@@ -337,7 +337,7 @@
       wrap.appendChild(row);
     });
 
-    var tip = document.createElement("div");
+    const tip = document.createElement("div");
     tip.className = "cb-muted";
     tip.style.cssText = "margin-top:10px; line-height:1.5;";
     tip.innerHTML = "提示：交換只改變硬幣數量，不會影響你已解鎖或已升級的圖鑑進度。";
@@ -345,7 +345,7 @@
   }
 
 function renderMain() {
-    var container = modalEl.querySelector("#main-scroll");
+    const container = modalEl.querySelector("#main-scroll");
     container.innerHTML = "";
 
     if (activeRarity === EXCHANGE_TAB) {
@@ -353,30 +353,30 @@ function renderMain() {
       return;
     }
 
-    var rarity = activeRarity, data = state.rarities[rarity], theme = THEME[rarity];
-    
-    var header = document.createElement("div"); header.style.cssText = "display:flex; flex-direction:column; align-items:center; margin-bottom:15px;";
+    const rarity = activeRarity, data = state.rarities[rarity], theme = THEME[rarity];
+
+    const header = document.createElement("div"); header.style.cssText = "display:flex; flex-direction:column; align-items:center; margin-bottom:15px;";
     header.innerHTML = `<div style="font-size:18px; font-weight:900;">${rarity} CLASS</div><div style="font-size:11px; color:${theme.color};">持有硬幣: ${getCoin(rarity)}</div>`;
-    
-    var batchBtn = document.createElement("button"); batchBtn.textContent = "⚡ 一鍵升級本階";
+
+    const batchBtn = document.createElement("button"); batchBtn.textContent = "⚡ 一鍵升級本階";
     Object.assign(batchBtn.style, { marginTop:"8px", padding: "8px 20px", borderRadius: "10px", background: theme.color, border: "none", color: "#000", cursor: "pointer", fontSize: "12px", fontWeight: "900" });
     batchBtn.onclick = () => { data.cards.forEach(c => { if(c.unlocked) { while(c.level < RARITY_CONFIG[rarity].maxLevel && spendCoin(rarity, (c.level+1)*5)) { c.level++; } } }); saveState(); refreshUI(); applyToPlayer(); };
     header.appendChild(batchBtn); container.appendChild(header);
 
     if(rarity !== "N") {
-      var lv15Count = data.cards.filter(c => c.unlocked && c.level >= 15).length;
-      var isUnlocked = lv15Count >= 2;
+      const lv15Count = data.cards.filter(c => c.unlocked && c.level >= 15).length;
+      const isUnlocked = lv15Count >= 2;
 
-      var potBox = document.createElement("div"); potBox.style.cssText = `background:${theme.bg}; border:1px solid ${theme.border}66; border-radius:20px; padding:15px; margin-bottom:20px; text-align:center; position:relative;`;
-      
+      const potBox = document.createElement("div"); potBox.style.cssText = `background:${theme.bg}; border:1px solid ${theme.border}66; border-radius:20px; padding:15px; margin-bottom:20px; text-align:center; position:relative;`;
+
       if(!isUnlocked) {
         potBox.innerHTML = `<div style="opacity:0.4; font-size:12px; height:80px; display:flex; flex-direction:column; align-items:center; justify-content:center;"><div>🔒 需 2 隻 Lv.15 開放洗鍊</div><div style="font-size:10px; margin-top:5px;">進度: ${lv15Count} / 2</div></div>`;
       } else {
-        var currentTierName = RARITIES[data.potential.tier];
-        var tierColor = THEME[currentTierName]?.color || "#fff";
-        var maxTierIdx = RARITIES.indexOf(rarity);
-        var isMaxTier = data.potential.tier >= maxTierIdx;
-        var nextProb = TIER_UP_CHANCE[currentTierName] ? (TIER_UP_CHANCE[currentTierName] * 100).toFixed(2) + "%" : "0%";
+        const currentTierName = RARITIES[data.potential.tier];
+        const tierColor = THEME[currentTierName]?.color || "#fff";
+        const maxTierIdx = RARITIES.indexOf(rarity);
+        const isMaxTier = data.potential.tier >= maxTierIdx;
+        const nextProb = TIER_UP_CHANCE[currentTierName] ? (TIER_UP_CHANCE[currentTierName] * 100).toFixed(2) + "%" : "0%";
 
         potBox.innerHTML = `
           <div class="tier-badge" style="background:${tierColor}22; color:${tierColor}; border:1px solid ${tierColor}44;">POTENTIAL ${currentTierName}</div>
@@ -388,16 +388,16 @@ function renderMain() {
           </div>
           <button id="roll-pot" style="background:#fff; color:#000; border:none; padding:10px 35px; border-radius:12px; font-weight:900; cursor:pointer;">洗 鍊 (20)</button>
         `;
-        
-        potBox.querySelector("#roll-pot").onclick = () => { 
-          if(isRolling || !spendCoin(rarity, 20)) return; 
-          isRolling = true; 
-          var disp = potBox.querySelector("#pot-disp"); 
-          disp.classList.add("pot-rolling"); 
-          
-          setTimeout(() => { 
+
+        potBox.querySelector("#roll-pot").onclick = () => {
+          if(isRolling || !spendCoin(rarity, 20)) return;
+          isRolling = true;
+          const disp = potBox.querySelector("#pot-disp");
+          disp.classList.add("pot-rolling");
+
+          setTimeout(() => {
             // 判定升階
-            var upChance = TIER_UP_CHANCE[currentTierName] || 0;
+            const upChance = TIER_UP_CHANCE[currentTierName] || 0;
             if(!isMaxTier && Math.random() < upChance) {
               data.potential.tier++;
             }
@@ -405,22 +405,22 @@ function renderMain() {
             data.potential.line1 = getRandomPot(data.potential.tier);
             data.potential.line2 = getRandomPot(Math.max(1, data.potential.tier - 1));
             data.potential.line3 = getRandomPot(Math.max(1, data.potential.tier - 1));
-            
-            isRolling = false; saveState(); refreshUI(); applyToPlayer(); 
-          }, 500); 
+
+            isRolling = false; saveState(); refreshUI(); applyToPlayer();
+          }, 500);
         };
       }
       container.appendChild(potBox);
     }
 
-    var grid = document.createElement("div"); grid.style.cssText = "display:grid; grid-template-columns:1fr; gap:12px;";
+    const grid = document.createElement("div"); grid.style.cssText = "display:grid; grid-template-columns:1fr; gap:12px;";
     if (window.innerWidth > 600) grid.style.gridTemplateColumns = "1fr 1fr";
     data.cards.forEach(c => {
-      var isMax = c.unlocked && c.level >= RARITY_CONFIG[rarity].maxLevel;
-      var el = document.createElement("div"); el.className = "card-item " + (c.unlocked ? "" : "locked-card") + (rarity === "SLR" ? " slr-card" : "");
+      const isMax = c.unlocked && c.level >= RARITY_CONFIG[rarity].maxLevel;
+      const el = document.createElement("div"); el.className = "card-item " + (c.unlocked ? "" : "locked-card") + (rarity === "SLR" ? " slr-card" : "");
       el.style.cssText = `background:#0f172a; border-radius:20px; padding:15px; border:1px solid ${isMax?theme.color:'#1e293b'}; text-align:center;`;
       el.innerHTML = `<div style="margin-bottom:8px; position:relative;">${!c.unlocked ? `<div style="position:absolute; top:-6px; left:50%; transform:translateX(-50%); padding:3px 10px; border-radius:999px; background:rgba(0,0,0,0.35); border:1px solid rgba(148,163,184,0.25); font-size:10px; font-weight:900; color:#e2e8f0;">未解鎖</div>` : ``}<b style="font-size:15px; display:block;">${c.name}</b><div style="color:${theme.color}; font-size:11px; font-weight:900;">Lv.${c.level}</div></div><div style="width:100%; height:5px; background:#020617; border-radius:3px; overflow:hidden; margin-bottom:12px;"><div style="width:${(c.level/RARITY_CONFIG[rarity].maxLevel)*100}%; height:100%; background:linear-gradient(90deg, ${theme.color}, #fff); transition: width 0.3s;"></div></div>`;
-      var btn = document.createElement("button");
+      let btn = document.createElement("button");
       if(!c.unlocked){ btn.textContent = "解 鎖 (1)"; Object.assign(btn.style, btnStyle(theme.color, true)); btn.onclick = () => { if(spendCoin(rarity,1)){ c.unlocked=true; saveState(); refreshUI(); applyToPlayer(); } }; }
       else if(!isMax){ btn.textContent = `升 級 (${(c.level+1)*5})`; Object.assign(btn.style, btnStyle("#1e293b", false)); btn.onclick = () => { if(spendCoin(rarity, (c.level+1)*5)){ c.level++; saveState(); refreshUI(); applyToPlayer(); } }; }
       else { btn = document.createElement("div"); btn.innerHTML = "<div style='font-size:11px; color:"+theme.color+"; font-weight:900; border:1px solid "+theme.color+"44; border-radius:8px; padding:4px;'>MAX</div>"; }
@@ -430,39 +430,39 @@ function renderMain() {
   }
 
   // 其他輔助函數維持原樣
-  var COIN_NAME = { N: "怪物硬幣N", R: "怪物硬幣R", SR: "怪物硬幣SR", SSR: "怪物硬幣SSR", UR: "怪物硬幣UR", LR: "怪物硬幣LR", SLR: "怪物硬幣SLR" };
-  var THEME = { N: { color: "#94a3b8", bg: "rgba(148,163,184,0.1)", border: "#475569" }, R: { color: "#3b82f6", bg: "rgba(59,130,246,0.1)", border: "#2563eb" }, SR: { color: "#a855f7", bg: "rgba(168,85,247,0.1)", border: "#7e22ce" }, SSR: { color: "#eab308", bg: "rgba(234,179,8,0.1)", border: "#ca8a04" }, UR: { color: "#ef4444", bg: "rgba(239,68,68,0.1)", border: "#dc2626" }, LR: { color: "#10b981", bg: "rgba(16,185,129,0.1)", border: "#059669" }, SLR: { color: "#f472b6", bg: "rgba(244,114,182,0.1)", border: "#db2777" } };
+  const COIN_NAME = { N: "怪物硬幣N", R: "怪物硬幣R", SR: "怪物硬幣SR", SSR: "怪物硬幣SSR", UR: "怪物硬幣UR", LR: "怪物硬幣LR", SLR: "怪物硬幣SLR" };
+  const THEME = { N: { color: "#94a3b8", bg: "rgba(148,163,184,0.1)", border: "#475569" }, R: { color: "#3b82f6", bg: "rgba(59,130,246,0.1)", border: "#2563eb" }, SR: { color: "#a855f7", bg: "rgba(168,85,247,0.1)", border: "#7e22ce" }, SSR: { color: "#eab308", bg: "rgba(234,179,8,0.1)", border: "#ca8a04" }, UR: { color: "#ef4444", bg: "rgba(239,68,68,0.1)", border: "#dc2626" }, LR: { color: "#10b981", bg: "rgba(16,185,129,0.1)", border: "#059669" }, SLR: { color: "#f472b6", bg: "rgba(244,114,182,0.1)", border: "#db2777" } };
   function getCoin(r) { return Number(global.getItemQuantity ? global.getItemQuantity(COIN_NAME[r]) : 0); }
   function spendCoin(r, a) { if (getCoin(r) < a) { showPopup("數量不夠", "你的「"+r+"」硬幣不足以進行交換。"); return false; } if (global.removeItem) global.removeItem(COIN_NAME[r], a); return true; }
   function addCoin(r, a) {
     if (!a) return;
-    var name = COIN_NAME[r];
+    const name = COIN_NAME[r];
     if (global.addItem) global.addItem(name, a);
     else if (global.gainItem) global.gainItem(name, a);
     else if (global.addItemQuantity) global.addItemQuantity(name, a);
     else if (global.addToInventory) global.addToInventory(name, a);
     else console.warn("[CollectionBook] 找不到 addItem/gainItem 之類的方法，無法發放：", name, a);
   }
-  function refreshUI() { if(!modalEl) return; var sc = modalEl.querySelector("#main-scroll"); var cp = sc.scrollTop; renderStats(); renderMain(); requestAnimationFrame(() => { sc.scrollTop = cp; }); }
+  function refreshUI() { if(!modalEl) return; const sc = modalEl.querySelector("#main-scroll"); const cp = sc.scrollTop; renderStats(); renderMain(); requestAnimationFrame(() => { sc.scrollTop = cp; }); }
   function btnStyle(c, o) { return { width:"100%", padding:"10px", borderRadius:"12px", border:"1px solid "+c, background:o?"transparent":c, color:o?c:"#fff", cursor:"pointer", fontWeight:"900", fontSize:"13px" }; }
 
   function loadState() {
-    var NAMES = { 
-      N: ["綠水靈","藍水靈","小螃蟹","蘑菇寶寶","小蝸蝸","水靈"], 
-      R: ["黃水靈","火焰螃蟹","岩石史萊姆","黑色史萊姆","青菇寶寶"], 
-      SR: ["烈焰精靈","冰霜精靈","暴走螃蟹","暗影蝸牛","黃金菇菇"], 
-      SSR: ["赤紅龍幼體","冰晶龍幼體","深淵史萊姆王","詛咒騎士","暴風魔眼"], 
-      UR: ["深淵領主","墮落天使","雷霆巨龍","虛空螃蟹王","時空魔導"], 
-      LR: ["黑曜龍王","天焰主宰","混沌魔神","古代守護者","審判之眼"], 
-      SLR: ["終焉之龍","創世天使","永劫魔神","命運織者","虛無之王"] 
+    const NAMES = {
+      N: ["綠水靈","藍水靈","小螃蟹","蘑菇寶寶","小蝸蝸","水靈"],
+      R: ["黃水靈","火焰螃蟹","岩石史萊姆","黑色史萊姆","青菇寶寶"],
+      SR: ["烈焰精靈","冰霜精靈","暴走螃蟹","暗影蝸牛","黃金菇菇"],
+      SSR: ["赤紅龍幼體","冰晶龍幼體","深淵史萊姆王","詛咒騎士","暴風魔眼"],
+      UR: ["深淵領主","墮落天使","雷霆巨龍","虛空螃蟹王","時空魔導"],
+      LR: ["黑曜龍王","天焰主宰","混沌魔神","古代守護者","審判之眼"],
+      SLR: ["終焉之龍","創世天使","永劫魔神","命運織者","虛無之王"]
     };
-    var def = { rarities: {} };
+    const def = { rarities: {} };
     RARITIES.forEach(r => { def.rarities[r] = { cards: NAMES[r].map(n => ({ name: n, unlocked: false, level: 0 })), potential: { tier: 1, line1: null, line2: null, line3: null } }; });
     state = global.SaveHub ? global.SaveHub.getOrInit(NS_KEY, def) : def;
     RARITIES.forEach(r => {
-      var currentCards = state.rarities[r].cards;
-      var currentNames = currentCards.map(c => c.name);
-      NAMES[r].forEach(name => { if (!currentNames.includes(name)) currentCards.push({ name: name, unlocked: false, level: 0 }); });
+      const currentCards = state.rarities[r].cards;
+      const currentNames = currentCards.map(c => c.name);
+      NAMES[r].forEach(name => { if (!currentNames.includes(name)) currentCards.push({ name, unlocked: false, level: 0 }); });
     });
   }
 
@@ -470,7 +470,7 @@ function renderMain() {
 
   function openModal(r) {
     loadState(); if (r) activeRarity = r;
-    var bd = document.createElement("div"); bd.id = "cb-backdrop";
+    const bd = document.createElement("div"); bd.id = "cb-backdrop";
     Object.assign(bd.style, { position: "fixed", inset: "0", background: "rgba(0,0,0,0.85)", zIndex: "9997", backdropFilter: "blur(8px)" });
     modalEl = document.createElement("div"); modalEl.className = "cb-container";
     Object.assign(modalEl.style, { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", background: "#020617", color: "#f8fafc", borderRadius: "28px", border: "1px solid #1e293b", width: "95%", maxWidth: "850px", height: "85vh", zIndex: "9998", overflow: "hidden" });
@@ -482,11 +482,11 @@ function renderMain() {
   }
 
   function renderStats() {
-    var s = computeTotalStats(); var panel = modalEl.querySelector("#stats-panel");
+    const s = computeTotalStats(); const panel = modalEl.querySelector("#stats-panel");
     panel.innerHTML = "";
-    var bG = document.createElement("div"); bG.className = "grid-base";
+    const bG = document.createElement("div"); bG.className = "grid-base";
     bG.innerHTML = `<div class="stat-row-center"><span class="stat-label">攻擊</span><span class="stat-value">+${s.base.atk}</span></div><div class="stat-row-center"><span class="stat-label">生命</span><span class="stat-value">+${s.base.hp}</span></div><div class="stat-row-center"><span class="stat-label">全能</span><span class="stat-value">+${s.base.allStat}</span></div>`;
-    var pG = document.createElement("div"); pG.className = "grid-pot";
+    const pG = document.createElement("div"); pG.className = "grid-pot";
     s.potList.sort((a,b) => b.value - a.value).forEach(p => {
       pG.innerHTML += `<div class="stat-row-center"><span class="stat-label">${p.label}</span><span class="stat-value pot-value">+${p.value.toFixed(1)}${p.suffix}</span></div>`;
     });
@@ -494,10 +494,10 @@ function renderMain() {
   }
 
   function renderTabs() {
-    var row = modalEl.querySelector("#tab-row"); row.innerHTML = "";
+    const row = modalEl.querySelector("#tab-row"); row.innerHTML = "";
 
     function makeBtn(label, isActive, borderColor, bgColor, textColor, onClick) {
-      var btn = document.createElement("button");
+      const btn = document.createElement("button");
       btn.textContent = label;
       Object.assign(btn.style, {
         padding: "7px 16px",
@@ -515,8 +515,8 @@ function renderMain() {
 
     // 稀有度頁籤
     RARITIES.forEach(r => {
-      var active = activeRarity === r;
-      var btn = makeBtn(
+      const active = activeRarity === r;
+      const btn = makeBtn(
         r,
         active,
         active ? THEME[r].border : "#1e293b",
@@ -528,8 +528,8 @@ function renderMain() {
     });
 
     // 交換頁籤
-    var exActive = activeRarity === EXCHANGE_TAB;
-    var exBtn = makeBtn(
+    const exActive = activeRarity === EXCHANGE_TAB;
+    const exBtn = makeBtn(
       "交換",
       exActive,
       exActive ? "#e2e8f0" : "#1e293b",

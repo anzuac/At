@@ -332,7 +332,7 @@
 
     // 對外提供只做「輕量刷新」的方法（不會重建，不會清空輸入框）
     container._shop = {
-      refreshAll: function(){
+      refreshAll(){
         for (const fn of refreshers) try { fn(); } catch(e){}
       }
     };
@@ -348,7 +348,7 @@
     w.ShopHub.registerTab({
       id: "shop_main",
       title: "主商店",
-      render: function(container){
+      render(container){
         // 建立穩定的真實 DOM 根節點，不直接依賴外部 container 內部結構
         if (container && container.querySelector) {
           hubRoot = container.querySelector(":scope > .shop-root");
@@ -368,7 +368,7 @@
         hubRoot._shop?.refreshAll?.();  // 每次顯示僅輕量刷新
       },
       // ShopHub 若會定時呼叫 tick，就只做輕量刷新，避免重建 DOM
-      tick: function(){
+      tick(){
         hubRoot?._shop?.refreshAll?.();
       }
     });

@@ -12,24 +12,24 @@
 
   // ======== 可調參數 ========
   // SaveHub 命名空間（若無 SaveHub 則回退 localStorage）
-  var SAVE_NS = "shield_system_v4";
-  var LS_KEY  = "護盾系統";
+  const SAVE_NS = "shield_system_v4";
+  const LS_KEY  = "護盾系統";
 
   // 道具名稱
-  var ITEM_REFILL    = "護盾補充器";
-  var ITEM_TICKET    = "護盾免費升級券";
-  var ITEM_CAPSTONE  = "擴充護盾上限石";
+  const ITEM_REFILL    = "護盾補充器";
+  const ITEM_TICKET    = "護盾免費升級券";
+  const ITEM_CAPSTONE  = "擴充護盾上限石";
 
   // 解鎖與等級上限
-  var UNLOCK_COST_GOLD = 50000;
-  var LV_CAP_GENERAL   = 40; // 金幣上限
-  var LV_CAP_TICKET    = 50; // 券上限
+  const UNLOCK_COST_GOLD = 50000;
+  const LV_CAP_GENERAL   = 40; // 金幣上限
+  const LV_CAP_TICKET    = 50; // 券上限
 
   // 補充量曲線（Lv1=500；2~10 +400；11~20 +300；21~30 +200；31+ +300）
   function SHIELD_GAIN_FOR_LEVEL(L){
     if (L <= 0) return 0;
-    var gain = 500;
-    for (var i=2;i<=L;i++){
+    let gain = 500;
+    for (let i=2;i<=L;i++){
       if (i<=10) gain += 400;
       else if (i<=20) gain += 300;
       else if (i<=30) gain += 200;
@@ -40,8 +40,8 @@
 
   // HP 加成曲線（1~10 +200；11~30 +300；31~50 +700）
   function HP_BONUS_FOR_LEVEL(L){
-    var sum = 0;
-    for (var i=1;i<=L;i++){
+    let sum = 0;
+    for (let i=1;i<=L;i++){
       if (i<=10) sum += 200;
       else if (i<=30) sum += 300;
       else sum += 700;
@@ -50,32 +50,32 @@
   }
 
   // 上限倍率（基礎＋擴充）：基礎 1.5×，每步 +0.05×，最多 5.0×
-  var CAP_BASE_MULT   = 1.5;
-  var CAP_STEP_MULT   = 0.05;
-  var CAP_MULT_MAX    = 5.0;  // 500%
-  var CAP_STEPS_MAX   = Math.floor((CAP_MULT_MAX - CAP_BASE_MULT) / CAP_STEP_MULT); // 70
+  const CAP_BASE_MULT   = 1.5;
+  const CAP_STEP_MULT   = 0.05;
+  const CAP_MULT_MAX    = 5.0;  // 500%
+  const CAP_STEPS_MAX   = Math.floor((CAP_MULT_MAX - CAP_BASE_MULT) / CAP_STEP_MULT); // 70
 
   // 升級費用（僅金幣；券免費）: 10000 * L^2（L=0/1 以 10000 計）
-  var GOLD_BASE_COST = 10000;
-  var GOLD_COST_EXP  = 2.0;
+  const GOLD_BASE_COST = 10000;
+  const GOLD_COST_EXP  = 2.0;
   function GOLD_COST_FOR_NEXT(L){
-    var cur = Math.max(0, L|0);
+    const cur = Math.max(0, L|0);
     if (cur <= 1) return GOLD_BASE_COST;
     return Math.floor(GOLD_BASE_COST * Math.pow(cur, GOLD_COST_EXP));
   }
 
   // 自動補：門檻範圍與最小間隔上限（UI 輸入會被夾斷）
-  var AUTO_THRESHOLD_MIN = 0;     // 0%
-  var AUTO_THRESHOLD_MAX = 1;     // 100%
-  var AUTO_INTERVAL_MIN  = 0;     // ms
-  var AUTO_INTERVAL_MAX  = 60000; // 60s
+  const AUTO_THRESHOLD_MIN = 0;     // 0%
+  const AUTO_THRESHOLD_MAX = 1;     // 100%
+  const AUTO_INTERVAL_MIN  = 0;     // ms
+  const AUTO_INTERVAL_MAX  = 60000; // 60s
 
   // 防禦被動（可選）
-  var DEF_PASSIVE_ENABLED    = false;       // ← 想開就改 true
-  var DEF_PASSIVE_MODE       = "flatDef";   // "flatDef" 或 "damageReduce"
-  var DEF_PER_LEVEL          = 3;           // 當 MODE=flatDef：每等 +DEF
-  var DR_PER_LEVEL           = 0.002;       // 當 MODE=damageReduce：每等 +0.2%
-  var DR_TOTAL_CAP           = 0.15;        // 減傷上限（僅本模組貢獻）
+  const DEF_PASSIVE_ENABLED    = false;       // ← 想開就改 true
+  const DEF_PASSIVE_MODE       = "flatDef";   // "flatDef" 或 "damageReduce"
+  const DEF_PER_LEVEL          = 3;           // 當 MODE=flatDef：每等 +DEF
+  const DR_PER_LEVEL           = 0.002;       // 當 MODE=damageReduce：每等 +0.2%
+  const DR_TOTAL_CAP           = 0.15;        // 減傷上限（僅本模組貢獻）
 
   // ======== 工具 ========
   function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
@@ -106,10 +106,10 @@
   }
 
   // ======== Save 層（SaveHub 優先）========
-  var useSaveHub = !!w.SaveHub;
+  const useSaveHub = !!w.SaveHub;
   if (useSaveHub){
     try{
-      var spec={}; spec[SAVE_NS] = { version:1, migrate:function(old){ return normalizeState(old||freshState()); } };
+      const spec={}; spec[SAVE_NS] = { version:1, migrate(old){ return normalizeState(old||freshState()); } };
       w.SaveHub.registerNamespaces(spec);
     }catch(_){}
   }
@@ -122,7 +122,7 @@
   function loadObj(){
     try{
       if (useSaveHub) return w.SaveHub.get(SAVE_NS, freshState());
-      var raw = localStorage.getItem(LS_KEY);
+      const raw = localStorage.getItem(LS_KEY);
       return raw ? JSON.parse(raw) : freshState();
     }catch(_){ return freshState(); }
   }
@@ -151,7 +151,7 @@
     return o;
   }
 
-  var S = normalizeState(loadObj());
+  const S = normalizeState(loadObj());
   function save(){ saveObj(S); }
 
   // ======== 推導數值 ========
@@ -164,11 +164,11 @@
   function applyToPlayer(){
     if (!w.player || !w.player.coreBonus) return;
 
-    var cap  = maxShield();
-    var hpPl = hpBonus();
+    const cap  = maxShield();
+    const hpPl = hpBonus();
 
     w.player.coreBonus.bonusData = w.player.coreBonus.bonusData || {};
-    var bag = w.player.coreBonus.bonusData.shieldSys = {};
+    const bag = w.player.coreBonus.bonusData.shieldSys = {};
 
     // HP 被動
     bag.hp = hpPl;
@@ -184,18 +184,18 @@
 
     // 上限與護盾值（用存檔為準）
     w.player.maxShield = cap;
-    var fromSave = Math.max(0, Number(S.shieldValue)||0);
+    const fromSave = Math.max(0, Number(S.shieldValue)||0);
     w.player.shield = Math.min(fromSave, cap);
 
     try{ w.updateResourceUI && w.updateResourceUI(); w.saveGame && w.saveGame(); }catch(_){}
   }
 
   // 週期同步（若外部戰鬥改了 player.shield，也會被存）
-  var _lastSnap = S.shieldValue|0;
-  setInterval(function(){
+  let _lastSnap = S.shieldValue|0;
+  setInterval(() =>{
     if (!w.player) return;
-    var cap = maxShield();
-    var cur = Math.max(0, Math.min(Number(w.player.shield||0), cap));
+    const cap = maxShield();
+    const cur = Math.max(0, Math.min(Number(w.player.shield||0), cap));
     if (cur !== _lastSnap){
       _lastSnap = cur;
       S.shieldValue = cur;
@@ -224,7 +224,7 @@
   function upgradeGold(){
     if (!S.unlocked){ toast("尚未解鎖", true); return; }
     if (!canRaiseTo("gold")){ toast("金幣升級已達上限（"+LV_CAP_GENERAL+"）", true); return; }
-    var cost = GOLD_COST_FOR_NEXT(S.level);
+    const cost = GOLD_COST_FOR_NEXT(S.level);
     if ((w.player.gold||0) < cost){ toast("金幣不足，需要 " + fmt(cost), true); return; }
     w.player.gold -= cost;
     S.level += 1; save(); applyToPlayer();
@@ -256,12 +256,12 @@
     if (!S.unlocked) return { ok:false, reason:"locked" };
     if (invQty(ITEM_REFILL) <= 0) return { ok:false, reason:"no_item" };
 
-    var cap = maxShield();
+    const cap = maxShield();
     if (cap <= 0) return { ok:false, reason:"cap0" };
 
-    var cur = Math.max(0, Math.min(Number(w.player.shield||0), cap));
-    var thr01 = clamp(Number(S.auto.threshold01)||0, AUTO_THRESHOLD_MIN, AUTO_THRESHOLD_MAX);
-    var minInt = clamp(Number(S.auto.minIntervalMs)||0, AUTO_INTERVAL_MIN, AUTO_INTERVAL_MAX);
+    const cur = Math.max(0, Math.min(Number(w.player.shield||0), cap));
+    const thr01 = clamp(Number(S.auto.threshold01)||0, AUTO_THRESHOLD_MIN, AUTO_THRESHOLD_MAX);
+    const minInt = clamp(Number(S.auto.minIntervalMs)||0, AUTO_INTERVAL_MIN, AUTO_INTERVAL_MAX);
 
     if ((now() - (S.lastAutoTs||0)) < minInt) return { ok:false, reason:"interval" };
     if (cur / cap > thr01) return { ok:false, reason:"over_threshold" };
@@ -269,7 +269,7 @@
   }
 
   function refill(isManual){
-    var chk = canRefill();
+    const chk = canRefill();
     if (!chk.ok){
       if (isManual){
         if (chk.reason==="over_threshold") toast("護盾尚未低於門檻", true);
@@ -282,10 +282,10 @@
     }
     if (!invRemove(ITEM_REFILL,1)){ if(isManual) toast("道具扣除失敗", true); return false; }
 
-    var cap    = maxShield();
-    var add    = currentRefill();
-    var cur    = Math.max(0, Math.min(Number(w.player.shield||0), cap));
-    var after  = Math.min(cur + add, cap); // 超出丟棄
+    const cap    = maxShield();
+    const add    = currentRefill();
+    const cur    = Math.max(0, Math.min(Number(w.player.shield||0), cap));
+    const after  = Math.min(cur + add, cap); // 超出丟棄
 
     w.player.shield = after;
     S.shieldValue   = after;
@@ -297,7 +297,7 @@
   }
 
   // 自動補 loop
-  setInterval(function(){
+  setInterval(() =>{
     if (!S.unlocked || !S.auto.enabled) return;
     refill(false);
   }, 500);
@@ -306,19 +306,19 @@
   function render(container){
     applyToPlayer();
 
-    var lv = S.level|0;
-    var refillAmt = currentRefill();
-    var cMul = capMultiplier();
-    var cap  = maxShield();
-    var cur  = Math.max(0, Math.min(Number(w.player.shield||0), cap));
-    var hpPl = hpBonus();
-    var goldCost = GOLD_COST_FOR_NEXT(lv);
+    const lv = S.level|0;
+    const refillAmt = currentRefill();
+    const cMul = capMultiplier();
+    const cap  = maxShield();
+    const cur  = Math.max(0, Math.min(Number(w.player.shield||0), cap));
+    const hpPl = hpBonus();
+    const goldCost = GOLD_COST_FOR_NEXT(lv);
 
-    var qRefill = invQty(ITEM_REFILL);
-    var qTicket = invQty(ITEM_TICKET);
-    var qCap    = invQty(ITEM_CAPSTONE);
+    const qRefill = invQty(ITEM_REFILL);
+    const qTicket = invQty(ITEM_TICKET);
+    const qCap    = invQty(ITEM_CAPSTONE);
 
-    var thr = Math.round(clamp(Number(S.auto.threshold01)||0,0,1)*100);
+    const thr = Math.round(clamp(Number(S.auto.threshold01)||0,0,1)*100);
 
     container.innerHTML =
       '<div style="background:#0b1220;border:1px solid #1f2937;border-radius:12px;padding:12px;display:grid;gap:12px">'+
@@ -334,7 +334,7 @@
              '</div>';
     }
     function summary(){
-      var defPassiveText = DEF_PASSIVE_ENABLED
+      const defPassiveText = DEF_PASSIVE_ENABLED
         ? (DEF_PASSIVE_MODE==="flatDef"
             ? ('防禦被動：每等 +'+DEF_PER_LEVEL+' DEF')
             : ('防禦被動：每等 +'+(DR_PER_LEVEL*100).toFixed(2)+'% 減傷（上限 '+(DR_TOTAL_CAP*100).toFixed(0)+'%）'))
@@ -412,26 +412,26 @@
 
     // 綁定
     if (!S.unlocked){
-      var u = container.querySelector('#btnUnlock'); if (u) u.onclick = function(){ unlock(); w.GrowthHub && w.GrowthHub.requestRerender && w.GrowthHub.requestRerender(); };
+      const u = container.querySelector('#btnUnlock'); if (u) u.onclick = function(){ unlock(); w.GrowthHub && w.GrowthHub.requestRerender && w.GrowthHub.requestRerender(); };
       return;
     }
-    var g = container.querySelector('#btnGoldUp');   if (g) g.onclick = function(){ upgradeGold();   w.GrowthHub && w.GrowthHub.requestRerender && w.GrowthHub.requestRerender(); };
-    var t = container.querySelector('#btnTicketUp'); if (t) t.onclick = function(){ upgradeTicket(); w.GrowthHub && w.GrowthHub.requestRerender && w.GrowthHub.requestRerender(); };
-    var cap = container.querySelector('#btnCapUp');  if (cap) cap.onclick = function(){ extendCap(); w.GrowthHub && w.GrowthHub.requestRerender && w.GrowthHub.requestRerender(); };
+    const g = container.querySelector('#btnGoldUp');   if (g) g.onclick = function(){ upgradeGold();   w.GrowthHub && w.GrowthHub.requestRerender && w.GrowthHub.requestRerender(); };
+    const t = container.querySelector('#btnTicketUp'); if (t) t.onclick = function(){ upgradeTicket(); w.GrowthHub && w.GrowthHub.requestRerender && w.GrowthHub.requestRerender(); };
+    const capBtn = container.querySelector('#btnCapUp');  if (capBtn) capBtn.onclick = function(){ extendCap(); w.GrowthHub && w.GrowthHub.requestRerender && w.GrowthHub.requestRerender(); };
 
-    var chk = container.querySelector('#autoOn'); if (chk) chk.onchange = function(){ S.auto.enabled = !!this.checked; save(); };
+    const chk = container.querySelector('#autoOn'); if (chk) chk.onchange = function(){ S.auto.enabled = !!this.checked; save(); };
 
-    var thrEl = container.querySelector('#thr'); if (thrEl){
-      thrEl.oninput  = function(){ var v = clamp(Number(this.value)||0,0,100); container.querySelector('#thrText').textContent = v+'%'; };
-      thrEl.onchange = function(){ var v = clamp(Number(this.value)||0,0,100); S.auto.threshold01 = clamp(v/100, AUTO_THRESHOLD_MIN, AUTO_THRESHOLD_MAX); save(); };
+    const thrEl = container.querySelector('#thr'); if (thrEl){
+      thrEl.oninput  = function(){ const v = clamp(Number(this.value)||0,0,100); container.querySelector('#thrText').textContent = v+'%'; };
+      thrEl.onchange = function(){ const v = clamp(Number(this.value)||0,0,100); S.auto.threshold01 = clamp(v/100, AUTO_THRESHOLD_MIN, AUTO_THRESHOLD_MAX); save(); };
     }
-    var minInt = container.querySelector('#minInt'); if (minInt){
+    const minInt = container.querySelector('#minInt'); if (minInt){
       minInt.onchange = function(){
-        var v = clamp(Math.floor(Number(this.value)||0), AUTO_INTERVAL_MIN, AUTO_INTERVAL_MAX);
+        const v = clamp(Math.floor(Number(this.value)||0), AUTO_INTERVAL_MIN, AUTO_INTERVAL_MAX);
         S.auto.minIntervalMs = v; this.value = v; save();
       };
     }
-    var rf = container.querySelector('#btnRefill'); if (rf) rf.onclick = function(){ refill(true); w.GrowthHub && w.GrowthHub.requestRerender && w.GrowthHub.requestRerender(); };
+    const rf = container.querySelector('#btnRefill'); if (rf) rf.onclick = function(){ refill(true); w.GrowthHub && w.GrowthHub.requestRerender && w.GrowthHub.requestRerender(); };
   }
 
   // 註冊 GrowthHub
@@ -439,15 +439,15 @@
     w.GrowthHub.registerTab({
       id: "shield",
       title: "護盾",
-      render: render,
-      tick: function(){},
-      onOpen: function(){ applyToPlayer(); }
+      render,
+      tick(){},
+      onOpen(){ applyToPlayer(); }
     });
   }
 
   // 啟動時套用
   (function boot(){
-    var tries = 0, t = setInterval(function(){
+    let tries = 0, t = setInterval(() =>{
       if (w.player && w.player.coreBonus){
         clearInterval(t); applyToPlayer();
       } else if (++tries > 200){ clearInterval(t); }
@@ -456,17 +456,17 @@
 
   // 對外
   w.ShieldSystem = {
-    getState: function(){ return JSON.parse(JSON.stringify(S)); },
+    getState(){ return JSON.parse(JSON.stringify(S)); },
     apply: applyToPlayer,
-    unlock: unlock,
-    refill: function(){ return refill(true); },
-    upgradeGold: upgradeGold,
-    upgradeTicket: upgradeTicket,
-    extendCap: extendCap,
+    unlock,
+    refill(){ return refill(true); },
+    upgradeGold,
+    upgradeTicket,
+    extendCap,
     // 讓外部在承受傷害後主動同步（可選）
-    syncShieldFromPlayer: function(){
-      var cap = maxShield();
-      var cur = Math.max(0, Math.min(Number(w.player && w.player.shield || 0), cap));
+    syncShieldFromPlayer(){
+      const cap = maxShield();
+      const cur = Math.max(0, Math.min(Number(w.player && w.player.shield || 0), cap));
       if (cur !== S.shieldValue){ S.shieldValue = cur; save(); }
     }
   };

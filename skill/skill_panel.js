@@ -82,7 +82,7 @@
 
     const snaps = window.AssistSkillPanelAPI.getSnapshot() || [];
 
-    snaps.forEach(function (snap) {
+    snaps.forEach((snap) => {
       // 🔹 register.js 那邊有把精通標記成 type: "mastery"
       const t = String(snap.type || "").toLowerCase();
 
@@ -319,7 +319,7 @@
       } catch (e) {
         console.error("[skill_panel] 初次 render 失敗：", e);
       }
-      setInterval(function () {
+      setInterval(() => {
         try {
           window.renderSkillPanel();
         } catch (e) {

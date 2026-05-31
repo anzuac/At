@@ -15,7 +15,7 @@ const JOB_CHANGE_REQUIREMENTS = [
 function getJobTierFromJobs(jobKey) {
   const map = window.jobs || {};
   let tier = 1;
-  let cur = String(jobKey || "").trim();
+  const cur = String(jobKey || "").trim();
   if (!cur) return tier;
 
   // 如果 jobKey 沒在 jobs 裡，就用名稱尾巴的數字推（例：archer5 -> 5）

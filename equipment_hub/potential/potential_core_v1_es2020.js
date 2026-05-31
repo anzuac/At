@@ -1,6 +1,6 @@
 // =======================================================
-// potential_core_v2_es5.js — 潛能規則核心（V2：每個裝備槽獨立潛能 + 指定部位潛能）
-// ES5
+// potential_core_v2_es2020.js — 潛能規則核心（V2：每個裝備槽獨立潛能 + 指定部位潛能）
+// ES2020+
 //
 // 依賴：window.SaveHub（可選）
 //      window.getItemQuantity / window.removeItem（inventory.js，可選）
@@ -34,13 +34,13 @@
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
   function weightedPick(items) {
-    var total = 0, i, wgt;
+    let total = 0, i, wgt;
     for (i = 0; i < items.length; i++) {
       wgt = n(items[i].w != null ? items[i].w : items[i].weight);
       if (wgt > 0) total += wgt;
     }
     if (total <= 0) return items[0];
-    var r = Math.random() * total, acc = 0;
+    let r = Math.random() * total, acc = 0;
     for (i = 0; i < items.length; i++) {
       wgt = n(items[i].w != null ? items[i].w : items[i].weight);
       if (wgt <= 0) continue;
@@ -57,23 +57,23 @@
   // - w: 權重（相對）
   // -----------------------------
   function pickFixedThenWeighted(list, lineTier) {
-    var fixed = [];
-    var rest = [];
-    var psum = 0;
-    for (var i = 0; i < list.length; i++) {
-      var it = list[i];
+    const fixed = [];
+    const rest = [];
+    let psum = 0;
+    for (let i = 0; i < list.length; i++) {
+      const it = list[i];
       if (!it) continue;
       if (it.p != null && meetsMinTier(lineTier, it.minTier)) {
-        var p = n(it.p);
+        const p = n(it.p);
         if (p > 0) { fixed.push(it); psum += p; continue; }
       }
       rest.push(it);
     }
-    var r = Math.random();
+    const r = Math.random();
     if (psum > 0 && r < psum) {
-      var t = r / psum;
-      var acc = 0;
-      for (var j = 0; j < fixed.length; j++) {
+      const t = r / psum;
+      let acc = 0;
+      for (let j = 0; j < fixed.length; j++) {
         acc += n(fixed[j].p) / psum;
         if (t <= acc) return fixed[j];
       }
@@ -84,12 +84,12 @@
 
   function tierValueLookup(valuesByTier, lineTier) {
     if (!valuesByTier) return 0;
-    var key = String(lineTier);
+    const key = String(lineTier);
     if (valuesByTier.hasOwnProperty(key)) return n(valuesByTier[key]);
     // 往下找最近可用階級
-    var order = ["特殊", "稀有", "罕見", "傳說", "唯一", "永恆"];
-    for (var i = tierIndex(lineTier); i >= 0; i--) {
-      var tn = order[i];
+    const order = ["特殊", "稀有", "罕見", "傳說", "唯一", "永恆"];
+    for (let i = tierIndex(lineTier); i >= 0; i--) {
+      const tn = order[i];
       if (valuesByTier.hasOwnProperty(tn)) return n(valuesByTier[tn]);
     }
     return 0;
@@ -98,20 +98,20 @@
   // -----------------------------
   // Slots（固定 9 格）
   // -----------------------------
-  var SLOTS = (function () {
+  const SLOTS = (function () {
     // 預設 9 格；若 UI 端有提供 window.POTENTIAL_SLOTS（陣列），就以它為準
-    var def = [
+    const def = [
       "weapon", "subWeapon",
     "hat", "glove", "suit", "shoes",
     "necklace", "earring", "ring"
     ];
     try {
-      var g = (typeof window !== "undefined") ? window : (typeof globalThis !== "undefined" ? globalThis : null);
-      var u = g && g.POTENTIAL_SLOTS;
+      const g = (typeof window !== "undefined") ? window : (typeof globalThis !== "undefined" ? globalThis : null);
+      const u = g && g.POTENTIAL_SLOTS;
       if (u && u.length) {
-        var out = [];
-        for (var i = 0; i < u.length; i++) {
-          var s = String(u[i] || "").trim();
+        const out = [];
+        for (let i = 0; i < u.length; i++) {
+          const s = String(u[i] || "").trim();
           if (s && out.indexOf(s) < 0) out.push(s);
         }
         if (out.length) return out;
@@ -124,7 +124,7 @@
   // SaveHub
   // -----------------------------
   function getSH() { return w.SaveHub || null; }
-  var NS = "potential_v2";
+  const NS = "potential_v2";
 
   function freshPotNode() {
     return { tier: "特殊", pity: 0, lines: [] };
@@ -134,12 +134,12 @@
   }
 
   function freshState() {
-    var pots = {};
-    for (var i = 0; i < SLOTS.length; i++) pots[SLOTS[i]] = freshSlotPot();
+    const pots = {};
+    for (let i = 0; i < SLOTS.length; i++) pots[SLOTS[i]] = freshSlotPot();
 
     return {
       _ver: 1,
-      pots: pots,
+      pots,
 
       // 裝備資料先空（只是 UI 顯示用）
       equip: {
@@ -153,13 +153,13 @@
   }
 
   (function registerNS() {
-    var SH = getSH();
+    const SH = getSH();
     if (!SH) { setTimeout(registerNS, 50); return; }
     try {
-      var schema = {
+      const schema = {
         version: 1,
-        migrate: function (old) {
-          var st = freshState();
+        migrate (old) {
+          const st = freshState();
           if (!old || typeof old !== "object") return st;
 
           if (old.pots && typeof old.pots === "object") st.pots = old.pots;
@@ -167,8 +167,8 @@
           if (old.ui && typeof old.ui === "object") st.ui = old.ui;
 
           if (!st.pots || typeof st.pots !== "object") st.pots = {};
-          for (var i = 0; i < SLOTS.length; i++) {
-            var s = SLOTS[i];
+          for (let i = 0; i < SLOTS.length; i++) {
+            const s = SLOTS[i];
             if (!st.pots[s]) st.pots[s] = freshSlotPot();
             if (!st.pots[s].main) st.pots[s].main = freshPotNode();
             if (!st.pots[s].add)  st.pots[s].add  = freshPotNode();
@@ -188,7 +188,7 @@ return st;
       };
 
       if (typeof SH.registerNamespaces === "function") {
-        var pack = {}; pack[NS] = schema;
+        const pack = {}; pack[NS] = schema;
         SH.registerNamespaces(pack);
       } else if (typeof SH.registerNamespace === "function") {
         SH.registerNamespace(NS, schema);
@@ -199,18 +199,18 @@ return st;
   })();
 
   function getStateOrInit() {
-    var SH = getSH();
+    const SH = getSH();
     if (!SH) {
       if (!getStateOrInit._mem) getStateOrInit._mem = freshState();
       return getStateOrInit._mem;
     }
     if (typeof SH.getOrInit === "function") return SH.getOrInit(NS, freshState());
-    var st = SH.get ? SH.get(NS, freshState()) : freshState();
+    const st = SH.get ? SH.get(NS, freshState()) : freshState();
     return st || freshState();
   }
 
   function writeState(next) {
-    var SH = getSH();
+    const SH = getSH();
     if (!SH) { getStateOrInit._mem = deepClone(next); return; }
     if (typeof SH.set === "function") SH.set(NS, next, { replace: true });
   }
@@ -218,9 +218,9 @@ return st;
   // -----------------------------
   // Tier 規則（特殊/稀有/罕見/傳說/唯一）
   // -----------------------------
-  var TIERS = ["特殊", "稀有", "罕見", "傳說", "唯一", "永恆"];
+  const TIERS = ["特殊", "稀有", "罕見", "傳說", "唯一", "永恆"];
   function tierIndex(t) {
-    var i = TIERS.indexOf(String(t || "特殊"));
+    const i = TIERS.indexOf(String(t || "特殊"));
     return i < 0 ? 0 : i;
   }
   function tierNameByIndex(i) {
@@ -234,7 +234,7 @@ return st;
     return tierNameByIndex(Math.min(TIERS.length - 1, tierIndex(t) + 1));
   }
 
-  var MAIN_TIER_RULE = {
+  const MAIN_TIER_RULE = {
   "特殊": { upChance: 0.05,    pity: 50,   mult: 1 },
   "稀有": { upChance: 0.03,    pity: 150,  mult: 2 },
   "罕見": { upChance: 0.01,    pity: 300,  mult: 3 },
@@ -248,7 +248,7 @@ return st;
   // -----------------------------
   // 附加潛能：獨立升階/保底規則（不再由主潛能衍生）
   // -----------------------------
-  var ADD_TIER_RULE = {
+  const ADD_TIER_RULE = {
     "特殊": { upChance: 0.05,    pity: 120,  mult: 1 },
     "稀有": { upChance: 0.03,    pity: 220,  mult: 2 },
     "罕見": { upChance: 0.01,    pity: 550,  mult: 3 },
@@ -261,9 +261,9 @@ return st;
   // expose tier rule table for UI (single source of truth)
   function getTierRuleTable(which) {
     which = String(which || "main");
-    var out = {};
-    for (var i = 0; i < TIERS.length; i++) {
-      var t = TIERS[i];
+    const out = {};
+    for (let i = 0; i < TIERS.length; i++) {
+      const t = TIERS[i];
       if (which === "add") out[t] = getAddRule(t);
       else out[t] = MAIN_TIER_RULE[t] || MAIN_TIER_RULE["特殊"];
     }
@@ -273,7 +273,7 @@ return st;
 
   // 附加：機率=一半；保底=兩倍；基礎值=一半（對應 mult/2）
   function getAddRule(tier) {
-    var r = MAIN_TIER_RULE[tier] || MAIN_TIER_RULE["特殊"];
+    const r = MAIN_TIER_RULE[tier] || MAIN_TIER_RULE["特殊"];
     return { upChance: r.upChance * 0.5, pity: r.pity ? (r.pity * 2) : 0, mult: r.mult / 2 };
   }
   function getRule(isAdd, tier) {
@@ -283,13 +283,13 @@ return st;
   // -----------------------------
   // 能力池：全域池（依 mult 套用）
   // -----------------------------
-  var DEFAULT_W = 0.05;
+  const DEFAULT_W = 0.05;
 
   // -----------------------------
 // 全域能力池（所有裝備套用；未標註機率者使用 DEFAULT_W；吃 tier.mult）
 // 主屬性抽到時隨機一個：力/敏/智/幸
 // -----------------------------
-var GLOBAL_POOL = [
+const GLOBAL_POOL = [
   // 主屬性（%）
   { id: "MAINSTAT_PCT_3", kind: "pct_stat", base: 0.03, w: 0.045 },
   { id: "MAINSTAT_PCT_2", kind: "pct_stat", base: 0.02, w: DEFAULT_W },
@@ -339,7 +339,7 @@ var GLOBAL_POOL = [
 // -----------------------------
 // 武器基本池（僅武器/副武器；吃 tier.mult）
 // -----------------------------
-var WEAPON_BASE_POOL = [
+const WEAPON_BASE_POOL = [
   { id: "WPN_ATK_PCT_3", kind: "pct",  stat: "atk", base: 0.03, w: 0.022 },
   { id: "WPN_ATK_PCT_2", kind: "pct",  stat: "atk", base: 0.02, w: DEFAULT_W },
   { id: "WPN_ATK_PCT_1", kind: "pct",  stat: "atk", base: 0.01, w: DEFAULT_W },
@@ -361,7 +361,7 @@ var WEAPON_BASE_POOL = [
 // 2) 武器類（包含能源）
 // 3) 手套限定
 // -----------------------------
-var ADD_GLOBAL_POOL = [
+const ADD_GLOBAL_POOL = [
   // 全屬性 flat（未寫機率 => 共用）
   { id: "ALLSTAT_FLAT_3", kind: "by_tier_flat", stat: "allStat", w: DEFAULT_W,
     valuesByTier: { "特殊": 3, "稀有": 6, "罕見": 9, "傳說": 9, "唯一": 9, "永恆": 9 } },
@@ -409,7 +409,7 @@ var ADD_GLOBAL_POOL = [
   { id: "ATK_FLAT_6", kind: "flat", stat: "atk", base: 6, p: 0.022 }
 ];
 
-var ADD_WEAPON_POOL = [
+const ADD_WEAPON_POOL = [
   // 攻擊力 %（固定機率）
   { id: "WPN_ATK_PCT_4", kind: "pct", stat: "atk", base: 0.04, p: 0.0033 },
   { id: "WPN_ATK_PCT_3", kind: "pct", stat: "atk", base: 0.03, p: 0.0145 },
@@ -435,7 +435,7 @@ var ADD_WEAPON_POOL = [
   { id: "WPN_TOTAL_DMG_PCT_3", kind: "direct_pct", stat: "totalDamage", base: 0.03, p: 0.0222 }
 ];
 
-var ADD_GLOVE_POOL = [
+const ADD_GLOVE_POOL = [
   // 爆擊傷害（固定機率 2%，依階級固定值）
   { id: "GLOVE_CRIT_DMG", kind: "direct_pct_by_tier", stat: "critDamagePct", p: 0.02, minTier: "傳說",
     valuesByTier: { "傳說": 0.03, "唯一": 0.05, "永恆": 0.09 } },
@@ -450,7 +450,7 @@ var ADD_GLOVE_POOL = [
 // 限制裝備的指定潛能（不吃 tier.mult）
 // 有備註「OO限定」：用 minTier 控制進池，並可用 valuesByTier 指定每個階級的固定數值
 // -----------------------------
-var SLOT_POOLS = {
+const SLOT_POOLS = {
   glove: [
     // 爆擊傷害（傳說/唯一/永恆）
     { id: "GLOVE_CRIT_DMG", kind: "special_pct", stat: "critMultiplier", w: 0.023, minTier: "傳說",
@@ -588,12 +588,12 @@ var SLOT_POOLS = {
 
   function specialValueFromProto(proto, lineTier) {
     if (proto && proto.valuesByTier) {
-      var v = proto.valuesByTier[String(lineTier)];
+      const v = proto.valuesByTier[String(lineTier)];
       if (typeof v === "number") return v;
       // fallback：找最高可用值
-      var order = ["特殊", "稀有", "罕見", "傳說", "唯一", "永恆"];
-      for (var i = order.length - 1; i >= 0; i--) {
-        var k = order[i];
+      const order = ["特殊", "稀有", "罕見", "傳說", "唯一", "永恆"];
+      for (let i = order.length - 1; i >= 0; i--) {
+        const k = order[i];
         if (typeof proto.valuesByTier[k] === "number") return proto.valuesByTier[k];
       }
     }
@@ -615,14 +615,14 @@ var SLOT_POOLS = {
 
     // Backward compatible: previous signature (frameTier, isSecondOrThird)
     if (typeof lineIndex === "boolean") {
-      var isSecondOrThird = lineIndex;
+      const isSecondOrThird = lineIndex;
       if (!isSecondOrThird) return frameTier;
       // old behavior: 1% same-tier
       if (Math.random() < 0.01) return frameTier;
       return lowerTier(frameTier);
     }
 
-    var same = 0;
+    let same = 0;
 
     if (isAdd) {
       // 附加潛能：第2/3排 0.5% 同等級（其餘為次一階）
@@ -642,16 +642,16 @@ var SLOT_POOLS = {
 
   // 外框升階（含保底）
   function tryUpgradeFrame(isAdd, curTier, pity, upChanceMult) {
-    var rule = getRule(isAdd, curTier);
+    const rule = getRule(isAdd, curTier);
     if (curTier === "永恆") return { tier: curTier, pity: 0, upgraded: false };
 
-    var canPity = n(rule.pity) > 0;
+    const canPity = n(rule.pity) > 0;
     if (canPity && pity + 1 >= rule.pity) {
       return { tier: nextTier(curTier), pity: 0, upgraded: true, by: "pity" };
     }
     upChanceMult = (upChanceMult == null) ? 1 : n(upChanceMult);
     if (upChanceMult < 0) upChanceMult = 0;
-    var upChance = n(rule.upChance) * upChanceMult;
+    let upChance = n(rule.upChance) * upChanceMult;
     if (upChance > 1) upChance = 1;
     if (Math.random() < upChance) {
       return { tier: nextTier(curTier), pity: 0, upgraded: true, by: "chance" };
@@ -661,38 +661,38 @@ var SLOT_POOLS = {
 
   // 抽一條（全域池吃 mult；指定池只吃 傳說/唯一規則）
   function rollAbilityLine(isAdd, lineTier, slot) {
-    var rule = getRule(isAdd, lineTier);
-    var mult = n(rule.mult);
+    const rule = getRule(isAdd, lineTier);
+    const mult = n(rule.mult);
 
     // 合併抽池
-    var candidates = [];
+    let candidates = [];
     if (isAdd) {
-      for (var i = 0; i < ADD_GLOBAL_POOL.length; i++) candidates.push(ADD_GLOBAL_POOL[i]);
+      for (let i = 0; i < ADD_GLOBAL_POOL.length; i++) candidates.push(ADD_GLOBAL_POOL[i]);
     } else {
-      for (var i = 0; i < GLOBAL_POOL.length; i++) candidates.push(GLOBAL_POOL[i]);
+      for (let i = 0; i < GLOBAL_POOL.length; i++) candidates.push(GLOBAL_POOL[i]);
     }
 
-    var slotKey = normalizeSlotGroup(slot);
+    const slotKey = normalizeSlotGroup(slot);
     if (slotKey === "weapon" || slotKey === "energy") {
       if (isAdd) {
-        for (var wi = 0; wi < ADD_WEAPON_POOL.length; wi++) candidates.push(ADD_WEAPON_POOL[wi]);
+        for (let wi = 0; wi < ADD_WEAPON_POOL.length; wi++) candidates.push(ADD_WEAPON_POOL[wi]);
       } else if (WEAPON_BASE_POOL && WEAPON_BASE_POOL.length) {
-        for (var wi2 = 0; wi2 < WEAPON_BASE_POOL.length; wi2++) candidates.push(WEAPON_BASE_POOL[wi2]);
+        for (let wi2 = 0; wi2 < WEAPON_BASE_POOL.length; wi2++) candidates.push(WEAPON_BASE_POOL[wi2]);
       }
     }
 
     // 手套限定（附加）
     if (isAdd && slotKey === "glove") {
-      for (var gi = 0; gi < ADD_GLOVE_POOL.length; gi++) candidates.push(ADD_GLOVE_POOL[gi]);
+      for (let gi = 0; gi < ADD_GLOVE_POOL.length; gi++) candidates.push(ADD_GLOVE_POOL[gi]);
     }
 
     // 指定部位池：依 minTier 控制進池（不再強制「傳說↑」才加入）
     if (SLOT_POOLS && SLOT_POOLS[slotKey] && SLOT_POOLS[slotKey].length) {
       // 附加已全面重寫：武器/能源/手套不再吃舊的指定池
-      var skipOld = isAdd && (slotKey === "weapon" || slotKey === "energy" || slotKey === "glove");
+      const skipOld = isAdd && (slotKey === "weapon" || slotKey === "energy" || slotKey === "glove");
       if (!skipOld) {
-        for (var j = 0; j < SLOT_POOLS[slotKey].length; j++) {
-          var sp = SLOT_POOLS[slotKey][j];
+        for (let j = 0; j < SLOT_POOLS[slotKey].length; j++) {
+          const sp = SLOT_POOLS[slotKey][j];
           if (sp && meetsMinTier(lineTier, sp.minTier)) candidates.push(sp);
         }
       }
@@ -701,13 +701,13 @@ var SLOT_POOLS = {
 
     // 主潛能：傳說以上取消非百分比（flat）
     if (!isAdd && tierIndex(lineTier) >= tierIndex("傳說")) {
-      var kept = [];
-      for (var kk = 0; kk < candidates.length; kk++) {
-        var c = candidates[kk];
+      const kept = [];
+      for (let kk = 0; kk < candidates.length; kk++) {
+        const c = candidates[kk];
         if (!c) continue;
-        var k = String(c.kind || "");
+        const k = String(c.kind || "");
         // 允許的：百分比/直接百分比/特殊百分比/選擇百分比等
-        var ok = (k.indexOf("pct") >= 0) || (k === "direct_pct") || (k === "choice_pct") || (k === "choice_pct_by_tier") || (k === "choice_direct_pct") || (k === "special_pct") || (k === "bundle") || (k === "effect");
+        const ok = (k.indexOf("pct") >= 0) || (k === "direct_pct") || (k === "choice_pct") || (k === "choice_pct_by_tier") || (k === "choice_direct_pct") || (k === "special_pct") || (k === "bundle") || (k === "effect");
         if (ok) kept.push(c);
       }
       candidates = kept;
@@ -731,9 +731,9 @@ var SLOT_POOLS = {
 
     // 附加：能源不能洗 Boss 傷害
     if (isAdd && slotKey === "energy") {
-      var kept2 = [];
-      for (var ee = 0; ee < candidates.length; ee++) {
-        var cc = candidates[ee];
+      const kept2 = [];
+      for (let ee = 0; ee < candidates.length; ee++) {
+        const cc = candidates[ee];
         if (!cc) continue;
         if (String(cc.id) === "WEAPON_BOSS_DMG") continue;
         kept2.push(cc);
@@ -741,7 +741,7 @@ var SLOT_POOLS = {
       candidates = kept2;
     }
 
-    var proto = isAdd ? pickFixedThenWeighted(candidates, lineTier) : weightedPick(candidates);
+    const proto = isAdd ? pickFixedThenWeighted(candidates, lineTier) : weightedPick(candidates);
 
 
     // ---- by_tier：直接依階級取值（不吃 mult） ----
@@ -749,7 +749,7 @@ var SLOT_POOLS = {
       return { kind: "stat", id: proto.id, tier: lineTier, value: tierValueLookup(proto.valuesByTier, lineTier), meta: { stat: proto.stat } };
     }
     if (proto.kind === "by_tier_mainstat_flat") {
-      var s2 = pick(["str", "agi", "int", "luk"]);
+      const s2 = pick(["str", "agi", "int", "luk"]);
       return { kind: "stat", id: proto.id, tier: lineTier, value: tierValueLookup(proto.valuesByTier, lineTier), meta: { stat: s2 } };
     }
     if (proto.kind === "direct_pct_by_tier") {
@@ -762,7 +762,7 @@ var SLOT_POOLS = {
       return { kind: "stat", id: proto.id, tier: lineTier, value: tierValueLookup(proto.valuesByTier, lineTier), meta: { stat: proto.stat } };
     }
     if (proto.kind === "by_tier_mainstat_flat") {
-      var s2 = pick(["str","agi","int","luk"]);
+      const s2 = pick(["str","agi","int","luk"]);
       return { kind: "stat", id: proto.id, tier: lineTier, value: tierValueLookup(proto.valuesByTier, lineTier), meta: { stat: s2 } };
     }
     if (proto.kind === "direct_pct_by_tier") {
@@ -771,7 +771,7 @@ var SLOT_POOLS = {
 
     // ---- 指定部位：bundle（一次給多個 stat） ----
     if (proto.kind === "bundle") {
-      var statsMap = (proto.statsByTier && proto.statsByTier[String(lineTier)]) || (proto.statsByTier && proto.statsByTier["傳說"]) || {};
+      const statsMap = (proto.statsByTier && proto.statsByTier[String(lineTier)]) || (proto.statsByTier && proto.statsByTier["傳說"]) || {};
       return {
         kind: "bundle",
         id: proto.id,
@@ -781,16 +781,16 @@ var SLOT_POOLS = {
       };
     }
 
-    
+
 
 // ---- 指定部位：choice_direct_pct（三選一：從 statsByTier 隨機挑一個 stat） ----
 if (proto.kind === "choice_direct_pct") {
-  var statsMap2 = (proto.statsByTier && proto.statsByTier[String(lineTier)]) || {};
+  let statsMap2 = (proto.statsByTier && proto.statsByTier[String(lineTier)]) || {};
   if (!statsMap2 && proto.statsByTier) statsMap2 = proto.statsByTier["傳說"] || {};
-  var keys = [];
-  for (var k in statsMap2) { if (Object.prototype.hasOwnProperty.call(statsMap2, k)) keys.push(k); }
-  var pickKey = keys.length ? keys[(Math.random() * keys.length) | 0] : "";
-  var v2 = pickKey ? n(statsMap2[pickKey]) : 0;
+  const keys = [];
+  for (const k in statsMap2) { if (Object.prototype.hasOwnProperty.call(statsMap2, k)) keys.push(k); }
+  const pickKey = keys.length ? keys[(Math.random() * keys.length) | 0] : "";
+  const v2 = pickKey ? n(statsMap2[pickKey]) : 0;
   return {
     kind: "special",
     id: proto.id,
@@ -802,29 +802,29 @@ if (proto.kind === "choice_direct_pct") {
 
 // ---- 指定部位：choice_pct_by_tier ----
     if (proto.kind === "choice_pct_by_tier") {
-      var arr = (proto.choicesByTier && proto.choicesByTier[String(lineTier)]) || [];
+      let arr = (proto.choicesByTier && proto.choicesByTier[String(lineTier)]) || [];
       if (!arr.length && proto.choicesByTier) {
         // 往下找最近可用階級
-        var order2 = ["特殊", "稀有", "罕見", "傳說", "唯一", "永恆"];
-        for (var oi = tierIndex(lineTier); oi >= 0; oi--) {
-          var tn = order2[oi];
+        const order2 = ["特殊", "稀有", "罕見", "傳說", "唯一", "永恆"];
+        for (let oi = tierIndex(lineTier); oi >= 0; oi--) {
+          const tn = order2[oi];
           if (proto.choicesByTier[tn] && proto.choicesByTier[tn].length) { arr = proto.choicesByTier[tn]; break; }
         }
       }
-      var choice = pick(arr);
+      const choice = pick(arr);
       return {
         kind: "special",
         id: proto.id,
         tier: lineTier,
         value: n(choice),
-        meta: { stat: proto.stat, choice: choice }
+        meta: { stat: proto.stat, choice }
       };
     }
 
     // ---- 指定部位：special_pct ----
 
     if (proto.kind === "special_pct") {
-      var v = specialValueFromProto(proto, lineTier);
+      const v = specialValueFromProto(proto, lineTier);
       return {
         kind: "special",
         id: proto.id,
@@ -836,21 +836,21 @@ if (proto.kind === "choice_direct_pct") {
 
     // ---- 指定部位：choice_pct（choices 內是「傳說值」） ----
     if (proto.kind === "choice_pct") {
-      var choice = pick(proto.choices || []);
-      var v2 = specialValueByTier(lineTier, choice);
+      const choice = pick(proto.choices || []);
+      const v2 = specialValueByTier(lineTier, choice);
       return {
         kind: "special",
         id: proto.id,
         tier: lineTier,
         value: v2,
-        meta: { stat: proto.stat, choice: choice }
+        meta: { stat: proto.stat, choice }
       };
     }
 
     // ---- 指定部位：choice_pct_stat（stat 在 choices，值固定 valueLegend） ----
     if (proto.kind === "choice_pct_stat") {
-      var statKey = pick(proto.choices || []);
-      var v3 = specialValueByTier(lineTier, proto.valueLegend);
+      const statKey = pick(proto.choices || []);
+      const v3 = specialValueByTier(lineTier, proto.valueLegend);
       return {
         kind: "special",
         id: proto.id,
@@ -861,7 +861,7 @@ if (proto.kind === "choice_direct_pct") {
     }
 
     // ---- 全域池（吃 mult） ----
-    var line = { kind: "stat", id: proto.id, tier: lineTier, value: 0, meta: {} };
+    const line = { kind: "stat", id: proto.id, tier: lineTier, value: 0, meta: {} };
 
 if (proto.kind === "direct_pct") {
   return {
@@ -874,7 +874,7 @@ if (proto.kind === "direct_pct") {
 }
 
     if (proto.kind === "flat_stat" || proto.kind === "pct_stat") {
-      var stat = pick(["str", "agi", "int", "luk"]);
+      const stat = pick(["str", "agi", "int", "luk"]);
       line.meta.stat = stat;
       line.meta.base = proto.base;
       line.value = n(proto.base) * mult;
@@ -886,7 +886,7 @@ if (proto.kind === "direct_pct") {
       return line;
     }
     if (proto.kind === "pct_pick") {
-      var pickStat = pick(proto.pick || ["hp", "mp"]);
+      const pickStat = pick(proto.pick || ["hp", "mp"]);
       line.meta.stat = pickStat;
       line.meta.base = proto.base;
       line.value = n(proto.base) * mult;
@@ -906,18 +906,18 @@ if (proto.kind === "direct_pct") {
   // -----------------------------
   // 消耗方塊
   // -----------------------------
-  var ITEM_MAIN = "潛能方塊";
-  var ITEM_ADD  = "附加方塊";
+  const ITEM_MAIN = "潛能方塊";
+  const ITEM_ADD  = "附加方塊";
   // 高級方塊（升階率加倍；其餘規則同普通）
-  var ITEM_MAIN_ADV = "高級潛能方塊";
-  var ITEM_ADD_ADV  = "高級附加方塊";
+  const ITEM_MAIN_ADV = "高級潛能方塊";
+  const ITEM_ADD_ADV  = "高級附加方塊";
   // 閃炫方塊（一次抽選多排後選擇保留）
-  var ITEM_MAIN_FLASHY = "閃炫方塊";
-  var ITEM_ADD_FLASHY  = "附加閃炫方塊";
+  const ITEM_MAIN_FLASHY = "閃炫方塊";
+  const ITEM_ADD_FLASHY  = "附加閃炫方塊";
 
 // 結合方塊（3抽1；外框固定不升階）
-var ITEM_MAIN_COMBINE = "結合方塊";
-var ITEM_ADD_COMBINE  = "附加結合方塊";
+const ITEM_MAIN_COMBINE = "結合方塊";
+const ITEM_ADD_COMBINE  = "附加結合方塊";
 
 
   function canConsume(itemName, count) {
@@ -942,29 +942,29 @@ var ITEM_ADD_COMBINE  = "附加結合方塊";
 
   function rollOnce(slot, which, opt) {
     if (!slot) slot = "weapon";
-    var isAdd = (which === "add");
+    const isAdd = (which === "add");
     opt = opt || {};
-    var item = opt.itemName || (isAdd ? ITEM_ADD : ITEM_MAIN);
-    var upChanceMult = (opt.upChanceMult == null) ? 1 : n(opt.upChanceMult);
+    const item = opt.itemName || (isAdd ? ITEM_ADD : ITEM_MAIN);
+    const upChanceMult = (opt.upChanceMult == null) ? 1 : n(opt.upChanceMult);
 
-    if (!canConsume(item, 1)) return { ok: false, reason: "no_item", item: item };
+    if (!canConsume(item, 1)) return { ok: false, reason: "no_item", item };
 
-    var st = getStateOrInit();
+    const st = getStateOrInit();
     ensureSlot(st, slot);
-    var node = st.pots[slot][which];
+    const node = st.pots[slot][which];
 
     consume(item, 1);
 
-    var curTier = node.tier || "特殊";
-    var pity = Math.max(0, Math.floor(n(node.pity)));
-    var up = tryUpgradeFrame(isAdd, curTier, pity, upChanceMult);
+    const curTier = node.tier || "特殊";
+    const pity = Math.max(0, Math.floor(n(node.pity)));
+    const up = tryUpgradeFrame(isAdd, curTier, pity, upChanceMult);
 
     node.tier = up.tier;
     node.pity = up.pity;
 
-    var t1 = rollLineTier(node.tier, 1, isAdd);
-    var t2 = rollLineTier(node.tier, 2, isAdd);
-    var t3 = rollLineTier(node.tier, 3, isAdd);
+    const t1 = rollLineTier(node.tier, 1, isAdd);
+    const t2 = rollLineTier(node.tier, 2, isAdd);
+    const t3 = rollLineTier(node.tier, 3, isAdd);
 
     node.lines = [
       rollAbilityLine(isAdd, t1, slot),
@@ -975,7 +975,7 @@ var ITEM_ADD_COMBINE  = "附加結合方塊";
     st.pots[slot][which] = node;
     writeState(st);
 
-    return { ok: true, slot: slot, which: which, upgraded: !!up.upgraded, upgradeBy: up.by || null, state: deepClone(st) };
+    return { ok: true, slot, which, upgraded: !!up.upgraded, upgradeBy: up.by || null, state: deepClone(st) };
   }
 
 // -----------------------------
@@ -986,22 +986,22 @@ var ITEM_ADD_COMBINE  = "附加結合方塊";
 // - 附加潛能：第2/3排 0.5% 同等級（其餘為次一階）
 function rollCombineCandidates(slot, which, lineIndex, opt) {
   if (!slot) slot = "weapon";
-  var isAdd = (which === "add");
+  const isAdd = (which === "add");
   lineIndex = Math.max(1, Math.min(3, Math.floor(n(lineIndex || 1))));
   opt = opt || {};
 
-  var item = opt.itemName || (isAdd ? ITEM_ADD_COMBINE : ITEM_MAIN_COMBINE);
-  if (!canConsume(item, 1)) return { ok: false, reason: "no_item", item: item };
+  const item = opt.itemName || (isAdd ? ITEM_ADD_COMBINE : ITEM_MAIN_COMBINE);
+  if (!canConsume(item, 1)) return { ok: false, reason: "no_item", item };
 
-  var st = getStateOrInit();
+  const st = getStateOrInit();
   ensureSlot(st, slot);
-  var node = st.pots[slot][which];
+  const node = st.pots[slot][which];
 
   // consume but DO NOT change tier/pity (外框固定)
   consume(item, 1);
 
-  var frameTier = node.tier || "特殊";
-  var same = 0;
+  const frameTier = node.tier || "特殊";
+  let same = 0;
 
   if (lineIndex === 1) {
     same = 1;
@@ -1010,12 +1010,12 @@ function rollCombineCandidates(slot, which, lineIndex, opt) {
     else same = 0.15;              // 主結合：15%
   }
 
-  var effTier = frameTier;
+  let effTier = frameTier;
   if (lineIndex !== 1) {
     if (!(same > 0 && Math.random() < same)) effTier = lowerTier(frameTier);
   }
 
-  var cands = [
+  const cands = [
     rollAbilityLine(isAdd, effTier, slot),
     rollAbilityLine(isAdd, effTier, slot),
     rollAbilityLine(isAdd, effTier, slot)
@@ -1026,10 +1026,10 @@ function rollCombineCandidates(slot, which, lineIndex, opt) {
 
   return {
     ok: true,
-    slot: slot,
-    which: which,
-    lineIndex: lineIndex,
-    frameTier: frameTier,
+    slot,
+    which,
+    lineIndex,
+    frameTier,
     candidates: cands,
     state: deepClone(st)
   };
@@ -1046,55 +1046,55 @@ function rollCombineCandidates(slot, which, lineIndex, opt) {
 //   附加潛能：0.5% 機率同外框等級，否則為次一階
 function combineDrawLine(slot, which, opt) {
   if (!slot) slot = "weapon";
-  var isAdd = (which === "add");
+  const isAdd = (which === "add");
   opt = opt || {};
-  var item = opt.itemName || (isAdd ? ITEM_ADD_COMBINE : ITEM_MAIN_COMBINE);
-  if (!canConsume(item, 1)) return { ok: false, reason: "no_item", item: item };
+  const item = opt.itemName || (isAdd ? ITEM_ADD_COMBINE : ITEM_MAIN_COMBINE);
+  if (!canConsume(item, 1)) return { ok: false, reason: "no_item", item };
 
-  var st = getStateOrInit();
+  const st = getStateOrInit();
   ensureSlot(st, slot);
 
   // consume item (pots unchanged)
   consume(item, 1);
 
   // 33.33% * 3
-  var lineIndex = (Math.floor(Math.random() * 3) + 1);
+  const lineIndex = (Math.floor(Math.random() * 3) + 1);
 
   writeState(st);
 
   return {
     ok: true,
-    slot: slot,
-    which: which,
-    item: item,
-    lineIndex: lineIndex,
+    slot,
+    which,
+    item,
+    lineIndex,
     state: deepClone(st)
   };
 }
 
 function combineConfirmApply(slot, which, lineIndex, opt) {
   if (!slot) slot = "weapon";
-  var isAdd = (which === "add");
+  const isAdd = (which === "add");
   lineIndex = Math.max(1, Math.min(3, Math.floor(n(lineIndex || 1))));
   opt = opt || {};
 
-  var st = getStateOrInit();
+  const st = getStateOrInit();
   ensureSlot(st, slot);
 
   // ensure lines exist for this slot
   try { ensureLinesExist(st); } catch (_) {}
 
-  var node = st.pots[slot][which];
+  const node = st.pots[slot][which];
   if (!node.lines || node.lines.length < 3) {
     node.lines = node.lines || [];
     while (node.lines.length < 3) node.lines.push(rollAbilityLine(isAdd, node.tier || "特殊", slot));
   }
 
-  var frameTier = node.tier || "特殊";
-  var sameChance = isAdd ? 0.005 : 0.15;
-  var effTier = (sameChance > 0 && Math.random() < sameChance) ? frameTier : lowerTier(frameTier);
+  const frameTier = node.tier || "特殊";
+  const sameChance = isAdd ? 0.005 : 0.15;
+  const effTier = (sameChance > 0 && Math.random() < sameChance) ? frameTier : lowerTier(frameTier);
 
-  var newLine = rollAbilityLine(isAdd, effTier, slot);
+  const newLine = rollAbilityLine(isAdd, effTier, slot);
   node.lines[lineIndex - 1] = newLine;
 
   // 外框 / 保底完全不變（不動 node.tier / node.pity）
@@ -1105,11 +1105,11 @@ function combineConfirmApply(slot, which, lineIndex, opt) {
 
   return {
     ok: true,
-    slot: slot,
-    which: which,
-    lineIndex: lineIndex,
-    frameTier: frameTier,
-    effTier: effTier,
+    slot,
+    which,
+    lineIndex,
+    frameTier,
+    effTier,
     line: deepClone(newLine),
     state: deepClone(st)
   };
@@ -1128,26 +1128,26 @@ function combineConfirmApply(slot, which, lineIndex, opt) {
   function rollMainFlashy(slot, opt) {
     if (!slot) slot = "weapon";
     opt = opt || {};
-    var item = opt.itemName || ITEM_MAIN_FLASHY;
-    var upChanceMult = (opt.upChanceMult == null) ? 1 : n(opt.upChanceMult);
+    const item = opt.itemName || ITEM_MAIN_FLASHY;
+    const upChanceMult = (opt.upChanceMult == null) ? 1 : n(opt.upChanceMult);
 
-    if (!canConsume(item, 1)) return { ok: false, reason: "no_item", item: item };
+    if (!canConsume(item, 1)) return { ok: false, reason: "no_item", item };
 
-    var st = getStateOrInit();
+    const st = getStateOrInit();
     ensureSlot(st, slot);
-    var node = st.pots[slot].main;
+    const node = st.pots[slot].main;
 
     consume(item, 1);
 
-    var curTier = node.tier || "特殊";
-    var pity = Math.max(0, Math.floor(n(node.pity)));
-    var up = tryUpgradeFrame(false, curTier, pity, upChanceMult);
+    const curTier = node.tier || "特殊";
+    const pity = Math.max(0, Math.floor(n(node.pity)));
+    const up = tryUpgradeFrame(false, curTier, pity, upChanceMult);
 
     node.tier = up.tier;
     node.pity = up.pity;
 
     // six line tiers
-    var tiers = [
+    const tiers = [
       node.tier,
       (Math.random() < 0.20) ? node.tier : lowerTier(node.tier),
       (Math.random() < 0.05) ? node.tier : lowerTier(node.tier),
@@ -1156,20 +1156,20 @@ function combineConfirmApply(slot, which, lineIndex, opt) {
       (Math.random() < 0.05) ? node.tier : lowerTier(node.tier)
     ];
 
-    var candidates = [];
-    for (var i = 0; i < 6; i++) candidates.push(rollAbilityLine(false, tiers[i], slot));
+    const candidates = [];
+    for (let i = 0; i < 6; i++) candidates.push(rollAbilityLine(false, tiers[i], slot));
 
     // default preview = first 3
     node.lines = [ candidates[0], candidates[1], candidates[2] ];
     // stash candidates in state for UI convenience
-    node._flashy = { type: "main", candidates: candidates };
+    node._flashy = { type: "main", candidates };
 
     st.pots[slot].main = node;
     writeState(st);
 
     return {
       ok: true,
-      slot: slot,
+      slot,
       which: "main",
       upgraded: !!up.upgraded,
       upgradeBy: up.by || null,
@@ -1181,40 +1181,40 @@ function combineConfirmApply(slot, which, lineIndex, opt) {
   function rollAddFlashy(slot, opt) {
     if (!slot) slot = "weapon";
     opt = opt || {};
-    var item = opt.itemName || ITEM_ADD_FLASHY;
-    var upChanceMult = (opt.upChanceMult == null) ? 1 : n(opt.upChanceMult);
+    const item = opt.itemName || ITEM_ADD_FLASHY;
+    const upChanceMult = (opt.upChanceMult == null) ? 1 : n(opt.upChanceMult);
 
-    if (!canConsume(item, 1)) return { ok: false, reason: "no_item", item: item };
+    if (!canConsume(item, 1)) return { ok: false, reason: "no_item", item };
 
-    var st = getStateOrInit();
+    const st = getStateOrInit();
     ensureSlot(st, slot);
-    var node = st.pots[slot].add;
+    const node = st.pots[slot].add;
 
     consume(item, 1);
 
-    var curTier = node.tier || "特殊";
-    var pity = Math.max(0, Math.floor(n(node.pity)));
-    var up = tryUpgradeFrame(true, curTier, pity, upChanceMult);
+    const curTier = node.tier || "特殊";
+    const pity = Math.max(0, Math.floor(n(node.pity)));
+    const up = tryUpgradeFrame(true, curTier, pity, upChanceMult);
 
     node.tier = up.tier;
     node.pity = up.pity;
 
     // line1: 2 candidates at same tier
-    var c1 = [ rollAbilityLine(true, node.tier, slot), rollAbilityLine(true, node.tier, slot) ];
+    const c1 = [ rollAbilityLine(true, node.tier, slot), rollAbilityLine(true, node.tier, slot) ];
     // line2/3: 3 candidates at lower tier (100% 次等級)
-    var low = lowerTier(node.tier);
-    var c23 = [ rollAbilityLine(true, low, slot), rollAbilityLine(true, low, slot), rollAbilityLine(true, low, slot) ];
+    const low = lowerTier(node.tier);
+    const c23 = [ rollAbilityLine(true, low, slot), rollAbilityLine(true, low, slot), rollAbilityLine(true, low, slot) ];
 
     // default preview: pick first of each rule
     node.lines = [ c1[0], c23[0], c23[1] ];
-    node._flashy = { type: "add", c1: c1, c23: c23 };
+    node._flashy = { type: "add", c1, c23 };
 
     st.pots[slot].add = node;
     writeState(st);
 
     return {
       ok: true,
-      slot: slot,
+      slot,
       which: "add",
       upgraded: !!up.upgraded,
       upgradeBy: up.by || null,
@@ -1224,25 +1224,25 @@ function combineConfirmApply(slot, which, lineIndex, opt) {
   }
   // 初始化：每個 slot 若沒 lines，就補一組（不扣方塊）
   function ensureLinesExist() {
-    var st = getStateOrInit();
-    var changed = false;
+    const st = getStateOrInit();
+    let changed = false;
 
-    var slots = (w.POTENTIAL_SLOTS && w.POTENTIAL_SLOTS.length) ? w.POTENTIAL_SLOTS.slice() : [];
+    let slots = (w.POTENTIAL_SLOTS && w.POTENTIAL_SLOTS.length) ? w.POTENTIAL_SLOTS.slice() : [];
     // 兼容：若有動態新增 slot，但 core 載入時沒拿到 window.POTENTIAL_SLOTS，仍可從 st.pots 補齊
-    for (var sk in st.pots) if (Object.prototype.hasOwnProperty.call(st.pots, sk)) {
+    for (const sk in st.pots) if (Object.prototype.hasOwnProperty.call(st.pots, sk)) {
       if (slots.indexOf(sk) < 0) slots.push(sk);
     }
     if (!slots.length) slots = SLOTS.slice();
 
-    for (var i = 0; i < slots.length; i++) {
-      var slot = slots[i];
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
       ensureSlot(st, slot);
 
-      ["main", "add"].forEach(function (which) {
-        var isAdd = (which === "add");
-        var node = st.pots[slot][which];
+      ["main", "add"].forEach((which) => {
+        const isAdd = (which === "add");
+        const node = st.pots[slot][which];
         if (!node.lines || !Array.isArray(node.lines) || node.lines.length !== 3) {
-          var tier = node.tier || "特殊";
+          const tier = node.tier || "特殊";
           node.lines = [
             rollAbilityLine(isAdd, tier, slot),
             rollAbilityLine(isAdd, lowerTier(tier), slot),
@@ -1266,25 +1266,25 @@ function combineConfirmApply(slot, which, lineIndex, opt) {
   //   並交由全域 applyPotentialEngine(player) 使用 core-final 做 %->平坦換算後寫入 PotentialBonus
   // - 其餘能力（例如總傷/無視/爆傷等）仍直接匯入 PotentialBonus
   //
-  // 依賴（可選）：window.registerPotentialBonus / window.applyPotentialEngine（potential_engine_es5.js）
+  // 依賴（可選）：window.registerPotentialBonus / window.applyPotentialEngine（potential_engine_es2020.js）
   // -----------------------------
   function getBaseForPercent(player) {
     // ✅ 潛能百分比必須基於「core 計算後」的數值（不含潛能本身）。
     // 依優先序嘗試：player.core（推薦）→ player.coreBonus（若 core 用此命名）→ baseStats/baseAtk... → player 本身。
     // 注意：此函式只提供百分比折算用的 base，不會把 base 寫回任何地方。
-    var core = (player && (player.core || player.coreBonus)) ? (player.core || player.coreBonus) : null;
-    var bs = (player && player.baseStats) ? player.baseStats : null;
+    const core = (player && (player.core || player.coreBonus)) ? (player.core || player.coreBonus) : null;
+    const bs = (player && player.baseStats) ? player.baseStats : null;
 
     function read(obj, key) {
       if (!obj || typeof obj !== "object") return null;
       // 允許 getter
-      var v;
+      let v;
       try { v = obj[key]; } catch (e) { v = null; }
       return (v != null) ? v : null;
     }
 
     function pickVal(keys) {
-      var i, v;
+      let i, v;
       for (i = 0; i < keys.length; i++) {
         v = read(core, keys[i]);
         if (v != null) return n(v);
@@ -1319,17 +1319,17 @@ function combineConfirmApply(slot, which, lineIndex, opt) {
     if (!player) return null;
     if (player.coreBonus && player.coreBonus.bonusData) return player.coreBonus;
 
-    var bonusData = (player.coreBonus && player.coreBonus.bonusData) || {};
+    const bonusData = (player.coreBonus && player.coreBonus.bonusData) || {};
     function calc(key) {
-      var sum = 0;
-      for (var src in bonusData) if (Object.prototype.hasOwnProperty.call(bonusData, src)) {
-        var o = bonusData[src];
+      let sum = 0;
+      for (const src in bonusData) if (Object.prototype.hasOwnProperty.call(bonusData, src)) {
+        const o = bonusData[src];
         if (o && typeof o === "object" && o[key] != null) sum += n(o[key]);
       }
       return sum;
     }
     player.coreBonus = {
-      bonusData: bonusData,
+      bonusData,
       get hp()  { return calc("hp"); },
       get mp()  { return calc("mp"); },
       get atk() { return calc("atk"); },
@@ -1349,29 +1349,29 @@ function combineConfirmApply(slot, which, lineIndex, opt) {
   function routeLines(lines, acc) {
     if (!Array.isArray(lines)) return;
     acc = acc || {};
-    var coreFlat = acc.coreFlat || (acc.coreFlat = {});
-    var pct = acc.pct || (acc.pct = {});
-    var other = acc.otherBonus || (acc.otherBonus = {});
+    const coreFlat = acc.coreFlat || (acc.coreFlat = {});
+    const pct = acc.pct || (acc.pct = {});
+    const other = acc.otherBonus || (acc.otherBonus = {});
 
     function addObj(dst, k, v) { dst[k] = n(dst[k]) + n(v); }
     function addPct(dst, k, frac) {
       // frac: 0.03 -> 3
-      var p = Math.round(n(frac) * 100);
+      const p = Math.round(n(frac) * 100);
       if (!p) return;
       dst[k] = Math.round(n(dst[k]) + p);
     }
 
-    for (var i = 0; i < lines.length; i++) {
-      var L = lines[i] || {};
-      var id = String(L.id || "");
-      var val = n(L.value);
-      var meta = L.meta || {};
-      var stat = meta.stat || "";
+    for (let i = 0; i < lines.length; i++) {
+      const L = lines[i] || {};
+      const id = String(L.id || "");
+      const val = n(L.value);
+      const meta = L.meta || {};
+      const stat = meta.stat || "";
 
       // bundle：一次加多個
       if (L.kind === "bundle" && meta.stats) {
-        var sm = meta.stats || {};
-        for (var k in sm) {
+        const sm = meta.stats || {};
+        for (const k in sm) {
           if (!sm.hasOwnProperty(k)) continue;
           // bundle 視為其他加成（不強制走 core 或 pct 引擎）
           addObj(other, k, sm[k]);
@@ -1404,10 +1404,10 @@ function combineConfirmApply(slot, which, lineIndex, opt) {
       }
 
       // atk/def/hp/mp：flat / pct（pct 走 base 折算）
-      var m1 = id.match(/^(WPN_)?(ATK|DEF|HP|MP)_(FLAT|PCT)_/);
+      const m1 = id.match(/^(WPN_)?(ATK|DEF|HP|MP)_(FLAT|PCT)_/);
       if (m1) {
-        var key = String(m1[2]).toLowerCase();
-        var typ = m1[3];
+        const key = String(m1[2]).toLowerCase();
+        const typ = m1[3];
         if (typ === "FLAT") addObj(coreFlat, key, Math.floor(val));
         else addPct(pct, key + "Pct", val);
         continue;
@@ -1436,47 +1436,47 @@ function combineConfirmApply(slot, which, lineIndex, opt) {
     player = player || w.player;
     if (!player || !player.PotentialBonus || !player.PotentialBonus.bonusData) return false;
 
-    var st = getStateOrInit();
-    var bd = player.PotentialBonus.bonusData;
-    var coreBonus = ensureCoreBonus(player);
+    const st = getStateOrInit();
+    const bd = player.PotentialBonus.bonusData;
+    const coreBonus = ensureCoreBonus(player);
 
     // ⚠️ 注意：不要把彙總 potential_all 放進 bonusData，否則聚合器會把它再加一次造成翻倍
     // 改為只給 UI 使用的彙總：player.PotentialBonus.uiTotal
     if (bd.potential_all) { try { delete bd.potential_all; } catch(e){} }
-    var uiTotal = player.PotentialBonus.uiTotal || (player.PotentialBonus.uiTotal = {});
+    const uiTotal = player.PotentialBonus.uiTotal || (player.PotentialBonus.uiTotal = {});
     // reset uiTotal
-    for (var kk in uiTotal) if (Object.prototype.hasOwnProperty.call(uiTotal, kk)) delete uiTotal[kk];
+    for (const kk in uiTotal) if (Object.prototype.hasOwnProperty.call(uiTotal, kk)) delete uiTotal[kk];
 
     // 先累積（1）平坦走 core、（2）指定 % 走引擎、（3）其他加成走 PotentialBonus
-    var totalCoreFlat = {};
-    var totalPct = {};
+    const totalCoreFlat = {};
+    const totalPct = {};
     function addObj(dst, src) {
-      for (var k in src) if (Object.prototype.hasOwnProperty.call(src, k)) dst[k] = n(dst[k]) + n(src[k]);
+      for (const k in src) if (Object.prototype.hasOwnProperty.call(src, k)) dst[k] = n(dst[k]) + n(src[k]);
     }
 
     // 動態 slot：優先使用 window.POTENTIAL_SLOTS，並補齊 st.pots 內已存在的 slot（避免新增 slot 沒被套用）
-var slotsToApply = [];
-var seenSlot = {};
+const slotsToApply = [];
+const seenSlot = {};
 function pushSlot(s) { if (!s || seenSlot[s]) return; seenSlot[s] = 1; slotsToApply.push(s); }
 
 if (w.POTENTIAL_SLOTS && typeof w.POTENTIAL_SLOTS.length === "number") {
-  for (var si = 0; si < w.POTENTIAL_SLOTS.length; si++) pushSlot(w.POTENTIAL_SLOTS[si]);
+  for (let si = 0; si < w.POTENTIAL_SLOTS.length; si++) pushSlot(w.POTENTIAL_SLOTS[si]);
 } else {
-  for (var si2 = 0; si2 < SLOTS.length; si2++) pushSlot(SLOTS[si2]);
+  for (let si2 = 0; si2 < SLOTS.length; si2++) pushSlot(SLOTS[si2]);
 }
 if (st && st.pots) {
-  for (var sk in st.pots) if (Object.prototype.hasOwnProperty.call(st.pots, sk)) pushSlot(sk);
+  for (const sk in st.pots) if (Object.prototype.hasOwnProperty.call(st.pots, sk)) pushSlot(sk);
 }
 
-for (var i = 0; i < slotsToApply.length; i++) {
-  var slot = slotsToApply[i];
+for (let i = 0; i < slotsToApply.length; i++) {
+  const slot = slotsToApply[i];
       ensureSlot(st, slot);
 
-      var km = "potential_" + slot + "_main";
-      var ka = "potential_" + slot + "_add";
+      const km = "potential_" + slot + "_main";
+      const ka = "potential_" + slot + "_add";
 
-      var accM = { coreFlat: {}, pct: {}, otherBonus: {} };
-      var accA = { coreFlat: {}, pct: {}, otherBonus: {} };
+      const accM = { coreFlat: {}, pct: {}, otherBonus: {} };
+      const accA = { coreFlat: {}, pct: {}, otherBonus: {} };
       routeLines(st.pots[slot].main.lines, accM);
       routeLines(st.pots[slot].add.lines,  accA);
 
@@ -1509,11 +1509,11 @@ for (var i = 0; i < slotsToApply.length; i++) {
       try { w.applyPotentialEngine(player); } catch (_) {}
     } else {
       // fallback：沒有引擎時，這裡就地做 %->平坦（寫入 PotentialBonus.bonusData.potentialEngine）
-      var base2 = getBaseForPercent(player);
-      var pe = {};
-      var strPct = n(totalPct.strPct), agiPct = n(totalPct.agiPct), intPct = n(totalPct.intPct), lukPct = n(totalPct.lukPct);
-      var allStatPct = n(totalPct.allStatPct);
-      var hpPct = n(totalPct.hpPct), mpPct = n(totalPct.mpPct), atkPct = n(totalPct.atkPct), defPct = n(totalPct.defPct);
+      const base2 = getBaseForPercent(player);
+      const pe = {};
+      const strPct = n(totalPct.strPct), agiPct = n(totalPct.agiPct), intPct = n(totalPct.intPct), lukPct = n(totalPct.lukPct);
+      const allStatPct = n(totalPct.allStatPct);
+      const hpPct = n(totalPct.hpPct), mpPct = n(totalPct.mpPct), atkPct = n(totalPct.atkPct), defPct = n(totalPct.defPct);
       pe.str = Math.floor(n(base2.str) * (strPct + allStatPct) / 100);
       pe.agi = Math.floor(n(base2.agi) * (agiPct + allStatPct) / 100);
       pe.int = Math.floor(n(base2.int) * (intPct + allStatPct) / 100);
@@ -1526,17 +1526,17 @@ for (var i = 0; i < slotsToApply.length; i++) {
     }
 
     // 3) uiTotal：只用於 UI summary（避免翻倍），包含：平坦潛能（core）+ %->平坦（potentialEngine）
-    var peOut = (bd.potentialEngine && typeof bd.potentialEngine === "object") ? bd.potentialEngine : {};
-    var keys = ["str","agi","int","luk","atk","def","hp","mp"];
-    for (var j = 0; j < keys.length; j++) {
-      var kk2 = keys[j];
+    const peOut = (bd.potentialEngine && typeof bd.potentialEngine === "object") ? bd.potentialEngine : {};
+    const keys = ["str","agi","int","luk","atk","def","hp","mp"];
+    for (let j = 0; j < keys.length; j++) {
+      const kk2 = keys[j];
       uiTotal[kk2] = n(totalCoreFlat[kk2]) + n(peOut[kk2]);
     }
     return true;
   }
 
   function setSelectedSlot(slot) {
-    var st = getStateOrInit();
+    const st = getStateOrInit();
     if (!slot) return false;
     st.ui = st.ui || {};
     st.ui.selectedSlot = slot;
@@ -1552,79 +1552,79 @@ for (var i = 0; i < slotsToApply.length; i++) {
   w.PotentialCoreV2 = {
     SLOTS: SLOTS.slice(),
     TIERS: TIERS.slice(),
-    ITEM_MAIN: ITEM_MAIN,
-    ITEM_ADD: ITEM_ADD,
-    ITEM_MAIN_ADV: ITEM_MAIN_ADV,
-    ITEM_ADD_ADV: ITEM_ADD_ADV,
-    ITEM_MAIN_FLASHY: ITEM_MAIN_FLASHY,
-    ITEM_ADD_FLASHY: ITEM_ADD_FLASHY,
-    ITEM_MAIN_COMBINE: ITEM_MAIN_COMBINE,
-    ITEM_ADD_COMBINE: ITEM_ADD_COMBINE,
+    ITEM_MAIN,
+    ITEM_ADD,
+    ITEM_MAIN_ADV,
+    ITEM_ADD_ADV,
+    ITEM_MAIN_FLASHY,
+    ITEM_ADD_FLASHY,
+    ITEM_MAIN_COMBINE,
+    ITEM_ADD_COMBINE,
 
-    getState: getState,
-    setSelectedSlot: setSelectedSlot,
-    ensureLinesExist: ensureLinesExist,
-    getTierRuleTable: getTierRuleTable,
+    getState,
+    setSelectedSlot,
+    ensureLinesExist,
+    getTierRuleTable,
 
 
-    rollMain: function (slot, opt) {
-      var r = rollOnce(slot, "main", opt);
+    rollMain (slot, opt) {
+      const r = rollOnce(slot, "main", opt);
       try { applySelectedToPlayer(w.player, slot); } catch (_) {}
       return r;
     },
-    rollAdd: function (slot, opt) {
-      var r = rollOnce(slot, "add", opt);
+    rollAdd (slot, opt) {
+      const r = rollOnce(slot, "add", opt);
       try { applySelectedToPlayer(w.player, slot); } catch (_) {}
       return r;
     },
-    rollMainFlashy: function (slot, opt) {
-      var r = rollMainFlashy(slot, opt);
+    rollMainFlashy (slot, opt) {
+      const r = rollMainFlashy(slot, opt);
       try { applySelectedToPlayer(w.player, slot); } catch (_) {}
       return r;
     },
-    rollAddFlashy: function (slot, opt) {
-      var r = rollAddFlashy(slot, opt);
+    rollAddFlashy (slot, opt) {
+      const r = rollAddFlashy(slot, opt);
       try { applySelectedToPlayer(w.player, slot); } catch (_) {}
       return r;
     },
 
-rollMainCombine: function (slot, lineIndex, opt) {
+rollMainCombine (slot, lineIndex, opt) {
   opt = opt || {};
   opt.itemName = ITEM_MAIN_COMBINE;
   return rollCombineCandidates(slot, "main", lineIndex, opt);
 },
-rollAddCombine: function (slot, lineIndex, opt) {
+rollAddCombine (slot, lineIndex, opt) {
   opt = opt || {};
   opt.itemName = ITEM_ADD_COMBINE;
   return rollCombineCandidates(slot, "add", lineIndex, opt);
 },
 
 // Combine Cube v2 (draw -> confirm)
-drawMainCombine: function (slot, opt) {
+drawMainCombine (slot, opt) {
   opt = opt || {};
   opt.itemName = ITEM_MAIN_COMBINE;
   return combineDrawLine(slot, "main", opt);
 },
-drawAddCombine: function (slot, opt) {
+drawAddCombine (slot, opt) {
   opt = opt || {};
   opt.itemName = ITEM_ADD_COMBINE;
   return combineDrawLine(slot, "add", opt);
 },
-confirmMainCombine: function (slot, lineIndex, opt) {
+confirmMainCombine (slot, lineIndex, opt) {
   opt = opt || {};
   return combineConfirmApply(slot, "main", lineIndex, opt);
 },
-confirmAddCombine: function (slot, lineIndex, opt) {
+confirmAddCombine (slot, lineIndex, opt) {
   opt = opt || {};
   return combineConfirmApply(slot, "add", lineIndex, opt);
 },
 
 
     // 允許 UI 回滾/套用指定結果（用於「前後選擇」）
-setSlotPotential: function (slot, which, node) {
+setSlotPotential (slot, which, node) {
   if (!slot) slot = "weapon";
   if (which !== "main" && which !== "add") which = "main";
-  var st = getStateOrInit();
+  const st = getStateOrInit();
   ensureSlot(st, slot);
   st.pots[slot][which] = deepClone(node || freshPotNode());
   writeState(st);
@@ -1632,8 +1632,8 @@ setSlotPotential: function (slot, which, node) {
   return true;
 },
 
-applySelectedToPlayer: applySelectedToPlayer,
-    applyAllToPlayer: applyAllToPlayer
+applySelectedToPlayer,
+    applyAllToPlayer
   };
 
 
@@ -1641,8 +1641,8 @@ applySelectedToPlayer: applySelectedToPlayer,
   // Auto-apply on refresh (when player becomes available)
   // -----------------------------
   (function autoApplyPotential() {
-    var tries = 0;
-    var maxTries = 80; // ~12s at 150ms
+    let tries = 0;
+    const maxTries = 80; // ~12s at 150ms
     function tick() {
       tries++;
       try {

@@ -93,9 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const rawAtk = Number(mon._enragedTurns || 0);
     const rawDef = Number(mon._defBuffTurns || 0);
     const rawShield = Number(mon._rootShieldTurns || 0);
-    let atkS = rawAtk || getBuffTurns(mon, "atk");
-    let defS = rawDef || getBuffTurns(mon, "def");
-    let shieldS = rawShield || getBuffTurns(mon, "shield");
+    const atkS = rawAtk || getBuffTurns(mon, "atk");
+    const defS = rawDef || getBuffTurns(mon, "def");
+    const shieldS = rawShield || getBuffTurns(mon, "shield");
     const speedS = getBuffTurns(mon, "speedMul");
 
     const parts = [];
@@ -324,7 +324,7 @@ function renderMultiMonsterCards(infoBox) {
   // 點卡片切換 currentMonster / targetIndex
   if (!infoBox._multiBind) {
     infoBox._multiBind = true;
-    infoBox.addEventListener("click", function (e) {
+    infoBox.addEventListener("click", (e) => {
       const card = e.target.closest(".monster-card");
       if (!card) return;
       const idx = Number(card.dataset.index);

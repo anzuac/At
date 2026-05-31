@@ -113,19 +113,19 @@ registerJobSkill('mage3', {
   type: "attack",
   role: "attack",
   isBasic: false,
-  
+
   requiredJobTier: 3,
-  
+
   // 🔒 元素師線專用：從 mage_elementalist3 往後的職業都可以用
   requireJobLineFrom: "mage_elementalist3",
-  
+
   level: 1,
   maxLevel: 20,
-  
+
   currentTier: 0,
   // 會一路進化到 750
   evolveLevels: [0, 100, 200, 350, 500, 750],
-  
+
   tiers: [
     { name: "元素攻擊(三轉)", mpCost: 18, cooldown: 20, logic: { damageMultiplier: 0.76, levelMultiplier: 0.04, hits: 1, intBonusCap: 0.50 } },
     { name: "高等元素攻擊(三轉)", mpCost: 20, cooldown: 20, logic: { damageMultiplier: 0.88, levelMultiplier: 0.05, hits: 1, intBonusCap: 1.00 } },
@@ -133,57 +133,57 @@ registerJobSkill('mage3', {
     { name: "深淵元素攻擊(三轉)", mpCost: 24, cooldown: 20, logic: { damageMultiplier: 1.07, levelMultiplier: 0.07, hits: 1, intBonusCap: 3.00 } },
     { name: "神域元素攻擊(三轉)", mpCost: 26, cooldown: 20, logic: { damageMultiplier: 1.19, levelMultiplier: 0.09, hits: 1, intBonusCap: 3.00 } },
   ],
-  
+
   currentCooldown: 0,
-  
+
   _getIntBonus() {
     const RATE = 0.002; // INT × 0.2%
     const t = getActiveTier(this);
     const cap = Number(t?.logic?.intBonusCap ?? 0.5);
-    
+
     const totalInt = (player?.baseStats?.int || 0) + (player?.coreBonus?.int || 0);
     return Math.min(cap, totalInt * RATE);
   },
-  
+
   use(monster) {
     const t = getActiveTier(this);
-    
+
     this.name = t.name;
     this.logic = t.logic;
     this.cooldown = t.cooldown;
     this.mpCost = t.mpCost;
-    
+
     const L = Math.max(1, this.level | 0);
-    
+
     const perMul = (t.logic.damageMultiplier || 0) +
       (t.logic.levelMultiplier || 0) * (L - 1);
-    
+
     const perHitPct = Math.round(perMul * 100);
-    
+
     const intBonus = this._getIntBonus();
     const baseAtk = Math.max(Number(player.totalStats?.atk || 1), 1);
-    
+
     const hitsThisCast = MAGE3_RANDOM_MIN_HITS +
       Math.floor(Math.random() * (MAGE3_RANDOM_MAX_HITS - MAGE3_RANDOM_MIN_HITS + 1));
-    
+
     const totalPctThisCast = perHitPct * hitsThisCast;
-    
+
     const targetsThisCast = MAGE3_RANDOM_MIN_TARGETS +
       Math.floor(Math.random() * (MAGE3_RANDOM_MAX_TARGETS - MAGE3_RANDOM_MIN_TARGETS + 1));
-    
+
     this.maxTargets = targetsThisCast;
-    
+
     const perHitBase = Math.floor(baseAtk * perMul * (1 + intBonus));
     let total = perHitBase * hitsThisCast;
-    
+
     const elementKeys = Object.keys(MAGE3_ELEMENT_CONFIG || {});
     const pickKey = elementKeys[Math.floor(Math.random() * elementKeys.length)];
     const cfg = MAGE3_ELEMENT_CONFIG[pickKey];
     let extraLog = "";
-    
+
     const nowSec = Math.floor(Date.now() / 1000);
     const chanceOK = Math.random() < (cfg.chance || 0);
-    
+
     if (cfg.type === "instantDamage" && chanceOK) {
       const extra = Math.floor(total * (cfg.extraDamageRatio || 0));
       total += extra;
@@ -199,56 +199,56 @@ registerJobSkill('mage3', {
       window.applyStatusToMonster?.(monster, cfg.statusKey, cfg.durationSec, 0, nowSec);
       extraLog += `｜${cfg.label}：附帶 ${cfg.statusKey} ${cfg.durationSec}s`;
     }
-    
+
     const elemLabel = cfg.label;
-    
+
     logPrepend?.(
       `✨ ${t.name} 隨機對最多 ${targetsThisCast} 名敵人造成約 ${total} 傷害` +
       `（單段約 ${perHitPct}% × ${hitsThisCast} Hit＝約 ${totalPctThisCast}%｜` +
       `元素：${elemLabel}｜INT加成約 ${Math.round(intBonus * 100)}%）` +
       extraLog
     );
-    
+
     spendAndCooldown(this, this.mpCost);
     return total;
   },
-  
+
   getUpgradeCost() { return 1; },
-  
+
   getDescription() {
     const t = getActiveTier(this);
     const L = Math.max(1, this.level | 0);
-    
+
     const perPct = Math.round(
       (t.logic.damageMultiplier + t.logic.levelMultiplier * (L - 1)) * 100
     );
-    
+
     const capPct = Math.round((t.logic.intBonusCap || 0) * 100);
-    
+
     const minHits = MAGE3_RANDOM_MIN_HITS;
     const maxHits = MAGE3_RANDOM_MAX_HITS;
     const minTotal = perPct * minHits;
     const maxTotal = perPct * maxHits;
-    
+
     const parts = Object.values(MAGE3_ELEMENT_CONFIG).map(cfg => {
       const chance = Math.round((cfg.chance || 0) * 100);
-      
+
       if (cfg.type === "instantDamage")
         return `${cfg.label}：${chance}% → 額外傷害 +${Math.round(cfg.extraDamageRatio * 100)}%`;
-      
+
       if (cfg.type === "dot")
         return `${cfg.label}：${chance}% → 造成本次 ${Math.round(cfg.dotRatio * 100)}% 的持續傷害`;
-      
+
       if (cfg.type === "status") {
         const name =
           cfg.statusKey === "paralyze" ? "麻痺" :
           cfg.statusKey === "chaos" ? "混亂" : cfg.statusKey;
         return `${cfg.label}：${chance}% → 附帶 ${name} ${cfg.durationSec}s`;
       }
-      
+
       return `${cfg.label}：${chance}%`;
     });
-    
+
     return (
       `元素攻擊（第三轉核心技能｜元素師專用）\n` +
       `・每次施放會隨機攻擊 ${MAGE3_RANDOM_MIN_TARGETS}~${MAGE3_RANDOM_MAX_TARGETS} 名敵人\n` +
@@ -439,7 +439,7 @@ const ORACLE_ELE_PATTERNS = [
     perLvPct: 12,      // 每等 +12%
     bonusChance: 0.20, // 20% 火元素上身
     bonusFinal: 0.70,  // 本次最終傷害 +70%
-    applyExtra: function (ctx) {
+    applyExtra (ctx) {
       if (Math.random() < this.bonusChance) {
         ctx.finalPerTarget = Math.floor(ctx.finalPerTarget * (1 + this.bonusFinal));
         ctx.extraLogs.push("火元素上身：本次最終傷害 +70%");
@@ -456,7 +456,7 @@ const ORACLE_ELE_PATTERNS = [
     perLvPct: 12,
     bonusChance: 0.15, // 15% 水元素上身
     bonusFinal: 0.50,  // 本次傷害 +50%
-    applyExtra: function (ctx) {
+    applyExtra (ctx) {
       const nowSec = ctx.nowSec;
       const m      = ctx.monster;
 
@@ -481,7 +481,7 @@ const ORACLE_ELE_PATTERNS = [
     perLvPct: 12,
     bonusChance: 0.20, // 20% 雷元素上身
     bonusFinal: 0,     // 只控場不加傷
-    applyExtra: function (ctx) {
+    applyExtra (ctx) {
       const nowSec = ctx.nowSec;
       const m      = ctx.monster;
 
@@ -503,13 +503,13 @@ const ORACLE_ELE_PATTERNS = [
     perLvPct: 12,
     bonusChance: 0.15, // 15% 機率 爆發強化
     bonusFinal: 0.15,  // 本次傷害 +15%
-    applyExtra: function (ctx) {
+    applyExtra (ctx) {
       // 元素爆發：15% 機率，本次傷害 +15%，並追加施放一次 火 / 水 / 雷 其中一種
       if (Math.random() >= this.bonusChance) return;
 
       const baseAtk    = ctx.baseAtk;
       const L          = ctx.level;
-      const patterns   = ORACLE_ELE_PATTERNS.filter(function(p){ return p.key !== "burst"; });
+      const patterns   = ORACLE_ELE_PATTERNS.filter((p) =>{ return p.key !== "burst"; });
       const extraPick  = patterns[Math.floor(Math.random() * patterns.length)];
       const extraPer   = (extraPick.basePct + extraPick.perLvPct * (L - 1)) / 100;
       const extraDmgPT = Math.floor(baseAtk * extraPer) * extraPick.hits;
@@ -558,17 +558,17 @@ registerJobSkill('mage5', {
       },
 
       // ===== 真正施放邏輯（tier 層級）=====
-      use: function(monster, skill) {
-        var s = skill || {};
-        var L = Math.max(1, s.level | 0);
+      use(monster, skill) {
+        const s = skill || {};
+        const L = Math.max(1, s.level | 0);
 
         // 隨機決定這次的元素型態
-        var mainPattern = ORACLE_ELE_PATTERNS[
+        const mainPattern = ORACLE_ELE_PATTERNS[
           Math.floor(Math.random() * ORACLE_ELE_PATTERNS.length)
         ];
 
         // === 讓戰鬥主 Log 顯示本次元素 ===
-        var displayName = "神諭滅世元素轟炸（" + mainPattern.icon + mainPattern.label + "）";
+        const displayName = "神諭滅世元素轟炸（" + mainPattern.icon + mainPattern.label + "）";
         this.name = displayName;
         s.name    = displayName;
 
@@ -579,20 +579,20 @@ registerJobSkill('mage5', {
         // 這次最多打幾隻怪
         s.maxTargets = mainPattern.targets;
 
-        var baseAtk    = Math.max(player.totalStats && player.totalStats.atk || 1, 1);
-        var perHitPct  = mainPattern.basePct + mainPattern.perLvPct * (L - 1);
-        var perHitMul  = perHitPct / 100;
+        const baseAtk    = Math.max(player.totalStats && player.totalStats.atk || 1, 1);
+        const perHitPct  = mainPattern.basePct + mainPattern.perLvPct * (L - 1);
+        const perHitMul  = perHitPct / 100;
 
         // 以「單一目標」為基準的總傷害
-        var perTargetBase = Math.floor(baseAtk * perHitMul) * mainPattern.hits;
+        const perTargetBase = Math.floor(baseAtk * perHitMul) * mainPattern.hits;
 
         // 各元素的額外效果
-        var nowSec = Math.floor(Date.now() / 1000);
-        var ctx = {
+        const nowSec = Math.floor(Date.now() / 1000);
+        const ctx = {
           level: L,
-          monster: monster,
-          nowSec: nowSec,
-          baseAtk: baseAtk,
+          monster,
+          nowSec,
+          baseAtk,
           finalPerTarget: perTargetBase,
           extraLogs: []
         };
@@ -601,10 +601,10 @@ registerJobSkill('mage5', {
           mainPattern.applyExtra(ctx);
         }
 
-        var finalPerTarget = ctx.finalPerTarget;
+        const finalPerTarget = ctx.finalPerTarget;
 
         // ===== 戰鬥細節 log（額外說明）=====
-        var detailText =
+        const detailText =
           "✨ " + displayName + " 對每個目標造成約 " + finalPerTarget + " 傷害" +
           "（" + mainPattern.targets + " 目標｜每目標 " + mainPattern.hits + " Hit｜單 Hit 約 " +
           Math.round(perHitPct) + "%）" +
@@ -625,18 +625,18 @@ registerJobSkill('mage5', {
 
   currentCooldown: 0,
 
-  getUpgradeCost: function() {
+  getUpgradeCost() {
     return 50 + (this.level - 1) * 20;
   },
 
   // ===== 這裡改成用 <br> 排版，避免一整條密密麻麻 =====
-  getDescription: function() {
-    var L = Math.max(1, this.level | 0);
+  getDescription() {
+    const L = Math.max(1, this.level | 0);
 
-    var parts = ORACLE_ELE_PATTERNS.map(function(p){
-      var perHit = p.basePct + p.perLvPct * (L - 1);
-      var total  = perHit * p.hits;
-      var extra  = "";
+    const parts = ORACLE_ELE_PATTERNS.map((p) =>{
+      const perHit = p.basePct + p.perLvPct * (L - 1);
+      const total  = perHit * p.hits;
+      let extra  = "";
 
       if (p.key === "fire") {
         extra = "；" + Math.round(p.bonusChance * 100) +
@@ -659,9 +659,9 @@ registerJobSkill('mage5', {
              " Hit，單 Hit 約 " + perHit + "%（總約 " + total + "%）" + extra;
     });
 
-    var t0 = this.tiers && this.tiers[0] || { mpCost: 80, cooldown: 20 };
+    const t0 = this.tiers && this.tiers[0] || { mpCost: 80, cooldown: 20 };
 
-    var html = "";
+    let html = "";
     html += "神諭滅世元素轟炸（元素師五轉專屬大招）<br>";
     html += "・每次施放隨機啟動 1 種元素型態：🔥火 / 💧水 / ⚡雷 / 🌈元素爆發<br>";
     html += "・等級已套用目前 Lv." + L + " 的倍率<br>";
@@ -721,7 +721,7 @@ registerJobSkill('mage5', {
 
   use(monster) {
     const L  = Math.max(1, this.level | 0);
-    
+
     // === 隨機抽一個元素（只為顯示效果）===
     const pick = ORACLE_APOCALYPSE_ELEMENTS[
       Math.floor(Math.random() * ORACLE_APOCALYPSE_ELEMENTS.length)
@@ -743,7 +743,7 @@ registerJobSkill('mage5', {
 
     // 狀態資訊用
     this.lastCastTag = "";
-    let extraNotes = [];
+    const extraNotes = [];
 
     // === 20% → 最終傷害 +20% ===
     if (Math.random() < lg.bonusChance) {
@@ -863,7 +863,7 @@ registerJobSkill('mage5', {
       Math.floor(baseAtk * judgePerHitMul * (1 + intBonus)) * JUDGE_HITS;
 
     let dmgPerTarget = mainPerTarget;
-    let tags = [];
+    const tags = [];
 
     // 25% 審判追擊
     const JUDGE_CHANCE = 0.25;

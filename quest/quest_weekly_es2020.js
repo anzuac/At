@@ -1,12 +1,12 @@
-// weekly_es5.js — V2（動態讀取 missionRewards.weekly + 顯示獎勵）
+// weekly_es2020.js — V2（動態讀取 missionRewards.weekly + 顯示獎勵）
 (function(){
   if (!window.QuestCore) return;
 
   // ===== 設定 =====
-  var STORAGE_KEY = 'WEEKLY_STATE_V2';
+  const STORAGE_KEY = 'WEEKLY_STATE_V2';
 
   // ===== 狀態 =====
-  var weeklyState = {
+  let weeklyState = {
     weekKey: '',
     doneCount: 0,
     claimed: {}
@@ -15,16 +15,16 @@
   // ===== 小工具 =====
   function pad2(n){ return (n<10?'0':'')+n; }
   function weekKey(){ // 以該週「週一」為 key
-    var d=new Date(), day=d.getDay(), diff=(day===0?-6:(1-day)), m=new Date(d.getFullYear(),d.getMonth(),d.getDate()+diff);
+    const d=new Date(), day=d.getDay(), diff=(day===0?-6:(1-day)), m=new Date(d.getFullYear(),d.getMonth(),d.getDate()+diff);
     return m.getFullYear()+'-'+pad2(m.getMonth()+1)+'-'+pad2(m.getDate());
   }
   function save(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(weeklyState)); }catch(e){} }
   function load(){
     try{
-      var raw=localStorage.getItem(STORAGE_KEY);
-      if(raw){ var o=JSON.parse(raw); if(o) weeklyState=o; }
+      const raw=localStorage.getItem(STORAGE_KEY);
+      if(raw){ const o=JSON.parse(raw); if(o) weeklyState=o; }
     }catch(e){}
-    var k=weekKey();
+    const k=weekKey();
     if(weeklyState.weekKey!==k){
       weeklyState.weekKey = k;
       weeklyState.doneCount = 0;
@@ -35,7 +35,7 @@
   }
 
   function getWeeklyPacks(){
-    var packs = (window.missionRewards && Array.isArray(window.missionRewards.weekly))
+    let packs = (window.missionRewards && Array.isArray(window.missionRewards.weekly))
       ? window.missionRewards.weekly
       : [
           { target: 5,  rewards:[{type:"diamond",amount:5}] },
@@ -43,21 +43,21 @@
           { target: 15, rewards:[{type:"diamond",amount:10}] },
           { target: 20, rewards:[{type:"item",key:"高級探索券",amount:10}] }
         ];
-    packs = packs.slice().sort(function(a,b){ return (a.target||0)-(b.target||0); });
+    packs = packs.slice().sort((a,b) =>{ return (a.target||0)-(b.target||0); });
     return packs;
   }
 
   function ensureClaimedTargets(){
-    var packs = getWeeklyPacks();
+    const packs = getWeeklyPacks();
     if (!weeklyState.claimed || typeof weeklyState.claimed!=='object') weeklyState.claimed = {};
-    for (var i=0;i<packs.length;i++){
-      var key = String(packs[i].target);
+    for (let i=0;i<packs.length;i++){
+      const key = String(packs[i].target);
       if (typeof weeklyState.claimed[key] !== 'boolean') weeklyState.claimed[key] = false;
     }
-    for (var k in weeklyState.claimed){
+    for (const k in weeklyState.claimed){
       if (!weeklyState.claimed.hasOwnProperty(k)) continue;
-      var exists = false;
-      for (var j=0;j<packs.length;j++){ if (String(packs[j].target)===k){ exists=true; break; } }
+      let exists = false;
+      for (let j=0;j<packs.length;j++){ if (String(packs[j].target)===k){ exists=true; break; } }
       if (!exists) delete weeklyState.claimed[k];
     }
   }
@@ -65,12 +65,12 @@
   // ===== 顯示用：獎勵轉字串 =====
   function rewardToText(rew){
     if(!rew || typeof rew!=='object') return '';
-    var t=rew.type;
+    const t=rew.type;
     if (t==='gold')    return '🪙 金幣 ×'+(rew.amount||0);
     if (t==='stone')   return '🪨 強化石 ×'+(rew.amount||0);
     if (t==='diamond') return '💎 鑽石 ×'+(rew.amount||0);
     if (t==='diamond_box'){
-      var a=(rew.min||0), b=(rew.max||0);
+      const a=(rew.min||0), b=(rew.max||0);
       return '🎁 鑽石寶箱（'+a+'～'+b+'）';
     }
     if (t==='medal')   return '🏅 任務獎牌 ×'+(rew.amount||0);
@@ -78,13 +78,13 @@
     return '';
   }
   function weeklyRewardsText(target){
-    var packs = getWeeklyPacks();
-    for (var i=0;i<packs.length;i++){
+    const packs = getWeeklyPacks();
+    for (let i=0;i<packs.length;i++){
       if (packs[i].target===target){
-        var arr = packs[i].rewards || [];
-        var out = [];
-        for (var j=0;j<arr.length;j++){
-          var s = rewardToText(arr[j]);
+        const arr = packs[i].rewards || [];
+        const out = [];
+        for (let j=0;j<arr.length;j++){
+          const s = rewardToText(arr[j]);
           if (s) out.push(s);
         }
         return out.join('、');
@@ -103,7 +103,7 @@
 
   // ===== 發獎 =====
   function grantReward(rew){
-    var t=rew.type;
+    const t=rew.type;
     if (t==='gold' && rew.amount>0){
       if (typeof player!=='undefined') player.gold=(player.gold||0)+rew.amount;
     } else if (t==='stone' && rew.amount>0){
@@ -111,7 +111,7 @@
     } else if (t==='diamond' && rew.amount>0){
       if (typeof player!=='undefined') player.gem=(player.gem||0)+rew.amount;
     } else if (t==='diamond_box'){
-      var v=(rew.min||0)+Math.floor(Math.random()*((rew.max||0)-(rew.min||0)+1));
+      const v=(rew.min||0)+Math.floor(Math.random()*((rew.max||0)-(rew.min||0)+1));
       if (typeof player!=='undefined') player.gem=(player.gem||0)+v;
       if (typeof logPrepend === 'function') logPrepend('🎁 週寶箱開出 '+v+' 鑽石！');
     } else if (t==='medal' && rew.amount>0){
@@ -129,15 +129,15 @@
   function claim(target){
     load();
     if (weeklyState.doneCount < target) return false;
-    var k = String(target);
+    const k = String(target);
     if (weeklyState.claimed[k]) return false;
 
-    var packs = getWeeklyPacks();
-    var pack = null;
-    for (var i=0;i<packs.length;i++){ if (packs[i].target===target){ pack=packs[i]; break; } }
+    const packs = getWeeklyPacks();
+    let pack = null;
+    for (let i=0;i<packs.length;i++){ if (packs[i].target===target){ pack=packs[i]; break; } }
     if (!pack) return false;
 
-    for (var r=0;r<(pack.rewards||[]).length;r++) grantReward(pack.rewards[r]);
+    for (let r=0;r<(pack.rewards||[]).length;r++) grantReward(pack.rewards[r]);
     weeklyState.claimed[k] = true;
     save();
 
@@ -149,14 +149,14 @@
 
   // ===== UI =====
   function nodeHTML(target){
-    var done=weeklyState.doneCount, can=(done>=target), took=!!weeklyState.claimed[String(target)];
-    var stateText = took ? '已領' : (can ? '可領' : '未達');
-    var btnStyle='padding:6px 10px;border:none;border-radius:6px;'
+    const done=weeklyState.doneCount, can=(done>=target), took=!!weeklyState.claimed[String(target)];
+    const stateText = took ? '已領' : (can ? '可領' : '未達');
+    const btnStyle='padding:6px 10px;border:none;border-radius:6px;'
                + (took ? 'background:#555;color:#aaa'
                        : 'background:'+(can?'#2d7':'#444')+';color:#fff');
 
-    var rew = weeklyRewardsText(target);
-    var rewHTML = rew ? '<div style="font-size:12px;color:#aaa;margin-top:4px">獎勵：'+rew+'</div>' : '';
+    const rew = weeklyRewardsText(target);
+    const rewHTML = rew ? '<div style="font-size:12px;color:#aaa;margin-top:4px">獎勵：'+rew+'</div>' : '';
 
     return '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin:8px 0;gap:12px;">'
          +   '<div><div>'+target+' 次</div>'+ rewHTML + '</div>'
@@ -165,30 +165,30 @@
   }
 
   function render(){
-    var box = document.getElementById('questContent'); if(!box) return;
+    const box = document.getElementById('questContent'); if(!box) return;
     load();
 
-    var packs = getWeeklyPacks();
-    var maxTarget = packs.length ? packs[packs.length-1].target : 30;
-    var done = weeklyState.doneCount;
-    var pct = Math.floor(Math.min(100, (done / Math.max(1,maxTarget)) * 100));
+    const packs = getWeeklyPacks();
+    const maxTarget = packs.length ? packs[packs.length-1].target : 30;
+    const done = weeklyState.doneCount;
+    const pct = Math.floor(Math.min(100, (done / Math.max(1,maxTarget)) * 100));
 
-    var html='';
+    let html='';
     html += '<div style="margin-bottom:8px;color:#ddd;">本週完成每日任務：<b>'+done+'</b> / '+maxTarget+'</div>';
     html += '<div style="height:10px;background:#333;border-radius:8px;overflow:hidden;margin-bottom:10px;">'
          +   '<div style="height:10px;width:'+pct+'%;background:#48c;"></div>'
          + '</div>';
 
-    for (var i=0;i<packs.length;i++){
+    for (let i=0;i<packs.length;i++){
       html += nodeHTML(packs[i].target);
     }
     box.innerHTML = html;
 
-    var btns = box.querySelectorAll ? box.querySelectorAll('[data-week-claim]') : [];
-    for (var j=0;j<btns.length;j++){
+    const btns = box.querySelectorAll ? box.querySelectorAll('[data-week-claim]') : [];
+    for (let j=0;j<btns.length;j++){
       (function(b){
         b.onclick=function(){
-          var t = parseInt(b.getAttribute('data-week-claim'),10)||0;
+          const t = parseInt(b.getAttribute('data-week-claim'),10)||0;
           if (claim(t)) render();
         };
       })(btns[j]);
@@ -198,7 +198,7 @@
   // ===== 與 QuestCore 整合 =====
   function onTabChange(){ if (QuestCore.getActiveTab && QuestCore.getActiveTab()==='weekly') render(); }
   function init(){
-    var btn=document.getElementById('tabWeekly');
+    const btn=document.getElementById('tabWeekly');
     if(btn) btn.onclick=function(){ QuestCore.setTab('weekly'); };
     document.addEventListener('quest:tabchange', onTabChange);
   }

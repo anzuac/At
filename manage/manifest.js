@@ -66,10 +66,10 @@ window.MANIFEST = {
 
     // === quests & misc ===
     "quest/mission_rewards.js",
-    "quest/quest_core_es5.js",
-    "quest/quest_weekly_es5.js",
-    "quest/quest_daily_es5.js",
-    "quest/quest_repeat_es5.js",
+    "quest/quest_core_es2020.js",
+    "quest/quest_weekly_es2020.js",
+    "quest/quest_daily_es2020.js",
+    "quest/quest_repeat_es2020.js",
     "floating.js",
     
     // 將 game_init.js 放在最後載入，確保其他檔案都已準備就緒

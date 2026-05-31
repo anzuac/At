@@ -4,27 +4,27 @@
 (function(w) {
   "use strict";
 
-  var _tabs = [];
-  var _activeId = null;
-  var _modal = null;
-  var _body = null;
-  var _tabBar = null;
+  const _tabs = [];
+  let _activeId = null;
+  let _modal = null;
+  let _body = null;
+  let _tabBar = null;
 
-  var _rerenderPending = false;
-  var _progSwitchEnabled = false;
+  let _rerenderPending = false;
+  let _progSwitchEnabled = false;
 
   // 邏輯 / 畫面更新定時器
-  var _logicTimer = null;
-  var _renderTimer = null;
+  let _logicTimer = null;
+  let _renderTimer = null;
 
   // 邏輯每秒更新一次
-  var LOGIC_INTERVAL_MS = 1000;
+  const LOGIC_INTERVAL_MS = 1000;
 
   // 畫面每秒更新一次
-  var RENDER_INTERVAL_MS = 1000;
+  const RENDER_INTERVAL_MS = 1000;
 
   function getTab(id) {
-    for (var i = 0; i < _tabs.length; i++) {
+    for (let i = 0; i < _tabs.length; i++) {
       if (_tabs[i].id === id) return _tabs[i];
     }
     return null;
@@ -34,11 +34,11 @@
 
     if (!_body) return;
 
-    var cur = getTab(_activeId);
+    const cur = getTab(_activeId);
 
     if (!cur) return;
 
-    var currentOwner =
+    const currentOwner =
       _body.getAttribute(
         "data-tab-owner"
       );
@@ -121,7 +121,7 @@
       !_progSwitchEnabled
     ) return;
 
-    var cur = getTab(id);
+    const cur = getTab(id);
 
     if (!cur) return;
 
@@ -130,7 +130,7 @@
       !force
     ) return;
 
-    var old = getTab(_activeId);
+    const old = getTab(_activeId);
 
     if (
       old &&
@@ -176,7 +176,7 @@
       )
     ) {
 
-      var style =
+      const style =
         document.createElement("style");
 
       style.id =
@@ -203,7 +203,7 @@
       document.head.appendChild(style);
     }
 
-    var m =
+    const m =
       document.createElement("div");
 
     m.id = "stockHubModal";
@@ -218,7 +218,7 @@
       "z-index:9999;" +
       "padding:12px;";
 
-    var wrap =
+    const wrap =
       document.createElement("div");
 
     wrap.style.cssText =
@@ -237,7 +237,7 @@
     // =========================================
     // Header
     // =========================================
-    var head =
+    const head =
       document.createElement("div");
 
     head.style.cssText =
@@ -284,7 +284,7 @@
     // =========================================
     // Tabs
     // =========================================
-    var tabs =
+    const tabs =
       document.createElement("div");
 
     tabs.id = "stockHubTabs";
@@ -346,7 +346,7 @@ tabs.style.cursor = "grab";
     // =========================================
     // Body
     // =========================================
-    var body =
+    const body =
       document.createElement("div");
 
     body.id = "stockHubBody";
@@ -385,14 +385,14 @@ tabs.style.cursor = "grab";
 
   function updateMarketStatus() {
 
-    var el =
+    const el =
       document.getElementById(
         "stockHubMarketStatus"
       );
 
     if (!el) return;
 
-    var state =
+    const state =
       w.StockStateManager &&
       w.StockStateManager.getState
         ? w.StockStateManager.getState()
@@ -406,15 +406,15 @@ tabs.style.cursor = "grab";
       return;
     }
 
-    var engine =
+    const engine =
       w.StockMarketEngine || {};
 
-    var phase =
+    const phase =
       String(
         state.marketPhase || ""
       );
 
-    var elapsed =
+    const elapsed =
       Math.max(
         0,
         Math.floor(
@@ -424,22 +424,22 @@ tabs.style.cursor = "grab";
         )
       );
 
-    var PREOPEN_SEC =
+    const PREOPEN_SEC =
       Number(
         engine.MARKET_PREOPEN_SEC || 5
       );
 
-    var OPEN_SEC =
+    const OPEN_SEC =
       Number(
         engine.MARKET_OPEN_SEC || 10
       );
 
-    var CLOSED_SEC =
+    const CLOSED_SEC =
       Number(
         engine.MARKET_CLOSE_SEC || 5
       );
 
-    var totalSec = 0;
+    let totalSec = 0;
 
     if (phase === "preopen") {
 
@@ -454,19 +454,19 @@ tabs.style.cursor = "grab";
       totalSec = CLOSED_SEC;
     }
 
-    var remain =
+    const remain =
       Math.max(
         0,
         totalSec - elapsed
       );
 
-    var min =
+    const min =
       Math.floor(remain / 60);
 
-    var sec =
+    const sec =
       remain % 60;
 
-    var timeText =
+    const timeText =
       String(min).padStart(2, "0") +
       ":" +
       String(sec).padStart(2, "0");
@@ -531,14 +531,14 @@ tabs.style.cursor = "grab";
     _tabBar.innerHTML = "";
 
     for (
-      var i = 0;
+      let i = 0;
       i < _tabs.length;
       i++
     ) {
 
       (function(def) {
 
-        var btn =
+        const btn =
           document.createElement(
             "button"
           );
@@ -546,7 +546,7 @@ tabs.style.cursor = "grab";
         btn.textContent =
           def.title;
 
-        var isActive =
+        const isActive =
           _activeId === def.id;
 
         btn.style.cssText =
@@ -615,7 +615,7 @@ tabs.style.cursor = "grab";
     ) return;
 
     for (
-      var i = 0;
+      let i = 0;
       i < _tabs.length;
       i++
     ) {
@@ -670,7 +670,7 @@ tabs.style.cursor = "grab";
         "none";
     }
 
-    var t =
+    const t =
       getTab(_activeId);
 
     if (
@@ -690,7 +690,7 @@ tabs.style.cursor = "grab";
   function runLogicTick() {
 
     for (
-      var i = 0;
+      let i = 0;
       i < _tabs.length;
       i++
     ) {
@@ -728,7 +728,7 @@ tabs.style.cursor = "grab";
 
       updateMarketStatus();
 
-      var cur =
+      const cur =
         getTab(_activeId);
 
       if (cur) {
@@ -774,7 +774,7 @@ tabs.style.cursor = "grab";
 
     _logicTimer =
       setInterval(
-        function() {
+        () => {
 
           runLogicTick();
 
@@ -784,7 +784,7 @@ tabs.style.cursor = "grab";
 
     _renderTimer =
       setInterval(
-        function() {
+        () => {
 
           runRenderTick();
 
@@ -817,42 +817,37 @@ tabs.style.cursor = "grab";
 
   w.StockHub = {
 
-    open: open,
+    open,
 
-    close: close,
+    close,
 
-    registerTab: registerTab,
+    registerTab,
 
-    enableProgrammaticSwitch:
-      function(on) {
+    enableProgrammaticSwitch(on) {
 
         _progSwitchEnabled =
           !!on;
       },
 
-    switchTo: switchTo,
+    switchTo,
 
-    requestRerender:
-      function() {
+    requestRerender() {
 
         _rerenderPending =
           true;
       },
 
-    getActiveId:
-      function() {
+    getActiveId() {
 
         return _activeId;
       },
 
-    restartLoops:
-      function() {
+    restartLoops() {
 
         startLoops();
       },
 
-    stopLoops:
-      function() {
+    stopLoops() {
 
         stopLoops();
       }

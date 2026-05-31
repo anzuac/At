@@ -5,18 +5,18 @@
   "use strict";
   if (w.JobSkillPassivesV7) return;
 
-  var TICKET_ITEM_NAME = "被動能力券";
-  var SAVE_NS = "job_skill_passives_v7.2";
-  var LS_KEY = "JOB_SKILL_PASSIVES_V7.2";
+  const TICKET_ITEM_NAME = "被動能力券";
+  const SAVE_NS = "job_skill_passives_v7.2";
+  const LS_KEY = "JOB_SKILL_PASSIVES_V7.2";
 
-  var FIRST_JOB_MAIN = {
+  const FIRST_JOB_MAIN = {
     warrior: "warrior_rend_slash",
     mage: "mage_arcane_burst",
     archer: "archer_pierce_shot",
     thief: "thief_shadow_flurry"
   };
 
-  var RULE = {
+  const RULE = {
     stage: {
       2: { max: 10, dmg: 1, last: 2.5,   cd: 0.1, mp: 1.0, hit: 0, tgt: 0 },
       3: { max: 10, dmg: 1.2, last: 2.9,   cd: 0, mp: 1.0, hit: 1, tgt: 1 },
@@ -26,11 +26,11 @@
     }
   };
 
-  var PASSIVES = (function () {
-    var roots = ["warrior", "mage", "archer", "thief"];
-    var out = [];
-    roots.forEach(function (r) {
-      for (var s = 2; s <= 6; s++) {
+  const PASSIVES = (function () {
+    const roots = ["warrior", "mage", "archer", "thief"];
+    const out = [];
+    roots.forEach((r) => {
+      for (let s = 2; s <= 6; s++) {
         out.push({
           id: "jm1_" + r + "_" + s,
           rootJob: r,
@@ -48,7 +48,7 @@
   // 核心邏輯
   // -----------------------------
   function loadState() {
-    var st = (w.SaveHub && typeof w.SaveHub.get === "function") ? w.SaveHub.get(SAVE_NS, null) : null;
+    let st = (w.SaveHub && typeof w.SaveHub.get === "function") ? w.SaveHub.get(SAVE_NS, null) : null;
     if (!st) {
       try { st = JSON.parse(localStorage.getItem(LS_KEY) || "null"); } catch (e) { st = null; }
     }
@@ -56,13 +56,13 @@
     st.levels = st.levels || {};
     return st;
   }
-  
+
   function saveState(st) {
     if (w.SaveHub && typeof w.SaveHub.set === "function") w.SaveHub.set(SAVE_NS, st, { replace: true });
     try { localStorage.setItem(LS_KEY, JSON.stringify(st)); } catch (e) {}
   }
 
-  var _state = loadState();
+  const _state = loadState();
   function getLevel(id) { return Number(_state.levels[id] || 0); }
   function setLevel(id, lv) { _state.levels[id] = lv; saveState(_state); }
 
@@ -71,20 +71,20 @@
   }
 
   function getPlayerJobId() {
-    var p = w.player || {};
+    const p = w.player || {};
     return p.jobId || p.currentJobId || p.job || "";
   }
 
   function getRootJob() {
-    var jobs = w.jobs || {};
-    var cur = getPlayerJobId();
-    var guard = 0;
+    const jobs = w.jobs || {};
+    let cur = getPlayerJobId();
+    let guard = 0;
     while (jobs[cur] && jobs[cur].parent && guard++ < 20) { cur = jobs[cur].parent; }
     return ["warrior", "mage", "archer", "thief"].includes(cur) ? cur : null;
   }
 
   function getPlayerJobTier() {
-    var m = String(getPlayerJobId()).match(/(\d+)$/);
+    const m = String(getPlayerJobId()).match(/(\d+)$/);
     return m ? Number(m[1]) : 1;
   }
 
@@ -98,15 +98,15 @@
   // 邏輯套用 (動態補償換算版)
   // -----------------------------
   function applyAll() {
-    var root = getRootJob();
+    const root = getRootJob();
     if (!root) return;
-    var skill = findSkillById(FIRST_JOB_MAIN[root]);
+    const skill = findSkillById(FIRST_JOB_MAIN[root]);
     if (!skill) return;
-    var tier = (typeof w.getActiveTier === "function") ? w.getActiveTier(skill) : (skill.tiers ? skill.tiers[0] : null);
+    const tier = (typeof w.getActiveTier === "function") ? w.getActiveTier(skill) : (skill.tiers ? skill.tiers[0] : null);
     if (!tier) return;
 
     tier.logic = tier.logic || {};
-    var lg = tier.logic;
+    const lg = tier.logic;
 
     // Reset 戰鬥數值
     lg.masteryAddPctPerHit = 0;
@@ -114,25 +114,25 @@
     lg.masteryCdReduceSec = 0;
     lg.masteryHitsBonus = 0;
     lg.masteryMaxTargetsBonus = 0;
-    
+
     // 初始化 MP 成長率
-    lg.mpCostLevelGrowth = 0; 
+    lg.mpCostLevelGrowth = 0;
 
-    var add = 0, last = 0, cd = 0, hit = 0, tgt = 0, mpTotalAdd = 0;
+    let add = 0, last = 0, cd = 0, hit = 0, tgt = 0, mpTotalAdd = 0;
 
-    for (var s = 2; s <= 6; s++) {
-      var def = getDef("jm1_" + root + "_" + s);
+    for (let s = 2; s <= 6; s++) {
+      const def = getDef("jm1_" + root + "_" + s);
       if (!def) continue;
-      var lv = getLevel(def.id);
+      const lv = getLevel(def.id);
       if (lv <= 0) continue;
 
-      var r = RULE.stage[s];
+      const r = RULE.stage[s];
       add   += r.dmg * lv;
       last  += r.last * lv;
       cd    += r.cd * lv;
-      
+
       // 這裡計算你想要的「總固定加值」 (例如 10 級精通 = +10 MP)
-      mpTotalAdd += r.mp * lv; 
+      mpTotalAdd += r.mp * lv;
 
       if (lv >= r.max) {
         hit += r.hit;
@@ -148,8 +148,8 @@
 
     // --- MP 邏輯修正核心 ---
     // 取得目前的技能等級 (skill.level)，如果沒有則預設為 1
-    var skillLv = skill.level || 1;
-    
+    const skillLv = skill.level || 1;
+
     // 換算公式：目標增加量 / 技能等級 = 成長率
     // 這樣系統計算 (skillLv * mpCostLevelGrowth) 時，結果就會剛好是 mpTotalAdd
     if (mpTotalAdd > 0) {
@@ -171,13 +171,13 @@
     container.style.padding = "15px";
     container.style.fontFamily = "sans-serif";
 
-    var root = getRootJob();
+    const root = getRootJob();
     if (!root) {
       container.innerHTML = "<div style='text-align:center;padding:20px;'>無法辨識職業類別</div>";
       return;
     }
 
-    var header = d.createElement("div");
+    const header = d.createElement("div");
     header.style.marginBottom = "20px";
     header.style.padding = "10px";
     header.style.background = "#333";
@@ -190,20 +190,20 @@
     `;
     container.appendChild(header);
 
-    PASSIVES.filter(p => p.rootJob === root).forEach(function (def) {
-      var lv = getLevel(def.id);
-      var r = RULE.stage[def.stage];
-      var canUp = (getLevel(def.id) < def.maxLevel) && getTicketCount() > 0 && 
+    PASSIVES.filter(p => p.rootJob === root).forEach((def) => {
+      const lv = getLevel(def.id);
+      const r = RULE.stage[def.stage];
+      const canUp = (getLevel(def.id) < def.maxLevel) && getTicketCount() > 0 &&
                   (getPlayerJobTier() >= def.minJobTier);
-      
-      var prevDef = getDef("jm1_" + def.rootJob + "_" + (def.stage - 1));
-      var isLocked = (getPlayerJobTier() < def.minJobTier) || (prevDef && getLevel(prevDef.id) < prevDef.maxLevel);
 
-      var card = d.createElement("div");
+      const prevDef = getDef("jm1_" + def.rootJob + "_" + (def.stage - 1));
+      const isLocked = (getPlayerJobTier() < def.minJobTier) || (prevDef && getLevel(prevDef.id) < prevDef.maxLevel);
+
+      const card = d.createElement("div");
       card.style.cssText = "background:#262626; border-radius:8px; padding:12px; margin-bottom:12px; border-left:4px solid " + (isLocked ? "#555" : "#4ea6ff");
       if (isLocked) card.style.opacity = "0.6";
 
-      var progressPct = (lv / def.maxLevel) * 100;
+      const progressPct = (lv / def.maxLevel) * 100;
 
       card.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -215,7 +215,7 @@
             ${lv >= def.maxLevel ? "已滿等" : "升級"}
           </button>
         </div>
-        
+
         <div style="background:#444; height:6px; border-radius:3px; margin-bottom:10px;">
           <div style="background:#4ea6ff; width:${progressPct}%; height:100%; border-radius:3px; transition:width 0.3s;"></div>
         </div>
@@ -234,11 +234,11 @@
         </div>
       `;
 
-      var btn = card.querySelector("#btn_" + def.id);
+      const btn = card.querySelector("#btn_" + def.id);
       btn.onclick = function () {
         if (isLocked) return alert("前置精通未完成或職業轉職等級不足！");
         if (!canUp) return;
-        
+
         if (typeof w.removeItem === "function") w.removeItem(TICKET_ITEM_NAME, 1);
         setLevel(def.id, lv + 1);
         render(container);
@@ -255,7 +255,7 @@
     w.SkillsHub.registerTab({
       id: "skills-masteries-v7",
       title: "技能精通",
-      render: render,
+      render,
       onOpen: applyAll
     });
   }
@@ -264,19 +264,19 @@
     if (w.player && Array.isArray(w.skills)) applyAll();
   }
 
-  ["rebuildActiveSkills", "loadSkillsByJob"].forEach(function (fn) {
+  ["rebuildActiveSkills", "loadSkillsByJob"].forEach((fn) => {
     if (typeof w[fn] === "function" && !w["__v7_" + fn]) {
       w["__v7_" + fn] = true;
-      var orig = w[fn];
+      const orig = w[fn];
       w[fn] = function () {
-        var r = orig.apply(this, arguments);
+        const r = orig.apply(this, arguments);
         tryApply();
         return r;
       };
     }
   });
 
-  w.JobSkillPassivesV7 = { applyAll: applyAll, getLevel: getLevel, RULE: RULE };
+  w.JobSkillPassivesV7 = { applyAll, getLevel, RULE };
   tryApply();
 
 })(window, document);
