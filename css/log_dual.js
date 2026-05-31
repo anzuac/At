@@ -1,7 +1,7 @@
 (function(global){
   // 時間 [HH:MM:SS]
   function _nowStr(){
-    var d=new Date(); 
+    const d=new Date();
     function p(n){return (n<10?'0':'')+n;}
     return "["+p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds())+"]";
   }
@@ -16,10 +16,10 @@ function _classify(text){
 
   // 寫入某一欄：用 prepend（配合 CSS 的 flex-direction: column）
   function _push(boxId, text, type){
-    var box=document.getElementById(boxId);
+    const box=document.getElementById(boxId);
     if(!box) return;
-    var div=document.createElement("div");
-    var cls = type || _classify(text);         // 可傳入覆蓋類型
+    const div=document.createElement("div");
+    const cls = type || _classify(text);         // 可傳入覆蓋類型
     div.className="log-entry " + cls;
     div.textContent=_nowStr()+" "+text;
     box.prepend(div);                           // ★ 最新插最上面
@@ -28,7 +28,7 @@ function _classify(text){
 
   // 對外 API：第二參數可強制類型（"normal"|"skill"|"reward"）
   global.LogDual = {
-    player:  function(txt, type){ _push("playerLog",  txt, type); },
-    monster: function(txt, type){ _push("monsterLog", txt, type); }
+    player(txt, type){ _push("playerLog",  txt, type); },
+    monster(txt, type){ _push("monsterLog", txt, type); }
   };
 })(window);

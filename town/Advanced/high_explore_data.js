@@ -15,17 +15,17 @@
   function nz(x,d){ x=Number(x); return isFinite(x)? x : (d||0); }
 
   // 段位順序（需與 combat_power.js 一致）
-  var RANK_ORDER = ["F-","F","F+","E-","E","E+","D-","D","D+","C-","C","C+","B-","B","B+","A-","A","A+","S-","S","S+","SS-","SS","SS+","SSS-","SSS","SSS+"];
+  const RANK_ORDER = ["F-","F","F+","E-","E","E+","D-","D","D+","C-","C","C+","B-","B","B+","A-","A","A+","S-","S","S+","SS-","SS","SS+","SSS-","SSS","SSS+"];
 
   function rankIndex(label){
-    var i = RANK_ORDER.indexOf(String(label||""));
+    const i = RANK_ORDER.indexOf(String(label||""));
     return i < 0 ? 0 : i;
   }
   function getPlayerRankLabel(){
     try{
       if (typeof w.computeCombatPower === "function" && typeof w.getRankByCP === "function"){
-        var cp = w.computeCombatPower(w.player || {});
-        var rk = w.getRankByCP(cp);
+        const cp = w.computeCombatPower(w.player || {});
+        const rk = w.getRankByCP(cp);
         return rk && rk.label ? rk.label : "F-";
       }
     }catch(_){}
@@ -34,12 +34,12 @@
   function meetsRankRequirement(reqRank){
     // 若沒載 combat_power.js，預設放行（避免卡住）
     if (typeof w.computeCombatPower !== "function" || typeof w.getRankByCP !== "function") return true;
-    var cur = getPlayerRankLabel();
+    const cur = getPlayerRankLabel();
     return rankIndex(cur) >= rankIndex(reqRank);
   }
 
   // ① 關卡表：用 reqRank（F- → SSS+）
-  var DIFFICULTIES = [
+  const DIFFICULTIES = [
     { id:"R01", name:"新手平原",     reqRank:"F-" , chanceMult:1.00, qtyMult:1.00, expMult:1.00 },
     { id:"R02", name:"嵐草丘陵",     reqRank:"F"  , chanceMult:1.04, qtyMult:1.04, expMult:1.10 },
     { id:"R03", name:"河畔營地",     reqRank:"F+" , chanceMult:1.08, qtyMult:1.08, expMult:1.21 },
@@ -77,21 +77,21 @@
     { id:"R27", name:"天星王座",     reqRank:"SSS+",chanceMult:4.50, qtyMult:4.50, expMult:24.70 }
   ];
   function getDiff(tierId){
-    for (var i=0;i<DIFFICULTIES.length;i++){
+    for (let i=0;i<DIFFICULTIES.length;i++){
       if (DIFFICULTIES[i].id===tierId) return DIFFICULTIES[i];
     }
     return DIFFICULTIES[0];
   }
 
   // ② 固定掉落：含 EXP；強化石 type "stone"
-  var GUARANTEED = [
+  const GUARANTEED = [
     { type:"gold",  key:"金錢",   name:"金錢",   baseQty:[600, 3000] },
     { type:"stone", key:"強化石", name:"強化石", baseQty:[220, 1000] },
     { type:"exp",   key:"經驗",   name:"經驗",   baseQty:[30, 180] }
   ];
 
   // ③ 隨機獎池（維持你先前的清單；修正藥水 key 的逗號）
-  var REWARDS = [
+  const REWARDS = [
     { type:"gem",  key:"💎",          name:"鑽石",           rate:0.01,  qty:[5,30] },
     { type:"item", key:"SP點數券",     name:"SP點數券",       rate:0.05,  qty:[1,3] },
     { type:"item", key:"技能強化券",   name:"技能強化券",     rate:0.005, qty:[1,2] },
@@ -103,7 +103,7 @@
   { type:"item", key:"怪物硬幣UR", name:"怪物硬幣UR",   rate:0.008, qty:[1,4] },
   { type:"item", key:"怪物硬幣LR", name:"怪物硬幣LR",   rate:0.005, qty:[1,3] },
   { type:"item", key:"怪物硬幣SLR", name:"怪物硬幣SLR",   rate:0.0025, qty:[1,2] },
-    
+
     { type:"item", key:"護盾補充器",   name:"護盾補充器",     rate:0.035, qty:[1,3] },
     { type:"item", key:"護盾免費升級券", name:"護盾免費升級券", rate:0.01,  qty:[1,1] },
     { type:"item", key:"擴充護盾上限石", name:"擴充護盾上限石", rate:0.012, qty:[1,1] },
@@ -118,18 +118,18 @@
   ];
 
   function scaleQty(qtyArr, mult){
-    var q = randInt(nz(qtyArr[0],1), nz(qtyArr[1],1));
+    const q = randInt(nz(qtyArr[0],1), nz(qtyArr[1],1));
     return Math.max(1, Math.round(q * nz(mult,1)));
   }
 
   // ④ 固定掉落計算：EXP 用 expMult，其它用 qtyMult
   function grantGuaranteed(diff){
-    var out = [];
-    var qMul = nz(diff.qtyMult, 1);
-    var eMul = nz(diff.expMult, 1);
-    for (var i=0;i<GUARANTEED.length;i++){
-      var g = GUARANTEED[i];
-      var mult = (g.type === "exp") ? eMul : qMul;
+    const out = [];
+    const qMul = nz(diff.qtyMult, 1);
+    const eMul = nz(diff.expMult, 1);
+    for (let i=0;i<GUARANTEED.length;i++){
+      const g = GUARANTEED[i];
+      const mult = (g.type === "exp") ? eMul : qMul;
       out.push({
         type: g.type || "item",
         key:  g.key  || g.name || "?",
@@ -146,19 +146,19 @@
     guaranteed: GUARANTEED,
 
     // 檢查玩家是否能進入該關卡（段位）
-    canEnterTier: function(tierId){
-      var d = getDiff(tierId);
+    canEnterTier(tierId){
+      const d = getDiff(tierId);
       return meetsRankRequirement(d.reqRank);
     },
 
     // 供 UI 預覽倍率後的數值
-    getViewForTier: function(tierId){
-      var d = getDiff(tierId);
-      var cMul = nz(d.chanceMult,1), qMul = nz(d.qtyMult,1), eMul = nz(d.expMult,1);
+    getViewForTier(tierId){
+      const d = getDiff(tierId);
+      const cMul = nz(d.chanceMult,1), qMul = nz(d.qtyMult,1), eMul = nz(d.expMult,1);
 
-      var randomRows = REWARDS.map(function(r){
-        var min = nz((r.qty && r.qty[0]), 1);
-        var max = nz((r.qty && r.qty[1]), 1);
+      const randomRows = REWARDS.map((r) =>{
+        const min = nz((r.qty && r.qty[0]), 1);
+        const max = nz((r.qty && r.qty[1]), 1);
         return {
           name: r.name || r.key || "?",
           type: r.type || "item",
@@ -169,10 +169,10 @@
         };
       });
 
-      var fixedRows = GUARANTEED.map(function(g){
-        var min = nz((g.baseQty && g.baseQty[0]), 1);
-        var max = nz((g.baseQty && g.baseQty[1]), 1);
-        var mult = (g.type === "exp") ? eMul : qMul;
+      const fixedRows = GUARANTEED.map((g) =>{
+        const min = nz((g.baseQty && g.baseQty[0]), 1);
+        const max = nz((g.baseQty && g.baseQty[1]), 1);
+        const mult = (g.type === "exp") ? eMul : qMul;
         return {
           name: g.name || g.key || "?",
           type: g.type || "item",
@@ -191,9 +191,9 @@
   // ⑥ 舊 API 兼容（roll）＋ 新增 canEnterTier
   w.HighExploreDrops = {
     TIERS: (function(){
-      var map = {};
-      for (var i=0;i<DIFFICULTIES.length;i++){
-        var t = DIFFICULTIES[i];
+      const map = {};
+      for (let i=0;i<DIFFICULTIES.length;i++){
+        const t = DIFFICULTIES[i];
         map[t.id] = {
           id:t.id, name:t.name,
           // 兼容舊結構（保留 qty/dropMult 欄位名）
@@ -204,33 +204,33 @@
       return map;
     })(),
 
-    canEnterTier: function(tierId){
-      var d = getDiff(tierId);
+    canEnterTier(tierId){
+      const d = getDiff(tierId);
       return meetsRankRequirement(d.reqRank);
     },
 
     // 原 roll：不強制門檻（交給 UI 控）；要強制也可在此加判斷 return []
-    rollOnceByTier: function(tierId){
-      var diff = getDiff(tierId), bag = [];
-      var fixed = grantGuaranteed(diff);
-      for (var i=0;i<fixed.length;i++) bag.push(fixed[i]);
+    rollOnceByTier(tierId){
+      const diff = getDiff(tierId), bag = [];
+      const fixed = grantGuaranteed(diff);
+      for (let i=0;i<fixed.length;i++) bag.push(fixed[i]);
 
-      var rnd = (function(diff){
-        var out=[], cMul=nz(diff.chanceMult,1), qMul=nz(diff.qtyMult,1);
-        for (var i=0;i<REWARDS.length;i++){
-          var r=REWARDS[i], pEff=clamp(nz(r.rate,0)*cMul,0,1);
+      const rnd = (function(diff){
+        const out=[], cMul=nz(diff.chanceMult,1), qMul=nz(diff.qtyMult,1);
+        for (let i=0;i<REWARDS.length;i++){
+          const r=REWARDS[i], pEff=clamp(nz(r.rate,0)*cMul,0,1);
           if(Math.random()<pEff) out.push({ type:r.type||"item", key:r.key||r.name||"?", qty:scaleQty(r.qty||[1,1],qMul) });
         } return out;
       })(diff);
-      for (var j=0;j<rnd.length;j++) bag.push(rnd[j]);
+      for (let j=0;j<rnd.length;j++) bag.push(rnd[j]);
       return bag;
     },
 
-    rollManyByTier: function(tierId,times){
-      times=Math.max(0,Math.floor(times||0)); var bag=[];
-      for (var i=0;i<times;i++){
-        var r=this.rollOnceByTier(tierId);
-        for (var j=0;j<r.length;j++) bag.push(r[j]);
+    rollManyByTier(tierId,times){
+      times=Math.max(0,Math.floor(times||0)); const bag=[];
+      for (let i=0;i<times;i++){
+        const r=this.rollOnceByTier(tierId);
+        for (let j=0;j<r.length;j++) bag.push(r[j]);
       }
       return bag;
     }

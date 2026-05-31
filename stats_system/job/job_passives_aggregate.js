@@ -1,5 +1,5 @@
 // =======================================================
-// job_passives_core.js — 核心（Store + Aggregate 合併版，ES5）
+// job_passives_core.js — 核心（Store + Aggregate 合併版，ES2020+）
 //
 // - 存檔層 + 券檢查 + 等級→加成計算 + 寫入 coreBonus / PotentialBonus
 // - 新被動：
@@ -16,49 +16,49 @@
   if (w.JobPassivesCore) return; // 避免重複掛載
 
   // ===== 常數與工具 =====
-  var SAVE_NS  = "job_passives";    // SaveHub 命名空間
-  var SAVE_KEY = "被動券";           // localStorage 後援鍵
-  var COST_PER_LEVEL = 1;           // 每級消耗 1 張券
+  const SAVE_NS  = "job_passives";    // SaveHub 命名空間
+  const SAVE_KEY = "被動券";           // localStorage 後援鍵
+  const COST_PER_LEVEL = 1;           // 每級消耗 1 張券
 
   // 舊四職上限
-  var MAX_LV_OLD = 10;
+  const MAX_LV_OLD = 10;
   // 新被動（生命祝福/魔力祝福/生命續航）上限
-  var MAX_LV_NEW = 10;
+  const MAX_LV_NEW = 10;
   // 女神上限
-  var MAX_LV_GODDESS = 25;
+  const MAX_LV_GODDESS = 25;
 
   // 舊程式相容用
-  var MAX_LV = MAX_LV_OLD;
+  const MAX_LV = MAX_LV_OLD;
 
   // === 設計常數（唯一真實數值來源） ===
   // 舊四職每級係數
-  var WARRIOR_DMGRED_PER_LV   = 0.03; // 3%
-  var MAGE_SHIELD_PER_LV      = 0.09; // 9%（已修改）
-  var THIEF_DOUBLEHIT_PER_LV  = 0.04; // 4%
-  var ARCHER_PREEMPT_PER_LV   = 0.04; // 4%
+  const WARRIOR_DMGRED_PER_LV   = 0.03; // 3%
+  const MAGE_SHIELD_PER_LV      = 0.09; // 9%（已修改）
+  const THIEF_DOUBLEHIT_PER_LV  = 0.04; // 4%
+  const ARCHER_PREEMPT_PER_LV   = 0.04; // 4%
 
   // 生命祝福：HP = 等級 × (60 + (lv-1)*10)，MP = 等級 × 3
-  var LIFE_BLESS_HP_BASE      = 60;
-  var LIFE_BLESS_HP_INC       = 10;
-  var LIFE_BLESS_MP_PER_LV    = 3;
+  const LIFE_BLESS_HP_BASE      = 60;
+  const LIFE_BLESS_HP_INC       = 10;
+  const LIFE_BLESS_MP_PER_LV    = 3;
 
   // 魔力祝福：MP = 等級 × (70 + (lv-1)*13)，HP = 等級 × 15
-  var MANA_BLESS_MP_BASE      = 70;
-  var MANA_BLESS_MP_INC       = 13;
-  var MANA_BLESS_HP_PER_LV    = 15;
+  const MANA_BLESS_MP_BASE      = 70;
+  const MANA_BLESS_MP_INC       = 13;
+  const MANA_BLESS_HP_PER_LV    = 15;
 
   // 生命續航：HP = 等級 × (30 + (lv-1)*10)，MP = 等級 × 5
-  var VITAL_HP_BASE           = 30;
-  var VITAL_HP_INC            = 10;
-  var VITAL_MP_PER_LV         = 5;
+  const VITAL_HP_BASE           = 30;
+  const VITAL_HP_INC            = 10;
+  const VITAL_MP_PER_LV         = 5;
 
   // 女神祈禱：每級 +3%，最多 75%（25級），10級起額外攻防
-  var GODDESS_PER_LV_PERCENT          = 0.03; // 3% (小數)
-  var GODDESS_LV_CAP                  = MAX_LV_GODDESS; // 25
-  var GODDESS_MAX_TOTAL_PERCENT       = GODDESS_PER_LV_PERCENT * GODDESS_LV_CAP; // 0.75 (75%)
-  var GODDESS_EXTRA_UNLOCK_LV         = 10;
-  var GODDESS_EXTRA_DEF_PER_PLAYER_LV = 3;  // 防禦力上升 5 × 等級
-  var GODDESS_EXTRA_ATK_PER_PLAYER_LV = 5;  // 攻擊力上升 8 × 等級
+  const GODDESS_PER_LV_PERCENT          = 0.03; // 3% (小數)
+  const GODDESS_LV_CAP                  = MAX_LV_GODDESS; // 25
+  const GODDESS_MAX_TOTAL_PERCENT       = GODDESS_PER_LV_PERCENT * GODDESS_LV_CAP; // 0.75 (75%)
+  const GODDESS_EXTRA_UNLOCK_LV         = 10;
+  const GODDESS_EXTRA_DEF_PER_PLAYER_LV = 3;  // 防禦力上升 5 × 等級
+  const GODDESS_EXTRA_ATK_PER_PLAYER_LV = 5;  // 攻擊力上升 8 × 等級
 
   function clampLv(x) {
     x = Number(x) || 0;
@@ -66,7 +66,7 @@
   }
 
   function getBaseJobSafe(job) {
-    var j = String(job || "").toLowerCase();
+    const j = String(job || "").toLowerCase();
     if (typeof w.getBaseJob === "function") return w.getBaseJob(j);
     return j.replace(/\d+$/, "");
   }
@@ -95,7 +95,7 @@
   }
 
   // ===== 技能定義（邏輯用） =====
-  var SKILLS = {
+  const SKILLS = {
     // 舊系統（仍可用）
     warrior:    { key: "fortitude",    cap: MAX_LV_OLD,     name: "堅韌護體" },
     mage:       { key: "manaGuard",    cap: MAX_LV_OLD,     name: "魔力護體" },
@@ -113,19 +113,19 @@
   };
 
   // 舊系統每級係數
-  var PER_LV = {
+  const PER_LV = {
     warrior: { damageReduce:        WARRIOR_DMGRED_PER_LV },
     mage:    { magicShieldPercent:  MAGE_SHIELD_PER_LV },
     thief:   { doubleHitChance:     THIEF_DOUBLEHIT_PER_LV },
     archer:  { preemptiveChance:    ARCHER_PREEMPT_PER_LV }
   };
-  var ARCHER_CAP_BONUS = 1; // 10等 +1
+  const ARCHER_CAP_BONUS = 1; // 10等 +1
 
   // ===== 技能定義（給 UI，用設計數值組文字） =====
-  var _baseSkillDefs = (function () {
+  const _baseSkillDefs = (function () {
     function pctStr(x) { return Math.round(x * 1000) / 10; } // 小數→百分比一位小數
 
-    var arr = [];
+    const arr = [];
 
     // ---- 舊四職 ----
     arr.push({
@@ -272,7 +272,7 @@
   })();
 
   // 讓外部額外技能檔可以註冊 UI 使用的技能定義
-  var _extraSkillDefs = [];
+  const _extraSkillDefs = [];
 
   function registerSkill(def) {
     if (!def || !def.id) return;
@@ -322,13 +322,13 @@
     return o;
   }
 
-  var useSaveHub = !!w.SaveHub;
+  const useSaveHub = !!w.SaveHub;
   if (useSaveHub) {
     try {
-      var spec = {};
+      const spec = {};
       spec[SAVE_NS] = {
         version: 2,
-        migrate: function (old) {
+        migrate (old) {
           return normalizeState(old || freshState());
         }
       };
@@ -339,10 +339,10 @@
   function loadState() {
     try {
       if (useSaveHub) {
-        var s = w.SaveHub.get(SAVE_NS, freshState());
+        const s = w.SaveHub.get(SAVE_NS, freshState());
         return normalizeState(s);
       } else {
-        var raw = localStorage.getItem(SAVE_KEY);
+        const raw = localStorage.getItem(SAVE_KEY);
         return normalizeState(raw ? JSON.parse(raw) || freshState() : freshState());
       }
     } catch (_) {}
@@ -356,10 +356,10 @@
     } catch (_) {}
   }
 
-  var state = loadState();
+  const state = loadState();
 
   // ===== 訂閱與快照 =====
-  var subs = [];
+  let subs = [];
 
   function snapshotLevels() {
     return {
@@ -372,14 +372,14 @@
   }
 
   function notify() {
-    for (var i = 0; i < subs.length; i++) {
+    for (let i = 0; i < subs.length; i++) {
       try { subs[i](snapshotLevels()); } catch (_) {}
     }
   }
 
   // ===== 能否/嘗試升級 =====
   function _jobHasMaxedPrimary(base) {
-    var lv = snapshotLevels();
+    const lv = snapshotLevels();
     if (base === "warrior") return (lv.warrior.lifeBlessing >= SKILLS.warriorLife.cap);
     if (base === "mage")    return (lv.mage.manaBlessing   >= SKILLS.mageMana.cap);
     if (base === "thief")   return (lv.thief.vitalSustain  >= SKILLS.thiefLife.cap);
@@ -388,7 +388,7 @@
   }
 
   function canLevelUp(jobKey) {
-    var base = getBaseJobSafe(w.player && w.player.job);
+    const base = getBaseJobSafe(w.player && w.player.job);
 
     // 女神祈禱：本職的新被動滿等才可升
     if (jobKey === "goddess") {
@@ -397,7 +397,7 @@
     }
 
     // 其餘需符合職業身分
-    var isSelf =
+    const isSelf =
       (jobKey === "warrior"     && base === "warrior") ||
       (jobKey === "mage"        && base === "mage")    ||
       (jobKey === "thief"       && base === "thief")   ||
@@ -466,29 +466,29 @@
 
   // ===== 玩家等級 =====
   function _playerLevel() {
-    var lv = 1;
+    let lv = 1;
     try { lv = (w.player && (w.player.level | 0)) || 1; } catch (_) {}
     return Math.max(1, lv | 0);
   }
 
   // ===== 等級 → 加成計算（平坦 + 女神放大） =====
   function getComputed() {
-    var lv = snapshotLevels();
-    var wLv = (lv && lv.warrior) ? (lv.warrior.fortitude | 0) : 0;
-    var mLv = (lv && lv.mage)    ? (lv.mage.manaGuard   | 0) : 0;
-    var tLv = (lv && lv.thief)   ? (lv.thief.flurry     | 0) : 0;
-    var aLv = (lv && lv.archer)  ? (lv.archer.quickdraw | 0) : 0;
+    const lv = snapshotLevels();
+    const wLv = (lv && lv.warrior) ? (lv.warrior.fortitude | 0) : 0;
+    const mLv = (lv && lv.mage)    ? (lv.mage.manaGuard   | 0) : 0;
+    const tLv = (lv && lv.thief)   ? (lv.thief.flurry     | 0) : 0;
+    const aLv = (lv && lv.archer)  ? (lv.archer.quickdraw | 0) : 0;
 
-    var wLife = lv.warrior.lifeBlessing | 0;
-    var mMana = lv.mage.manaBlessing    | 0;
-    var tLife = lv.thief.vitalSustain   | 0;
-    var aLife = lv.archer.vitalSustain  | 0;
-    var gLv   = lv.global.goddessGrace  | 0;
+    const wLife = lv.warrior.lifeBlessing | 0;
+    const mMana = lv.mage.manaBlessing    | 0;
+    const tLife = lv.thief.vitalSustain   | 0;
+    const aLife = lv.archer.vitalSustain  | 0;
+    const gLv   = lv.global.goddessGrace  | 0;
 
-    var pLv = _playerLevel();
+    const pLv = _playerLevel();
 
     // 舊四職：百分比
-    var oldOut = {
+    const oldOut = {
       warrior: { damageReduce:       wLv * PER_LV.warrior.damageReduce },
       mage:    { magicShieldPercent: mLv * PER_LV.mage.magicShieldPercent },
       thief:   { doubleHitChance:    tLv * PER_LV.thief.doubleHitChance },
@@ -499,21 +499,21 @@
     };
 
     // 新被動基礎平坦（不含女神%）
-    var wBaseHp = (wLife > 0) ? pLv * (LIFE_BLESS_HP_BASE + (wLife - 1) * LIFE_BLESS_HP_INC) : 0;
-    var wBaseMp = (wLife > 0) ? pLv * LIFE_BLESS_MP_PER_LV : 0;
+    const wBaseHp = (wLife > 0) ? pLv * (LIFE_BLESS_HP_BASE + (wLife - 1) * LIFE_BLESS_HP_INC) : 0;
+    const wBaseMp = (wLife > 0) ? pLv * LIFE_BLESS_MP_PER_LV : 0;
 
-    var mBaseMp = (mMana > 0) ? pLv * (MANA_BLESS_MP_BASE + (mMana - 1) * MANA_BLESS_MP_INC) : 0;
-    var mBaseHp = (mMana > 0) ? pLv * MANA_BLESS_HP_PER_LV : 0;
+    const mBaseMp = (mMana > 0) ? pLv * (MANA_BLESS_MP_BASE + (mMana - 1) * MANA_BLESS_MP_INC) : 0;
+    const mBaseHp = (mMana > 0) ? pLv * MANA_BLESS_HP_PER_LV : 0;
 
-    var tBaseHp = (tLife > 0) ? pLv * (VITAL_HP_BASE + (tLife - 1) * VITAL_HP_INC) : 0;
-    var tBaseMp = (tLife > 0) ? pLv * VITAL_MP_PER_LV : 0;
+    const tBaseHp = (tLife > 0) ? pLv * (VITAL_HP_BASE + (tLife - 1) * VITAL_HP_INC) : 0;
+    const tBaseMp = (tLife > 0) ? pLv * VITAL_MP_PER_LV : 0;
 
-    var aBaseHp = (aLife > 0) ? pLv * (VITAL_HP_BASE + (aLife - 1) * VITAL_HP_INC) : 0;
-    var aBaseMp = (aLife > 0) ? pLv * VITAL_MP_PER_LV : 0;
+    const aBaseHp = (aLife > 0) ? pLv * (VITAL_HP_BASE + (aLife - 1) * VITAL_HP_INC) : 0;
+    const aBaseMp = (aLife > 0) ? pLv * VITAL_MP_PER_LV : 0;
 
-    var baseJob = getBaseJobSafe(w.player && w.player.job);
-    var baseHp = 0;
-    var baseMp = 0;
+    const baseJob = getBaseJobSafe(w.player && w.player.job);
+    let baseHp = 0;
+    let baseMp = 0;
 
     if (baseJob === "warrior") {
       baseHp = wBaseHp;
@@ -530,20 +530,20 @@
     }
 
     // 女神祈禱：計算百分比（0~0.75）
-    var goddessPercent = Math.min(GODDESS_MAX_TOTAL_PERCENT, gLv * GODDESS_PER_LV_PERCENT);
+    const goddessPercent = Math.min(GODDESS_MAX_TOTAL_PERCENT, gLv * GODDESS_PER_LV_PERCENT);
 
     // ★ 方案 A：
     //   - 所有職業 HP 都吃女神 %
     //   - 法師 MP 也吃女神 %
-    var goddessHpFlat = Math.floor(baseHp * goddessPercent);
-    var goddessMpFlat = 0;
+    const goddessHpFlat = Math.floor(baseHp * goddessPercent);
+    let goddessMpFlat = 0;
     if (baseJob === "mage") {
       goddessMpFlat = Math.floor(baseMp * goddessPercent);
     }
 
     // 女神祈禱 10 等起攻防平坦（coreBonus）
-    var goddessDefFlat = 0;
-    var goddessAtkFlat = 0;
+    let goddessDefFlat = 0;
+    let goddessAtkFlat = 0;
     if (gLv >= GODDESS_EXTRA_UNLOCK_LV) {
       goddessDefFlat = pLv * GODDESS_EXTRA_DEF_PER_PLAYER_LV;
       goddessAtkFlat = pLv * GODDESS_EXTRA_ATK_PER_PLAYER_LV;
@@ -559,18 +559,18 @@
       newFlat: {
         hpBase: baseHp,
         mpBase: baseMp,
-        goddessDefFlat: goddessDefFlat,
-        goddessAtkFlat: goddessAtkFlat,
-        goddessHpFlat: goddessHpFlat, // 給 PotentialBonus 使用
-        goddessMpFlat: goddessMpFlat  // 給 PotentialBonus 使用
+        goddessDefFlat,
+        goddessAtkFlat,
+        goddessHpFlat, // 給 PotentialBonus 使用
+        goddessMpFlat  // 給 PotentialBonus 使用
       }
     };
   }
 
   function ensurePlayerReady(cb) {
-    var tries = 0;
+    let tries = 0;
     (function wait() {
-      var ok = !!(w.player &&
+      const ok = !!(w.player &&
                   w.player.coreBonus && w.player.coreBonus.bonusData &&
                   w.player.PotentialBonus && w.player.PotentialBonus.bonusData);
       if (ok) return cb();
@@ -581,13 +581,13 @@
 
   // ===== 套用到 coreBonus / PotentialBonus =====
   function apply() {
-    ensurePlayerReady(function () {
-      var comp = getComputed();
+    ensurePlayerReady(() => {
+      const comp = getComputed();
 
       // coreBonus：基礎平坦能力＋舊百分比
-      var core = w.player.coreBonus;
+      const core = w.player.coreBonus;
       if (core && core.bonusData) {
-        var cBucket = core.bonusData.jobPassives || {};
+        const cBucket = core.bonusData.jobPassives || {};
 
         // 舊系統百分比
         cBucket.damageReduce           = Number(comp.warrior.damageReduce || 0);
@@ -610,9 +610,9 @@
       }
 
       // PotentialBonus：女神祈禱放大的 HP/MP（已換算成平坦）
-      var pot = w.player.PotentialBonus;
+      const pot = w.player.PotentialBonus;
       if (pot && pot.bonusData) {
-        var pBucket = pot.bonusData.jobPassives || {};
+        const pBucket = pot.bonusData.jobPassives || {};
 
         pBucket.hp = Number(comp.newFlat.goddessHpFlat || 0);
         pBucket.mp = Number(comp.newFlat.goddessMpFlat || 0);
@@ -626,12 +626,12 @@
   }
 
   // ===== 自動偵測：等級/職業改變 =====
-  var _lastWatch = { level: -1, base: "" };
+  const _lastWatch = { level: -1, base: "" };
 
   function watchPlayerTick() {
     try {
-      var lvl = (w.player && (w.player.level | 0)) || -1;
-      var base = getBaseJobSafe(w.player && w.player.job) || "";
+      const lvl = (w.player && (w.player.level | 0)) || -1;
+      const base = getBaseJobSafe(w.player && w.player.job) || "";
       if (lvl !== _lastWatch.level || base !== _lastWatch.base) {
         _lastWatch.level = lvl;
         _lastWatch.base = base;
@@ -643,22 +643,22 @@
 
   function autoWire() {
     try { setInterval(watchPlayerTick, 1000); } catch (_) {}
-    subs.push(function () { apply(); });
+    subs.push(() => { apply(); });
   }
 
   // ===== 對外 API =====
-  var api = {
-    getState: function () { return JSON.parse(JSON.stringify(state)); },
+  const api = {
+    getState () { return JSON.parse(JSON.stringify(state)); },
     getLevels: snapshotLevels,
-    tryLevelUp: tryLevelUp,
-    setLevel: setLevel,
-    canLevelUp: canLevelUp,
-    getConfig: function () {
+    tryLevelUp,
+    setLevel,
+    canLevelUp,
+    getConfig () {
       return {
-        COST_PER_LEVEL: COST_PER_LEVEL,
-        MAX_LV_OLD: MAX_LV_OLD,
-        MAX_LV_NEW: MAX_LV_NEW,
-        MAX_LV_GODDESS: MAX_LV_GODDESS,
+        COST_PER_LEVEL,
+        MAX_LV_OLD,
+        MAX_LV_NEW,
+        MAX_LV_GODDESS,
         SKILLS: JSON.parse(JSON.stringify(SKILLS)),
         DESIGN: {
           PER_LV: JSON.parse(JSON.stringify(PER_LV)),
@@ -688,15 +688,15 @@
         }
       };
     },
-    subscribe: function (fn) { if (typeof fn === "function") subs.push(fn); },
-    unsubscribe: function (fn) {
-      subs = subs.filter(function (f) { return f !== fn; });
+    subscribe (fn) { if (typeof fn === "function") subs.push(fn); },
+    unsubscribe (fn) {
+      subs = subs.filter((f) => { return f !== fn; });
     },
-    getComputed: getComputed,
-    apply: apply,
-    getSkillDefs: getSkillDefs,
-    getAllSkillDefs: getAllSkillDefs,
-    registerSkill: registerSkill
+    getComputed,
+    apply,
+    getSkillDefs,
+    getAllSkillDefs,
+    registerSkill
   };
 
   w.JobPassivesCore = api;
@@ -719,7 +719,7 @@
 
   // ===== 啟動 =====
   if (d.readyState === "loading") {
-    d.addEventListener("DOMContentLoaded", function () {
+    d.addEventListener("DOMContentLoaded", () => {
       apply();
       autoWire();
     });

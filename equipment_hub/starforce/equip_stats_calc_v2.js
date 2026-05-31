@@ -27,20 +27,20 @@
       };
     }
 
-    var b = clone(node.base||{}),
+    const b = clone(node.base||{}),
         e = clone(node.enhance||{});
-    var type = node.type||'',
+    const type = node.type||'',
         star = node.star|0;
 
     // 用「卷軸後的攻擊」當作武器星力%基礎
-    var basePlusScrollAtk = nz(b.atk) + nz(e.atk);
+    const basePlusScrollAtk = nz(b.atk) + nz(e.atk);
 
     // 取得星力加成（新版提供 defFlat / hpFlat）
-    var sf = (root.StarforceTableV1 && root.StarforceTableV1.calcStarBonus)
+    const sf = (root.StarforceTableV1 && root.StarforceTableV1.calcStarBonus)
       ? root.StarforceTableV1.calcStarBonus(type, star, basePlusScrollAtk)
       : { allStat:0, atkPctSum:0, atkFromStar:0, atkFlat:0, defFlat:0, hpFlat:0, mpFlat:0 };
 
-    var out = {
+    const out = {
       // 全屬（星力 allStat 為平值，四圍都加）
       str: nz(b.str) + nz(e.str) + nz(sf.allStat),
       dex: nz(b.dex) + nz(e.dex) + nz(sf.allStat),
@@ -80,9 +80,9 @@
    * 將多件裝備的最終值相加
    */
   function sumStats(list){
-    var sum = { str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0 };
-    for (var i=0; i<list.length; i++){
-      var s = list[i] || {};
+    const sum = { str:0,dex:0,int:0,luk:0,atk:0,def:0,hp:0,mp:0 };
+    for (let i=0; i<list.length; i++){
+      const s = list[i] || {};
       sum.str += nz(s.str);
       sum.dex += nz(s.dex);
       sum.int += nz(s.int);
@@ -97,8 +97,8 @@
 
   // 導出
   root.EquipStatsV2 = {
-    calcEquipFinal: calcEquipFinal,
-    sumStats: sumStats
+    calcEquipFinal,
+    sumStats
   };
 
 })(this);

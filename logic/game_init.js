@@ -1,7 +1,7 @@
 // 📦 game_init.js —— rAF 主迴圈 + 充能條（玩家/怪物）+ APS 顯示 + 節流更新
 
 // ===== 可調參數（毫秒 / 倍數） =====
-var RT = {
+const RT = {
   // 基準（100% 時的間隔）
   basePlayerMs: 2000,
   baseMonsterMs: 2000,
@@ -27,38 +27,38 @@ var RT = {
 };
 
 // ===== rAF 迴圈累加器 =====
-var _lastTs = 0, _accP = 0, _accM = 0, _accT = 0, _accUI = 0;
-var _loopOn = false;
+let _lastTs = 0, _accP = 0, _accM = 0, _accT = 0, _accUI = 0;
+let _loopOn = false;
 
 // ===== 對外 setter（變更時重置累加器，避免爆跑） =====
 function _resetAccumulators(){ _accP = _accM = _accT = _accUI = 0; }
 
 window.setAttackSpeed = function (ms) {
-  var v = Number(ms);
+  const v = Number(ms);
   if (isFinite(v) && v > 0) { RT.playerMsFixed = v; _resetAccumulators(); }
 };
 window.setMonsterSpeed = function (ms) {
-  var v = Number(ms);
+  const v = Number(ms);
   if (isFinite(v) && v > 0) { RT.monsterMsFixed = v; _resetAccumulators(); }
 };
 window.setPlayerSpeedPct = function (pct) {
-  var p = Number(pct);
+  const p = Number(pct);
   RT.playerPctOverride = (isFinite(p) && p > 0) ? p : 1;
   RT.playerMsFixed = null; // 回自動
   _resetAccumulators();
 };
 window.setMonsterSpeedPct = function (pct) {
-  var p = Number(pct);
+  const p = Number(pct);
   RT.monsterPctOverride = (isFinite(p) && p > 0) ? p : 1;
   RT.monsterMsFixed = null;
   _resetAccumulators();
 };
 window.setTickMs = function (ms) {
-  var v = Number(ms);
+  const v = Number(ms);
   if (isFinite(v) && v >= 16) { RT.tickMs = v; _resetAccumulators(); }
 };
 window.setUiMs = function (ms) {
-  var v = Number(ms);
+  const v = Number(ms);
   if (isFinite(v) && v >= 16) { RT.uiMs = v; _resetAccumulators(); }
 };
 
@@ -171,23 +171,23 @@ function _recalcIntervals() {
 // ===== 充能條：依「累積/間隔」顯示 0→100% =====
 function updateChargeBars() {
   // APS 文字（次/秒）
-  var pAps = (1000 / RT.playerActMs);
-  var mAps = (1000 / RT.monsterActMs);
-  var pTxt = document.getElementById("hudPlayerAPS");
-  var mTxt = document.getElementById("hudMonsterAPS");
+  const pAps = (1000 / RT.playerActMs);
+  const mAps = (1000 / RT.monsterActMs);
+  const pTxt = document.getElementById("hudPlayerAPS");
+  const mTxt = document.getElementById("hudMonsterAPS");
   if (pTxt) pTxt.textContent = pAps.toFixed(2) + "/s";
   if (mTxt) mTxt.textContent = mAps.toFixed(2) + "/s";
 
   // 充能百分比：累積 / 間隔
-  var pFill = document.getElementById("playerApsFill");
-  var mFill = document.getElementById("monsterApsFill");
+  const pFill = document.getElementById("playerApsFill");
+  const mFill = document.getElementById("monsterApsFill");
 
   if (pFill && RT.playerActMs > 0) {
-    var pPct = Math.max(0, Math.min(100, Math.round((_accP / RT.playerActMs) * 100)));
+    const pPct = Math.max(0, Math.min(100, Math.round((_accP / RT.playerActMs) * 100)));
     pFill.style.width = pPct + "%";
   }
   if (mFill && RT.monsterActMs > 0) {
-    var mPct = Math.max(0, Math.min(100, Math.round((_accM / RT.monsterActMs) * 100)));
+    const mPct = Math.max(0, Math.min(100, Math.round((_accM / RT.monsterActMs) * 100)));
     mFill.style.width = mPct + "%";
   }
 }
@@ -205,7 +205,7 @@ function flashAndReset(fillEl) {
 function _loop(ts) {
   if (!_loopOn) return;
   if (_lastTs === 0) _lastTs = ts;
-  var dt = ts - _lastTs; _lastTs = ts;
+  const dt = ts - _lastTs; _lastTs = ts;
 
   _recalcIntervals();
 
@@ -249,40 +249,40 @@ function _loop(ts) {
 }
 
 // ===== DOMContentLoaded：初始化/事件綁定/啟動迴圈 =====
-window.addEventListener("DOMContentLoaded", function () {
+window.addEventListener("DOMContentLoaded", () => {
   // ====== 你的地圖/等級填入（相容保留） ======
-  var levelSelect = document.getElementById("levelRange");
-  var mapSelect   = document.getElementById("mapSelect");
+  const levelSelect = document.getElementById("levelRange");
+  const mapSelect   = document.getElementById("mapSelect");
 
   if (typeof levelRangeOptions !== 'undefined' && levelSelect && levelSelect.options.length === 0) {
-    for (var i = 0; i < levelRangeOptions.length; i++) {
-      var rng = levelRangeOptions[i];
-      var opt = document.createElement("option");
+    for (let i = 0; i < levelRangeOptions.length; i++) {
+      const rng = levelRangeOptions[i];
+      const opt = document.createElement("option");
       opt.value = rng.value;
       opt.textContent = rng.label;
       levelSelect.appendChild(opt);
     }
   }
   if (typeof mapOptions !== 'undefined' && mapSelect && mapSelect.options.length === 0) {
-    for (var j = 0; j < mapOptions.length; j++) {
-      var mp = mapOptions[j];
-      var opt2 = document.createElement("option");
+    for (let j = 0; j < mapOptions.length; j++) {
+      const mp = mapOptions[j];
+      const opt2 = document.createElement("option");
       opt2.value = mp.value;
       opt2.textContent = mp.label;
       mapSelect.appendChild(opt2);
     }
   }
 
-  if (levelSelect) levelSelect.addEventListener("change", function(){
+  if (levelSelect) levelSelect.addEventListener("change", () =>{
     window.selectedRange = levelSelect.value;
   });
-  if (mapSelect)   mapSelect.addEventListener("change", function(){
+  if (mapSelect)   mapSelect.addEventListener("change", () =>{
     window.selectedMap = mapSelect.value;
   });
 
   // Start：開啟自動戰鬥（如無怪則自動生新怪）
-  var btnStart = document.getElementById('btnStart');
-  if (btnStart) btnStart.addEventListener('click', function () {
+  const btnStart = document.getElementById('btnStart');
+  if (btnStart) btnStart.addEventListener('click', () => {
     if (!window.autoEnabled) {
       window.autoEnabled = true;
 
@@ -301,8 +301,8 @@ window.addEventListener("DOMContentLoaded", function () {
   });
 
   // Stop：優雅停止（通常在本場結束後停）
-  var btnStop  = document.getElementById('btnStop');
-  if (btnStop) btnStop.addEventListener('click', function () {
+  const btnStop  = document.getElementById('btnStop');
+  if (btnStop) btnStop.addEventListener('click', () => {
     window.stopAfterEncounter = true; // 交由你的戰鬥流程在適當時機檢查並停下
   });
 

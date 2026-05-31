@@ -11,12 +11,12 @@
   if (window.RecoveryItemsTab && window.RecoveryItemsTab.__v5__) return;
 
   // ===== 狀態存檔（SaveHub 優先；localStorage 後備；含自動遷移）=====
-  var SAVEHUB_NS = "recovery_items_tab_v5";
-  var SAVE_KEY   = "potions_tab_state_v1"; // 舊 localStorage key（遷移來源）
-  var SH = window.SaveHub || null;
+  const SAVEHUB_NS = "recovery_items_tab_v5";
+  const SAVE_KEY   = "potions_tab_state_v1"; // 舊 localStorage key（遷移來源）
+  const SH = window.SaveHub || null;
 
   // 預設狀態
-  var STATE = {
+  let STATE = {
     auto: {},        // 各藥水自動用藥設定 { [id]: { enabled, threshold01, autoBuy:{enabled,target} } }
     cooldowns: {},   // 各藥水冷卻截止時間（時間戳 ms）
     lastManualUse: 0 // 最近手動使用時間（ms）
@@ -32,7 +32,7 @@
   }
 
   function loadState(){
-    var st = null;
+    let st = null;
     try{
       if (SH){
         // 先試著從 SaveHub 讀
@@ -41,7 +41,7 @@
 
         // 如果 SaveHub 沒有，就從舊 localStorage 遷移
         if (!st && window.localStorage){
-          var raw = localStorage.getItem(SAVE_KEY);
+          const raw = localStorage.getItem(SAVE_KEY);
           if (raw){
             try{
               st = JSON.parse(raw);
@@ -54,7 +54,7 @@
         }
       } else if (window.localStorage){
         // 沒有 SaveHub，就用舊的 localStorage
-        var raw2 = localStorage.getItem(SAVE_KEY);
+        const raw2 = localStorage.getItem(SAVE_KEY);
         if (raw2) st = JSON.parse(raw2);
       }
     }catch(_){}
@@ -76,12 +76,12 @@
   STATE = loadState();
 
   // ---- UI loop（避免每次重繪都重複啟動計時器）----
-  var UI_CONTAINER = null;
-  var UI_LOOP_STARTED = false;
+  let UI_CONTAINER = null;
+  let UI_LOOP_STARTED = false;
 
   // ---- Auto loop（自動用藥：不依賴 UI 是否開啟）----
   // 自動用藥應在戰鬥/掛機時持續運作，因此不能綁在 GrowthHub 的重繪節奏。
-  var AUTO_LOOP_STARTED = false;
+  let AUTO_LOOP_STARTED = false;
 
   // ---- 小工具 ----
   function now(){ return Date.now(); }
@@ -89,12 +89,12 @@
   function fmt(n){ return (n||0).toLocaleString(); }
   function getMoney(){
     if (!window.player) return 0;
-    var g = Number(player.gold || player.money || 0);
+    const g = Number(player.gold || player.money || 0);
     return isFinite(g) ? g : 0;
   }
   function addMoney(delta){
     if (!window.player) return;
-    var g = getMoney() + delta;
+    let g = getMoney() + delta;
     if (g < 0) g = 0;
     player.gold = g;
     if (typeof window.updateResourceUI === 'function') {
@@ -108,15 +108,15 @@
   (function migrateOldPercent(){
     try{
       if (!window.localStorage) return;
-      var hpThr = localStorage.getItem('auto_hp_threshold');
-      var mpThr = localStorage.getItem('auto_mp_threshold');
+      const hpThr = localStorage.getItem('auto_hp_threshold');
+      const mpThr = localStorage.getItem('auto_mp_threshold');
       if (hpThr != null){
-        var v = Math.max(1, Math.min(100, Number(hpThr)||50))/100;
+        const v = Math.max(1, Math.min(100, Number(hpThr)||50))/100;
         STATE.auto.hp_basic = STATE.auto.hp_basic || {};
         if (typeof STATE.auto.hp_basic.threshold01 !== 'number') STATE.auto.hp_basic.threshold01 = v;
       }
       if (mpThr != null){
-        var v2 = Math.max(1, Math.min(100, Number(mpThr)||50))/100;
+        const v2 = Math.max(1, Math.min(100, Number(mpThr)||50))/100;
         STATE.auto.mp_basic = STATE.auto.mp_basic || {};
         if (typeof STATE.auto.mp_basic.threshold01 !== 'number') STATE.auto.mp_basic.threshold01 = v2;
       }
@@ -126,23 +126,23 @@
   // ---- 恢復力（百分比）----
   // RecoveryPower = player.totalStats.recoverPercent（已含被動/技能）
   // 藥水實際吃進去的比例可用 POTION_EAT_RATIO 微調
-  var POTION_EAT_RATIO = 1.0;
+  const POTION_EAT_RATIO = 1.0;
 
   // ==========================
   // ★ 藥水強化系統參數
   // ==========================
   // 強化等級上限
-  var POTION_UPGRADE_MAX_LEVEL = 500;
+  const POTION_UPGRADE_MAX_LEVEL = 500;
   // 每等級提升 +5% 回復量
-  var POTION_UPGRADE_STEP_PCT  = 0.05; // 5%
+  const POTION_UPGRADE_STEP_PCT  = 0.05; // 5%
   // 升級成本：第 1 級 5 把，第 2 級 10 把... => cost = BASE * (level+1)
-  var POTION_UPGRADE_COST_BASE = 5;
+  const POTION_UPGRADE_COST_BASE = 5;
 
   // ★ 強化帶來的「基礎值成長」（每升 1 等，基礎值 +X）
   // 例：base=100 的生命藥水，Lv.1 → 110；Lv.500 → 100 + 10×500
   // 依需求調整：每升 1 等增加的「基礎回復值」
   // （升級素材與成本邏輯不變）
-  var POTION_UPGRADE_BASE_INC_BY_ID = {
+  const POTION_UPGRADE_BASE_INC_BY_ID = {
     hp_basic: 15,   // 生命藥水
     hp_adv:   120,  // 高級生命藥水
     hp_super: 450,  // 超級生命藥水
@@ -156,7 +156,7 @@
   // - 高級/超級：70% Max
   // - 超級生命藥水：無上限（依需求調整）
   // - 超級法力：無上限
-  var POTION_HEAL_CAP_PCT_BY_ID = {
+  const POTION_HEAL_CAP_PCT_BY_ID = {
     hp_basic: 0.30,
     mp_basic: 0.30,
     hp_adv:   0.70,
@@ -168,7 +168,7 @@
 
 
   // 各藥水對應的「潛能解放鑰匙」名稱
-  var POTION_UPGRADE_KEY_BY_ID = {
+  const POTION_UPGRADE_KEY_BY_ID = {
     hp_basic: '低階潛能解放鑰匙',  // 生命藥水
     mp_basic: '低階潛能解放鑰匙',  // 法力藥水
 
@@ -180,7 +180,7 @@
   };
 
   function getRecoveryPower(){
-    var p = 0;
+    let p = 0;
 
     // 1) 首選：統一總合（base+skill+core，已做上限）
     if (player && player.totalStats && typeof player.totalStats.recoverPercent === 'number') {
@@ -203,7 +203,7 @@
   }
 
   // ---- 藥水清單（新增藥水就加一條）----
-  var ITEMS = {
+  const ITEMS = {
     // 需求：等級上限 500；每等 +5% 回復倍率（已由 POTION_UPGRADE_STEP_PCT 控制）
     // 數值調整：base / cd / price
     hp_basic:  { id:'hp_basic',  name:'生命藥水',     invName:'生命藥水',     stat:'hp', base:100,   cdMs: 30*1000, price: 500,  order:1 },
@@ -213,20 +213,20 @@
     mp_adv:    { id:'mp_adv',    name:'高級法力藥水', invName:'高級法力藥水', stat:'mp', base:130,   cdMs: 30*1000, price: 5000, order:2 },
     mp_super:  { id:'mp_super',  name:'超級法力藥水', invName:'超級法力藥水', stat:'mp', base:300,   cdMs: 27*1000, price: null, order:3 }
   };
-  var LIST = [ITEMS.hp_basic, ITEMS.hp_adv, ITEMS.hp_super, ITEMS.mp_basic, ITEMS.mp_adv, ITEMS.mp_super];
+  const LIST = [ITEMS.hp_basic, ITEMS.hp_adv, ITEMS.hp_super, ITEMS.mp_basic, ITEMS.mp_adv, ITEMS.mp_super];
 
   // ==========================
   // ★ 藥水強化存檔（SaveHub / localStorage）
   // ==========================
-  var POTION_UPGRADE_SH_NS   = "potion_upgrade_v1";
-  var POTION_UPGRADE_LS_KEY  = "potion_upgrade_v1";
-  var POTION_UPGRADE_LEVELS  = {};
+  const POTION_UPGRADE_SH_NS   = "potion_upgrade_v1";
+  const POTION_UPGRADE_LS_KEY  = "potion_upgrade_v1";
+  let POTION_UPGRADE_LEVELS  = {};
 
   function normalizePotionLevels(o){
-    var out = {};
+    const out = {};
     o = o && typeof o === 'object' ? o : {};
-    ['hp_basic','hp_adv','hp_super','mp_basic','mp_adv','mp_super'].forEach(function(id){
-      var lv = Number(o[id] || 0);
+    ['hp_basic','hp_adv','hp_super','mp_basic','mp_adv','mp_super'].forEach((id) =>{
+      let lv = Number(o[id] || 0);
       if (!isFinite(lv) || lv < 0) lv = 0;
       if (lv > POTION_UPGRADE_MAX_LEVEL) lv = POTION_UPGRADE_MAX_LEVEL;
       out[id] = lv;
@@ -235,15 +235,15 @@
   }
 
   function loadPotionUpgradeLevels(){
-    var SH2 = window.SaveHub || null;
+    const SH2 = window.SaveHub || null;
     try{
       if (SH2){
-        var raw = null;
+        let raw = null;
         if (typeof SH2.get === 'function') raw = SH2.get(POTION_UPGRADE_SH_NS, null);
         else if (typeof SH2.read === 'function') raw = SH2.read(POTION_UPGRADE_SH_NS, null);
 
         if (!raw && window.localStorage){
-          var s = localStorage.getItem(POTION_UPGRADE_LS_KEY);
+          const s = localStorage.getItem(POTION_UPGRADE_LS_KEY);
           if (s){
             try{
               raw = JSON.parse(s);
@@ -255,7 +255,7 @@
         }
         return normalizePotionLevels(raw || {});
       } else if (window.localStorage){
-        var raw2 = localStorage.getItem(POTION_UPGRADE_LS_KEY);
+        const raw2 = localStorage.getItem(POTION_UPGRADE_LS_KEY);
         return normalizePotionLevels(raw2 ? JSON.parse(raw2) : {});
       }
     }catch(_){}
@@ -263,8 +263,8 @@
   }
 
   function savePotionUpgradeLevels(){
-    var SH2 = window.SaveHub || null;
-    var safe = normalizePotionLevels(POTION_UPGRADE_LEVELS);
+    const SH2 = window.SaveHub || null;
+    const safe = normalizePotionLevels(POTION_UPGRADE_LEVELS);
     try{
       if (SH2){
         if (typeof SH2.set === 'function') SH2.set(POTION_UPGRADE_SH_NS, safe);
@@ -282,23 +282,23 @@
   }
 
   function getPotionUpgradeCost(id){
-    var lv = getPotionUpgradeLevel(id);
+    const lv = getPotionUpgradeLevel(id);
     if (lv >= POTION_UPGRADE_MAX_LEVEL) return null;
     return POTION_UPGRADE_COST_BASE * (lv + 1);
   }
 
   function canUpgradePotion(id){
-    var def = ITEMS[id];
+    const def = ITEMS[id];
     if (!def) return { ok:false, reason:'no_item' };
 
-    var keyName = POTION_UPGRADE_KEY_BY_ID[id];
+    const keyName = POTION_UPGRADE_KEY_BY_ID[id];
     if (!keyName) return { ok:false, reason:'no_key_config' };
 
-    var lv = getPotionUpgradeLevel(id);
+    const lv = getPotionUpgradeLevel(id);
     if (lv >= POTION_UPGRADE_MAX_LEVEL) return { ok:false, reason:'max' };
 
-    var cost = getPotionUpgradeCost(id);
-    var owned = 0;
+    const cost = getPotionUpgradeCost(id);
+    let owned = 0;
     if (typeof getItemQuantity === 'function') {
       try { owned = getItemQuantity(keyName) | 0; } catch(_){}
     }
@@ -309,22 +309,22 @@
         reason:'no_key',
         need:cost,
         have:owned,
-        keyName:keyName
+        keyName
       };
     }
 
-    return { ok:true, level:lv, cost:cost, keyName:keyName, have:owned };
+    return { ok:true, level:lv, cost, keyName, have:owned };
   }
 
   function upgradePotion(id){
-    var chk = canUpgradePotion(id);
+    const chk = canUpgradePotion(id);
     if (!chk.ok) return chk;
 
     if (typeof removeItem === 'function') {
       try { removeItem(chk.keyName, chk.cost); } catch(_){}
     }
 
-    var lv = getPotionUpgradeLevel(id) + 1;
+    let lv = getPotionUpgradeLevel(id) + 1;
     if (lv > POTION_UPGRADE_MAX_LEVEL) lv = POTION_UPGRADE_MAX_LEVEL;
     POTION_UPGRADE_LEVELS[id] = lv;
     savePotionUpgradeLevels();
@@ -367,8 +367,8 @@
 
   // 冷卻（走獨立存檔 STATE.cooldowns）
   function getCdRemain(def){
-    var t = Number(STATE.cooldowns[def.id] || 0);
-    var ms = t - now();
+    const t = Number(STATE.cooldowns[def.id] || 0);
+    const ms = t - now();
     return ms>0?ms:0;
   }
   function setCd(def){
@@ -379,37 +379,37 @@
 
   // 自動設定（從 STATE.auto）
   function autoConf(def){
-    var c = STATE.auto[def.id];
+    let c = STATE.auto[def.id];
     if (!c) c = (STATE.auto[def.id] = {enabled:false, threshold01:0.5, autoBuy:{enabled:false, target:10}});
     if (typeof c.enabled !== 'boolean') c.enabled = false;
     if (typeof c.threshold01 !== 'number') c.threshold01 = 0.5;
     c.threshold01 = clamp(c.threshold01, 0.01, 1);
     if (!c.autoBuy) c.autoBuy = {enabled:false, target:10};
     if (typeof c.autoBuy.enabled !== 'boolean') c.autoBuy.enabled = false;
-    var tg = Number(c.autoBuy.target); if (!isFinite(tg)) tg = 10;
+    let tg = Number(c.autoBuy.target); if (!isFinite(tg)) tg = 10;
     c.autoBuy.target = clamp(tg, 0, 999);
     return c;
   }
 
   function setAuto(id, on){
-    var def = ITEMS[id]; if (!def) return;
-    var c = autoConf(def);
+    const def = ITEMS[id]; if (!def) return;
+    const c = autoConf(def);
     c.enabled = !!on;
     saveState();
   }
   function setThreshold(id, thr01){
-    var def = ITEMS[id]; if (!def) return;
-    var c = autoConf(def);
+    const def = ITEMS[id]; if (!def) return;
+    const c = autoConf(def);
     c.threshold01 = clamp(Number(thr01)||0.5, 0.01, 1);
     saveState();
   }
   function setAutoBuy(id, on, target){
-    var def = ITEMS[id]; if (!def) return;
-    var c = autoConf(def);
+    const def = ITEMS[id]; if (!def) return;
+    const c = autoConf(def);
     if (!c.autoBuy) c.autoBuy = {enabled:false, target:10};
     if (typeof on === 'boolean') c.autoBuy.enabled = on;
     if (target != null){
-      var v = Number(target);
+      let v = Number(target);
       if (!isFinite(v) || v < 0) v = 0;
       if (v > 999) v = 999;
       c.autoBuy.target = v;
@@ -422,50 +422,50 @@
   // - 額外回復倍率：+5%/Lv
   // - 上限不吃「恢復力」：cap 只看 baseNow 與強化倍率
   function getPotionHealInfo(def){
-    var lv = getPotionUpgradeLevel(def.id);
+    const lv = getPotionUpgradeLevel(def.id);
 
-    var baseInc = POTION_UPGRADE_BASE_INC_BY_ID[def.id] || 0;
-    var baseNow = (Number(def.base) || 0) + baseInc * lv;
+    const baseInc = POTION_UPGRADE_BASE_INC_BY_ID[def.id] || 0;
+    const baseNow = (Number(def.base) || 0) + baseInc * lv;
 
-    var upMul = 1 + lv * POTION_UPGRADE_STEP_PCT;
+    const upMul = 1 + lv * POTION_UPGRADE_STEP_PCT;
 
     // 恢復力（0~?）只影響 raw，不影響 cap
-    var recMul = 1 + getRecoveryPower();
+    const recMul = 1 + getRecoveryPower();
 
-    var capPct = (def && def.id) ? POTION_HEAL_CAP_PCT_BY_ID[def.id] : null;
-    var maxVal = 0;
+    const capPct = (def && def.id) ? POTION_HEAL_CAP_PCT_BY_ID[def.id] : null;
+    let maxVal = 0;
     try { maxVal = getMax(def.stat); } catch(_){ maxVal = 0; }
 
     // capBase：不含恢復力
-    var capBase = Math.ceil(baseNow * upMul);
+    const capBase = Math.ceil(baseNow * upMul);
 
     // raw：含恢復力
-    var rawHeal = Math.ceil(baseNow * upMul * recMul);
+    const rawHeal = Math.ceil(baseNow * upMul * recMul);
 
-    var hardCap = null;
+    let hardCap = null;
     if (capPct == null){
       hardCap = null; // 無上限
     } else {
       hardCap = Math.ceil(maxVal * capPct);
     }
 
-    var finalHeal = rawHeal;
+    let finalHeal = rawHeal;
     if (hardCap != null){
       finalHeal = Math.min(rawHeal, Math.min(capBase, hardCap));
     }
     if (finalHeal < 0) finalHeal = 0;
 
     return {
-      lv: lv,
-      baseInc: baseInc,
-      baseNow: baseNow,
-      upMul: upMul,
-      recMul: recMul,
-      rawHeal: rawHeal,
-      capPct: capPct,
-      capBase: capBase,
-      hardCap: hardCap,
-      finalHeal: finalHeal
+      lv,
+      baseInc,
+      baseNow,
+      upMul,
+      recMul,
+      rawHeal,
+      capPct,
+      capBase,
+      hardCap,
+      finalHeal
     };
   }
 
@@ -476,19 +476,19 @@
 
   // 判斷可以使用？
   function canUse(id){
-    var def = ITEMS[id]; if (!def) return {ok:false, reason:'no_item'};
+    const def = ITEMS[id]; if (!def) return {ok:false, reason:'no_item'};
     if (!player || !player.totalStats) return {ok:false, reason:'no_player'};
 
     if (player.isDead || player.currentHP<=0) return {ok:false, reason:'dead'};
 
-    var cur = getCur(def.stat);
-    var max = getMax(def.stat);
+    const cur = getCur(def.stat);
+    const max = getMax(def.stat);
     if (cur >= max) return {ok:false, reason:'not_needed'};
 
-    var cd = getCdRemain(def);
+    const cd = getCdRemain(def);
     if (cd > 0) return {ok:false, reason:'cooldown', remainingMs:cd};
 
-    var stock = getStock(def);
+    const stock = getStock(def);
     if (stock <= 0) return {ok:false, reason:'no_stock'};
 
     return {ok:true};
@@ -496,8 +496,8 @@
 
   // 實際使用
   function use(id, isManual){
-    var def = ITEMS[id]; if (!def) return {ok:false, reason:'no_item'};
-    var can = canUse(id);
+    const def = ITEMS[id]; if (!def) return {ok:false, reason:'no_item'};
+    const can = canUse(id);
     if (!can.ok) return can;
 
     if (isManual) {
@@ -505,10 +505,10 @@
       saveState();
     }
 
-    var cur = getCur(def.stat);
-    var max = getMax(def.stat);
-    var heal = totalHeal(def);
-    var after = cur + heal;
+    const cur = getCur(def.stat);
+    const max = getMax(def.stat);
+    const heal = totalHeal(def);
+    let after = cur + heal;
     if (after > max) after = max;
 
     setCur(def.stat, after);
@@ -520,15 +520,15 @@
     if (typeof window.updateResourceUI === 'function') {
       try{ window.updateResourceUI(); }catch(_){}
     }
-    return {ok:true, heal:heal};
+    return {ok:true, heal};
   }
 
   // 購買（配合 autoBuy）
   function buy(id){
-    var def = ITEMS[id]; if (!def) return {ok:false, reason:'no_item'};
+    const def = ITEMS[id]; if (!def) return {ok:false, reason:'no_item'};
     if (def.price == null) return {ok:false, reason:'no_shop'};
 
-    var money = getMoney();
+    const money = getMoney();
     if (money < def.price) return {ok:false, reason:'no_money'};
 
     addMoney(-def.price);
@@ -541,32 +541,32 @@
     if (!player || !player.totalStats) return;
 
     // 手動使用後 1 秒內，暫停自動用藥，讓玩家有優先權
-    var dtManual = now() - STATE.lastManualUse;
-    var manualBlock = (dtManual < 1000);
+    const dtManual = now() - STATE.lastManualUse;
+    const manualBlock = (dtManual < 1000);
 
-    var curHP = getCur('hp');
-    var maxHP = getMax('hp');
-    var curMP = getCur('mp');
-    var maxMP = getMax('mp');
+    let curHP = getCur('hp');
+    const maxHP = getMax('hp');
+    let curMP = getCur('mp');
+    const maxMP = getMax('mp');
 
-    LIST.forEach(function(def){
-      var conf = autoConf(def);
+    LIST.forEach((def) =>{
+      const conf = autoConf(def);
       if (!conf.enabled) return;
 
       // 冷卻中
       if (getCdRemain(def) > 0) return;
 
-      var cur = (def.stat==='hp') ? curHP : curMP;
-      var max = (def.stat==='hp') ? maxHP : maxMP;
+      const cur = (def.stat==='hp') ? curHP : curMP;
+      const max = (def.stat==='hp') ? maxHP : maxMP;
       if (max <= 0) return;
-      var ratio = cur / max;
+      const ratio = cur / max;
 
       if (ratio <= conf.threshold01){
         if (manualBlock) return;
-        var res = use(def.id, false);
+        const res = use(def.id, false);
         if (!res.ok){
           if (res.reason === 'no_stock' && conf.autoBuy && conf.autoBuy.enabled){
-            var bought = buy(def.id);
+            const bought = buy(def.id);
             if (bought.ok) use(def.id, false);
           }
         }else{
@@ -589,12 +589,12 @@
 
   // ---- 用於 UI 的去抖 ----
   function withDebounce(btn, fn){
-    var locked = false;
+    let locked = false;
     return function(){
       if (locked) return;
       locked = true;
       try{ fn.apply(this, arguments); }finally{
-        setTimeout(function(){ locked = false; }, 200);
+        setTimeout(() =>{ locked = false; }, 200);
       }
     };
   }
@@ -607,9 +607,9 @@
   // 冷卻倒數文字
   function fmtCountdown(ms){
     if (ms <= 0) return '';
-    var s = Math.ceil(ms/1000);
+    const s = Math.ceil(ms/1000);
     if (s < 60) return s+'s';
-    var m = Math.floor(s/60), r = s%60;
+    const m = Math.floor(s/60), r = s%60;
     return m+'m'+(r>0?(''+r+'s'):'');
   }
 
@@ -618,7 +618,7 @@
   // - 避免點一下就整頁重繪造成「一直刷新重整」的體感
   // - 進度條（冷卻條）維持由 UI loop 每秒更新
   // ==========================
-  var RI_CSS = null;
+  let RI_CSS = null;
 
   function getRiCss(){
     if (RI_CSS) return RI_CSS;
@@ -662,26 +662,26 @@
   }
 
   function buildCard(def, powPct){
-    var cd  = getCdRemain(def);
-    var st  = getStock(def);
-    var conf= autoConf(def);
-    var thr = Math.round(conf.threshold01*100);
-    var info = getPotionHealInfo(def);
-    var heal= info.finalHeal;
-    var cdRatio = 0;
+    const cd  = getCdRemain(def);
+    const st  = getStock(def);
+    const conf= autoConf(def);
+    const thr = Math.round(conf.threshold01*100);
+    const info = getPotionHealInfo(def);
+    const heal= info.finalHeal;
+    let cdRatio = 0;
     if (cd > 0 && def.cdMs > 0) cdRatio = clamp((def.cdMs - cd) / def.cdMs, 0, 1);
 
     // 強化資訊
-    var upLv    = info.lv;
-    var upPct   = Math.round(upLv * POTION_UPGRADE_STEP_PCT * 100);
-    var keyName = POTION_UPGRADE_KEY_BY_ID[def.id];
-    var upCost  = getPotionUpgradeCost(def.id);
-    var upInfo  = keyName ? canUpgradePotion(def.id) : { ok:false, reason:'no_key_config' };
+    const upLv    = info.lv;
+    const upPct   = Math.round(upLv * POTION_UPGRADE_STEP_PCT * 100);
+    const keyName = POTION_UPGRADE_KEY_BY_ID[def.id];
+    const upCost  = getPotionUpgradeCost(def.id);
+    const upInfo  = keyName ? canUpgradePotion(def.id) : { ok:false, reason:'no_key_config' };
 
-    var upgradeHtml = '';
+    let upgradeHtml = '';
     if (keyName){
-      var disabledAttr = upInfo.ok ? '' : 'disabled';
-      var reasonTxt = '';
+      const disabledAttr = upInfo.ok ? '' : 'disabled';
+      let reasonTxt = '';
       if (!upInfo.ok){
         if (upInfo.reason === 'max') reasonTxt = '（已達強化上限）';
         else if (upInfo.reason === 'no_key') reasonTxt = '（'+keyName+'不足）';
@@ -700,9 +700,9 @@
       upgradeHtml = '<div style="font-size:13px;opacity:.75">此道具無強化功能</div>';
     }
 
-    var capTxt = (info.capPct==null ? '無上限' : ('上限 '+Math.round(info.capPct*100)+'%（'+fmt(info.hardCap)+'）'));
+    const capTxt = (info.capPct==null ? '無上限' : ('上限 '+Math.round(info.capPct*100)+'%（'+fmt(info.hardCap)+'）'));
 
-    var detailHtml = ''+
+    const detailHtml = ''+
       '<div class="ri-row" style="margin-top:0">'+
         '<div class="ri-kv">基礎：<b>'+fmt(info.baseNow)+'</b></div>'+
         '<div class="ri-kv">強化倍率：<b>x'+info.upMul.toFixed(2)+'</b></div>'+
@@ -715,8 +715,8 @@
         '<div class="ri-kv">硬上限：<b>'+(info.hardCap==null?'無':fmt(info.hardCap))+'</b></div>'+
       '</div>';
 
-    var advanced =
-      '<details class="ri-details" id="adv-'+def.id+'" data-adv="'+def.id+'"'+(STATE.advOpen && STATE.advOpen[def.id] ? ' open' : '')+'>'+ 
+    const advanced =
+      '<details class="ri-details" id="adv-'+def.id+'" data-adv="'+def.id+'"'+(STATE.advOpen && STATE.advOpen[def.id] ? ' open' : '')+'>'+
         '<summary>進階設定 <span style="opacity:.6;font-weight:600">（升級 / 自動 / 補貨）</span></summary>'+
         '<div style="margin-top:10px">'+
           detailHtml+
@@ -754,7 +754,7 @@
     return ''+
       '<div class="ri-card" id="card-'+def.id+'">'+
         '<div class="ri-top">'+
-          '<div>'+ 
+          '<div>'+
             '<div class="ri-name">'+def.name+'</div>'+
             '<div class="ri-sub">效果：<b id="heal-'+def.id+'">回復 '+fmt(heal)+'</b></div>'+
           '</div>'+
@@ -776,11 +776,11 @@
 
   function bindCard(container, def){
     if (!container || !def) return;
-    var $ = function(sel){ return container.querySelector(sel); };
+    const $ = function(sel){ return container.querySelector(sel); };
 
-    var btnUse = $('#use-'+def.id);
-    if (btnUse) btnUse.onclick = withDebounce(btnUse, function(){
-      var r = use(def.id, true);
+    const btnUse = $('#use-'+def.id);
+    if (btnUse) btnUse.onclick = withDebounce(btnUse, () =>{
+      const r = use(def.id, true);
       if (!r.ok){
         if (r.reason === 'dead') alert('你已死亡，無法使用道具');
         else if (r.reason === 'cooldown') alert('冷卻中：'+fmtCountdown(r.remainingMs));
@@ -791,22 +791,22 @@
       refreshCard(def);
     });
 
-    var btnBuy = $('#buy-'+def.id);
-    if (btnBuy) btnBuy.onclick = withDebounce(btnBuy, function(e){
-      var qty = 1;
+    const btnBuy = $('#buy-'+def.id);
+    if (btnBuy) btnBuy.onclick = withDebounce(btnBuy, (e) =>{
+      let qty = 1;
       if (e && e.shiftKey) qty = 10;
       else if (e && (e.ctrlKey || e.metaKey)) qty = 50;
       else if (e && e.altKey) qty = 999999;
 
-      var conf = autoConf(def);
-      var target = conf.autoBuy && conf.autoBuy.target || Infinity;
-      var startStock = getStock(def);
-      var maxNeed = (def.price!=null) ? Math.max(0, target - startStock) : 0;
+      const conf = autoConf(def);
+      const target = conf.autoBuy && conf.autoBuy.target || Infinity;
+      const startStock = getStock(def);
+      const maxNeed = (def.price!=null) ? Math.max(0, target - startStock) : 0;
       if (e && e.altKey) qty = Math.min(qty, maxNeed>0?maxNeed:qty);
 
-      var bought = 0;
-      for (var i=0;i<qty;i++){
-        var r = buy(def.id);
+      let bought = 0;
+      for (let i=0;i<qty;i++){
+        const r = buy(def.id);
         if (!r.ok) break;
         bought++;
         if (def.price!=null && (getStock(def) >= target)) break;
@@ -815,38 +815,38 @@
       refreshCard(def);
     });
 
-    var chk = $('#auto-'+def.id);
+    const chk = $('#auto-'+def.id);
     if (chk) chk.onchange = function(){ setAuto(def.id, this.checked); };
 
-    var thr = $('#thr-'+def.id), tv = $('#thrval-'+def.id);
+    const thr = $('#thr-'+def.id), tv = $('#thrval-'+def.id);
     if (thr && tv){
       thr.oninput  = function(){ tv.textContent = this.value + '%'; };
       thr.onchange = function(){ setThreshold(def.id, Math.max(1,Math.min(100, Number(this.value)||50))/100); };
     }
 
-    var abOn = $('#ab-on-'+def.id);
+    const abOn = $('#ab-on-'+def.id);
     if (abOn) abOn.onchange = function(){
-      var tg = container.querySelector('#ab-tg-'+def.id);
+      const tg = container.querySelector('#ab-tg-'+def.id);
       setAutoBuy(def.id, this.checked, tg ? tg.value : undefined);
     };
 
-    var abTg = $('#ab-tg-'+def.id);
+    const abTg = $('#ab-tg-'+def.id);
     if (abTg) abTg.onchange = function(){ setAutoBuy(def.id, undefined, this.value); };
 
-    var adv = $('#adv-'+def.id);
+    const adv = $('#adv-'+def.id);
     if (adv) adv.ontoggle = function(){
       try{ STATE.advOpen = STATE.advOpen || {}; STATE.advOpen[def.id] = !!this.open; saveState(); }catch(_){ }
     };
 
-    var btnUp = $('#up-'+def.id);
-    if (btnUp) btnUp.onclick = withDebounce(btnUp, function(){
-      var r = upgradePotion(def.id);
+    const btnUp = $('#up-'+def.id);
+    if (btnUp) btnUp.onclick = withDebounce(btnUp, () =>{
+      const r = upgradePotion(def.id);
       if (!r.ok){
         if (r.reason === 'max') alert('已達強化等級上限');
         else if (r.reason === 'no_key'){
-          var need = (r.need != null ? r.need : '?');
-          var have = (r.have != null ? r.have : 0);
-          var keyName = r.keyName || POTION_UPGRADE_KEY_BY_ID[def.id] || '潛能解放鑰匙';
+          const need = (r.need != null ? r.need : '?');
+          const have = (r.have != null ? r.have : 0);
+          const keyName = r.keyName || POTION_UPGRADE_KEY_BY_ID[def.id] || '潛能解放鑰匙';
           alert('「'+keyName+'」不足，需 '+need+' 把，現有 '+have+' 把。');
         } else if (r.reason === 'no_item') alert('找不到此藥水，無法強化');
         else alert('無法升級（'+r.reason+'）');
@@ -860,8 +860,8 @@
   function refreshCard(def){
     if (!UI_CONTAINER || !def) return;
     try{
-      var powPct = Math.round(getRecoveryPower()*100);
-      var card = UI_CONTAINER.querySelector('#card-'+def.id);
+      const powPct = Math.round(getRecoveryPower()*100);
+      const card = UI_CONTAINER.querySelector('#card-'+def.id);
       if (!card) return;
       card.outerHTML = buildCard(def, powPct);
       bindCard(UI_CONTAINER, def);
@@ -871,15 +871,15 @@
   function render(container){
     if (!ensurePlayerReady()){ container.innerHTML = '<div style="opacity:.7">（玩家尚未就緒）</div>'; return; }
     // 保留使用者 UI 狀態（避免重繪造成收合/縮小/跳動）
-    var prevScrollTop = 0;
+    let prevScrollTop = 0;
     try{ prevScrollTop = container && container.scrollTop ? container.scrollTop : 0; }catch(_){ prevScrollTop = 0; }
-    var powPct = Math.round(getRecoveryPower()*100);
+    const powPct = Math.round(getRecoveryPower()*100);
 
     // 重新設計 UI（V6）
     // - 卡片式版面 + 兩欄網格（寬螢幕）
     // - 進階設定收合（升級 / 自動使用 / 自動補貨）
     // - 保留既有 id，避免事件綁定與外部依賴失效
-    var css =
+    const css =
       '<style>'+
       '.ri-wrap{background:#0b1220;border:1px solid #1f2937;border-radius:14px;padding:14px;display:grid;gap:12px}'+
       '.ri-head{display:flex;align-items:center;gap:10px}'+
@@ -917,27 +917,27 @@
       '</style>';
 
     function row(def){
-      var cd  = getCdRemain(def);
-      var st  = getStock(def);
-      var conf= autoConf(def);
-      var thr = Math.round(conf.threshold01*100);
-      var info = getPotionHealInfo(def);
-      var heal= info.finalHeal;
-      var cdRatio = 0;
+      const cd  = getCdRemain(def);
+      const st  = getStock(def);
+      const conf= autoConf(def);
+      const thr = Math.round(conf.threshold01*100);
+      const info = getPotionHealInfo(def);
+      const heal= info.finalHeal;
+      let cdRatio = 0;
       if (cd > 0 && def.cdMs > 0) cdRatio = clamp((def.cdMs - cd) / def.cdMs, 0, 1);
-      var cdTxt = (cd > 0 ? fmtCountdown(cd) : '就緒');
+      const cdTxt = (cd > 0 ? fmtCountdown(cd) : '就緒');
 
       // 強化資訊
-      var upLv    = info.lv;
-      var upPct   = Math.round(upLv * POTION_UPGRADE_STEP_PCT * 100); // 額外回復 %
-      var keyName = POTION_UPGRADE_KEY_BY_ID[def.id];
-      var upCost  = getPotionUpgradeCost(def.id);
-      var upInfo  = keyName ? canUpgradePotion(def.id) : { ok:false, reason:'no_key_config' };
+      const upLv    = info.lv;
+      const upPct   = Math.round(upLv * POTION_UPGRADE_STEP_PCT * 100); // 額外回復 %
+      const keyName = POTION_UPGRADE_KEY_BY_ID[def.id];
+      const upCost  = getPotionUpgradeCost(def.id);
+      const upInfo  = keyName ? canUpgradePotion(def.id) : { ok:false, reason:'no_key_config' };
 
-      var upgradeHtml = '';
+      let upgradeHtml = '';
       if (keyName){
-        var disabledAttr = upInfo.ok ? '' : 'disabled';
-        var reasonTxt = '';
+        const disabledAttr = upInfo.ok ? '' : 'disabled';
+        let reasonTxt = '';
         if (!upInfo.ok){
           if (upInfo.reason === 'max') reasonTxt = '（已達強化上限）';
           else if (upInfo.reason === 'no_key') reasonTxt = '（'+keyName+'不足）';
@@ -957,9 +957,9 @@
           '<div style="font-size:13px;opacity:.75">此道具無強化功能</div>';
       }
 
-      var capTxt = (info.capPct==null ? '無上限' : ('上限 '+Math.round(info.capPct*100)+'%（'+fmt(info.hardCap)+'）'));
+      const capTxt = (info.capPct==null ? '無上限' : ('上限 '+Math.round(info.capPct*100)+'%（'+fmt(info.hardCap)+'）'));
 
-      var detailHtml = ''+
+      const detailHtml = ''+
         '<div class="ri-row" style="margin-top:0">'+
           '<div class="ri-kv">基礎：<b>'+fmt(info.baseNow)+'</b></div>'+
           '<div class="ri-kv">強化倍率：<b>x'+info.upMul.toFixed(2)+'</b></div>'+
@@ -973,7 +973,7 @@
         '</div>';
 
       // 進階：把「升級 / 自動 / 補貨」放在同一個可收合區域，版面更乾淨
-      var advanced =
+      const advanced =
         '<details class="ri-details" id="adv-'+def.id+'" data-adv="'+def.id+'"'+(STATE.advOpen && STATE.advOpen[def.id] ? ' open' : '')+'>'+
           '<summary>進階設定 <span style="opacity:.6;font-weight:600">（升級 / 自動 / 補貨）</span></summary>'+
           '<div style="margin-top:10px">'+
@@ -1012,7 +1012,7 @@
       return ''+
         '<div class="ri-card">'+
           '<div class="ri-top">'+
-            '<div>'+ 
+            '<div>'+
               '<div class="ri-name">'+def.name+'</div>'+
               '<div class="ri-sub">效果：<b>回復 '+fmt(heal)+'</b></div>'+
             '</div>'+
@@ -1043,19 +1043,19 @@
           '</div>'+
         '</div>'+
         '<div class="ri-grid">'+
-          LIST.map(function(d){ return buildCard(d, powPct); }).join('')+
+          LIST.map((d) =>{ return buildCard(d, powPct); }).join('')+
         '</div>'+
       '</div>';
 
     // 綁定事件（帶去抖）
     // 舊：整段會在每次 render 後重新綁定，並且使用 rerender() 造成整頁重繪。
     // 改：保留程式碼但停用，改用 bindCard + refreshCard 做局部刷新。
-    if (false) { LIST.forEach(function(def){
-      var $ = function(sel){ return container.querySelector(sel); };
+    if (false) { LIST.forEach((def) =>{
+      const $ = function(sel){ return container.querySelector(sel); };
 
-      var btnUse = $('#use-'+def.id);
-      if (btnUse) btnUse.onclick = withDebounce(btnUse, function(){
-        var r = use(def.id, true);
+      const btnUse = $('#use-'+def.id);
+      if (btnUse) btnUse.onclick = withDebounce(btnUse, () =>{
+        const r = use(def.id, true);
         if (!r.ok){
           if (r.reason === 'dead') alert('你已死亡，無法使用道具');
           else if (r.reason === 'cooldown') alert('冷卻中：'+fmtCountdown(r.remainingMs));
@@ -1066,22 +1066,22 @@
         rerender();
       });
 
-      var btnBuy = $('#buy-'+def.id);
-      if (btnBuy) btnBuy.onclick = withDebounce(btnBuy, function(e){
-        var qty = 1;
+      const btnBuy = $('#buy-'+def.id);
+      if (btnBuy) btnBuy.onclick = withDebounce(btnBuy, (e) =>{
+        let qty = 1;
         if (e && e.shiftKey) qty = 10;
         else if (e && (e.ctrlKey || e.metaKey)) qty = 50;
         else if (e && e.altKey) qty = 999999;
 
-        var conf = autoConf(def);
-        var target = conf.autoBuy && conf.autoBuy.target || Infinity;
-        var startStock = getStock(def);
-        var maxNeed = (def.price!=null) ? Math.max(0, target - startStock) : 0;
+        const conf = autoConf(def);
+        const target = conf.autoBuy && conf.autoBuy.target || Infinity;
+        const startStock = getStock(def);
+        const maxNeed = (def.price!=null) ? Math.max(0, target - startStock) : 0;
         if (e && e.altKey) qty = Math.min(qty, maxNeed>0?maxNeed:qty);
 
-        var bought = 0;
-        for (var i=0;i<qty;i++){
-          var r = buy(def.id);
+        let bought = 0;
+        for (let i=0;i<qty;i++){
+          const r = buy(def.id);
           if (!r.ok) break;
           bought++;
           if (def.price!=null && (getStock(def) >= target)) break;
@@ -1090,40 +1090,40 @@
         rerender();
       });
 
-      var chk = $('#auto-'+def.id);
+      const chk = $('#auto-'+def.id);
       if (chk) chk.onchange = function(){ setAuto(def.id, this.checked); };
 
-      var thr = $('#thr-'+def.id), tv = $('#thrval-'+def.id);
+      const thr = $('#thr-'+def.id), tv = $('#thrval-'+def.id);
       if (thr && tv){
         thr.oninput  = function(){ tv.textContent = this.value + '%'; };
         thr.onchange = function(){ setThreshold(def.id, Math.max(1,Math.min(100, Number(this.value)||50))/100); };
       }
 
-      var abOn = $('#ab-on-'+def.id);
+      const abOn = $('#ab-on-'+def.id);
       if (abOn) abOn.onchange = function(){
-        var tg = container.querySelector('#ab-tg-'+def.id);
+        const tg = container.querySelector('#ab-tg-'+def.id);
         setAutoBuy(def.id, this.checked, tg ? tg.value : undefined);
       };
-      var abTg = $('#ab-tg-'+def.id);
+      const abTg = $('#ab-tg-'+def.id);
       if (abTg) abTg.onchange = function(){
         setAutoBuy(def.id, undefined, this.value);
       };
 
-      var adv = $('#adv-'+def.id);
+      const adv = $('#adv-'+def.id);
       if (adv) adv.ontoggle = function(){
         try{ STATE.advOpen = STATE.advOpen || {}; STATE.advOpen[def.id] = !!this.open; saveState(); }catch(_){}
       };
 
-      var btnUp = $('#up-'+def.id);
-      if (btnUp) btnUp.onclick = withDebounce(btnUp, function(){
-        var r = upgradePotion(def.id);
+      const btnUp = $('#up-'+def.id);
+      if (btnUp) btnUp.onclick = withDebounce(btnUp, () =>{
+        const r = upgradePotion(def.id);
         if (!r.ok){
           if (r.reason === 'max') {
             alert('已達強化等級上限');
           } else if (r.reason === 'no_key') {
-            var need = (r.need != null ? r.need : '?');
-            var have = (r.have != null ? r.have : 0);
-            var keyName = r.keyName || POTION_UPGRADE_KEY_BY_ID[def.id] || '潛能解放鑰匙';
+            const need = (r.need != null ? r.need : '?');
+            const have = (r.have != null ? r.have : 0);
+            const keyName = r.keyName || POTION_UPGRADE_KEY_BY_ID[def.id] || '潛能解放鑰匙';
             alert('「'+keyName+'」不足，需 '+need+' 把，現有 '+have+' 把。');
           } else if (r.reason === 'no_item') {
             alert('找不到此藥水，無法強化');
@@ -1139,42 +1139,42 @@
     }
 
     // 新：只綁定一次卡片事件（局部刷新）
-    LIST.forEach(function(def){ bindCard(container, def); });
+    LIST.forEach((def) =>{ bindCard(container, def); });
 
     // 每秒刷新（冷卻/庫存/金錢/冷卻條）— 使用單一計時器，避免重繪後越跑越多
     UI_CONTAINER = container;
     if (!UI_LOOP_STARTED){
       UI_LOOP_STARTED = true;
       (function loop(){
-        var c = UI_CONTAINER;
+        const c = UI_CONTAINER;
         try{
           if (c){
-            LIST.forEach(function(def){
-              var invEl = c.querySelector('#inv-'+def.id);
+            LIST.forEach((def) =>{
+              const invEl = c.querySelector('#inv-'+def.id);
               if (invEl) invEl.textContent = fmt(getStock(def));
 
-              var cdEl = c.querySelector('#cd-'+def.id);
+              const cdEl = c.querySelector('#cd-'+def.id);
               if (cdEl) {
-                var cd = getCdRemain(def);
+                const cd = getCdRemain(def);
                 cdEl.textContent = (cd > 0 ? fmtCountdown(cd) : '就緒');
               }
 
-              var cdTxt = c.querySelector('#cdtxt-'+def.id);
+              const cdTxt = c.querySelector('#cdtxt-'+def.id);
               if (cdTxt) {
-                var cd2 = getCdRemain(def);
+                const cd2 = getCdRemain(def);
                 cdTxt.textContent = (cd2 > 0 ? fmtCountdown(cd2) : '就緒');
               }
 
-              var stEl = c.querySelector('#stock-'+def.id);
+              const stEl = c.querySelector('#stock-'+def.id);
               if (stEl) stEl.textContent = fmt(getStock(def));
 
-              var goldEl = c.querySelector('#gold-'+def.id);
+              const goldEl = c.querySelector('#gold-'+def.id);
               if (goldEl) goldEl.textContent = fmt(getMoney());
 
-              var bar = c.querySelector('#cdbar-'+def.id);
+              const bar = c.querySelector('#cdbar-'+def.id);
               if (bar){
-                var cd = getCdRemain(def);
-                var ratio = 0;
+                const cd = getCdRemain(def);
+                let ratio = 0;
                 if (cd > 0 && def.cdMs > 0) ratio = clamp((def.cdMs - cd) / def.cdMs, 0, 1);
                 bar.style.width = Math.round(ratio*100)+'%';
               }
@@ -1187,13 +1187,13 @@
 
     // 還原捲動位置（避免重繪造成畫面跳動/縮小錯覺）
     if (prevScrollTop){
-      setTimeout(function(){ try{ container.scrollTop = prevScrollTop; }catch(_){} }, 0);
+      setTimeout(() =>{ try{ container.scrollTop = prevScrollTop; }catch(_){} }, 0);
     }
 
   }
 
   function rerender(){
-    var tab = document.getElementById('recovery-items-tab-body');
+    const tab = document.getElementById('recovery-items-tab-body');
     if (tab) render(tab);
   }
 
@@ -1201,12 +1201,12 @@
     window.GrowthHub.registerTab({
       id: 'potions',
       title: '藥水',
-      render: render,
+      render,
       // GrowthHub 的 tick 可能被其他模組用來驅動自動用藥；保留相容。
-      tick: function(steps){
+      tick(steps){
         try{
           steps = Math.max(1, Number(steps)||1);
-          for (var i=0;i<steps;i++) autoTick();
+          for (let i=0;i<steps;i++) autoTick();
         }catch(_){ }
       }
     });
@@ -1218,13 +1218,13 @@
   // 對外
   window.RecoveryItemsTab = {
     __v5__: true,
-    use: function(id){ return use(id, true); },
-    buy: buy,
-    canUse: canUse,
-    setAuto: setAuto,
-    setThreshold: setThreshold,
-    setAutoBuy: setAutoBuy,
-    autoTick: autoTick,
-    totalHeal: totalHeal
+    use(id){ return use(id, true); },
+    buy,
+    canUse,
+    setAuto,
+    setThreshold,
+    setAutoBuy,
+    autoTick,
+    totalHeal
   };
 })();

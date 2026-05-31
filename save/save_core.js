@@ -245,7 +245,7 @@
       saveGameNow("interval");
     } else if (!flushTimer) {
       // 間隔太短 → 排一個 timeout，最久 FLUSH_TIMEOUT_MS 秒內一定寫
-      flushTimer = setTimeout(function () {
+      flushTimer = setTimeout(() => {
         flushTimer = null;
         if (savePending) saveGameNow("timeout");
       }, Math.min(SAVE_MIN_INTERVAL_MS - elapsed, FLUSH_TIMEOUT_MS));
@@ -288,10 +288,10 @@
   window.hasGameSave = hasGameSave;
 
   // 頁面關閉 / 隱藏：如果還有 pending 存檔就立刻寫一次
-  window.addEventListener("beforeunload", function () {
+  window.addEventListener("beforeunload", () => {
     if (savePending) saveGameNow("beforeunload");
   });
-  document.addEventListener("visibilitychange", function () {
+  document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden" && savePending) {
       saveGameNow("hidden");
     }

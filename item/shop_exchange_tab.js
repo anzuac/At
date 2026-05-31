@@ -8,23 +8,23 @@
   if (!w.ShopHub) { console.error("[shop] ShopHub not found"); return; }
 
   // ===== 共用：背包/工具 =====
-  var HAS_INV = (typeof w.getItemQuantity==="function" && typeof w.addItem==="function" && typeof w.removeItem==="function");
+  const HAS_INV = (typeof w.getItemQuantity==="function" && typeof w.addItem==="function" && typeof w.removeItem==="function");
   function inv(name){ if(!HAS_INV) return 0; try { return Math.max(0, Number(w.getItemQuantity(name)||0)); }catch(_){ return 0; } }
   function add(name,n){ if(HAS_INV) w.addItem(name, Math.max(0,Math.floor(n||0))); }
   function remove(name,n){ if(HAS_INV) w.removeItem(name, Math.max(0,Math.floor(n||0))); }
   function logMsg(msg){ if (typeof w.logPrepend==="function") w.logPrepend(msg); else try{ console.log(msg); }catch(e){} }
 
   // ===== 共用：UI 元件 =====
-  function el(tag, css){ var x=document.createElement(tag); if(css) x.style.cssText=css; return x; }
+  function el(tag, css){ const x=document.createElement(tag); if(css) x.style.cssText=css; return x; }
   function pill(txt, color){
-    var span=el("span","display:inline-block;padding:3px 8px;border-radius:999px;font-weight:800;font-size:12px;border:1px solid transparent;"+
+    const span=el("span","display:inline-block;padding:3px 8px;border-radius:999px;font-weight:800;font-size:12px;border:1px solid transparent;"+
       (color==="price" ? "background:#0b1220;color:#e5e7eb;border-color:#374151" :
        color==="muted" ? "background:#1f2937;color:#9ca3af;border-color:#374151" :
                          "background:#0b1220;color:#e5e7eb;border-color:#374151"));
     span.textContent = txt; return span;
   }
   function btn(label, on, enabled){
-    var b = el("button","padding:6px 10px;border:0;border-radius:10px;font-weight:800;cursor:pointer;background:"+ (enabled?"#1d4ed8":"#374151")+";color:#fff");
+    const b = el("button","padding:6px 10px;border:0;border-radius:10px;font-weight:800;cursor:pointer;background:"+ (enabled?"#1d4ed8":"#374151")+";color:#fff");
     b.textContent = label; b.disabled = !enabled; if (enabled) b.onclick = on; return b;
   }
 
@@ -35,16 +35,16 @@
 
   function pickActiveCat(cats, activeId){
     if (!cats || !cats.length) return null;
-    for (var i=0;i<cats.length;i++){ if (cats[i].id === activeId) return cats[i]; }
+    for (let i=0;i<cats.length;i++){ if (cats[i].id === activeId) return cats[i]; }
     return cats[0];
   }
 
   function renderTabsBar(root, cats, getActiveId, setActiveId, rerender){
     if (!cats || !cats.length) return;
-    var bar = el("div","display:flex;gap:8px;margin:6px 0 10px 0;flex-wrap:wrap;");
-    cats.forEach(function(cat){
-      var active = (getActiveId() === cat.id);
-      var b = el("button","border:0;padding:6px 10px;border-radius:8px;font-weight:700;cursor:pointer;background:"+(active?"#1d4ed8":"#1f2937")+";color:#fff;");
+    const bar = el("div","display:flex;gap:8px;margin:6px 0 10px 0;flex-wrap:wrap;");
+    cats.forEach((cat) =>{
+      const active = (getActiveId() === cat.id);
+      const b = el("button","border:0;padding:6px 10px;border-radius:8px;font-weight:700;cursor:pointer;background:"+(active?"#1d4ed8":"#1f2937")+";color:#fff;");
       b.textContent = catName(cat);
       b.onclick = function(){
         if (getActiveId() !== cat.id){
@@ -58,39 +58,39 @@
   }
 
   function renderEmpty(root, emptyText){
-    var empty = el("div","padding:10px;opacity:.75;");
+    const empty = el("div","padding:10px;opacity:.75;");
     empty.textContent = emptyText || "（沒有商品）";
     root.appendChild(empty);
   }
 
   function renderList(root, list, rowFn, emptyText){
     if (!list || !list.length){ renderEmpty(root, emptyText); return; }
-    list.forEach(function(def){ rowFn(root, def); });
+    list.forEach((def) =>{ rowFn(root, def); });
   }
 
   function rerenderCategorizedShop(root, cats, getActiveId, headerFn, tabsFn, rowFn, emptyText){
     root.innerHTML = "";
     headerFn(root);
     tabsFn(root);
-    var cat = pickActiveCat(cats, getActiveId());
-    renderList(root, (cat && cat.list) ? cat.list : [], function(r, def){ rowFn(r, cat, def); }, emptyText);
+    const cat = pickActiveCat(cats, getActiveId());
+    renderList(root, (cat && cat.list) ? cat.list : [], (r, def) =>{ rowFn(r, cat, def); }, emptyText);
   }
 
   // ============================================================
   // ================ 分頁 A：代幣商店（一般商店） ================
   // ============================================================
 
-  var TOKEN_ADV  = { key: "高級代幣" };
-  var TOKEN_STAR = { key: "星痕代幣" };
+  const TOKEN_ADV  = { key: "高級代幣" };
+  const TOKEN_STAR = { key: "星痕代幣" };
 
   // 代幣商店商品格式（刻意做成與「兌換商品」同一風格）
   // { name, outItem, outQty, cost }
-  var ADV_LIST = [
+  const ADV_LIST = [
     { name:"星痕代幣",       outItem:"星痕代幣",       outQty:5,  cost:1 },
 
     { name:"銀行代幣",       outItem:"銀行代幣",       outQty:1,  cost:1 }
   ];
-  var STAR_LIST = [
+  const STAR_LIST = [
     { name:"強化道具兌換券",           outItem:"強化道具兌換券",           outQty:30,  cost:1 },
     { name:"擴充護盾上限石",     outItem:"擴充護盾上限石",     outQty:1,  cost:10 },
     { name:"護盾補充器",         outItem:"護盾補充器",         outQty:1,  cost:5 },
@@ -105,24 +105,24 @@
     { name:"Boss挑戰券",         outItem:"Boss挑戰券",         outQty:1,  cost:12 }
   ];
 
-  var TOKEN_CATS = [
+  const TOKEN_CATS = [
     { id: "adv",  title: "高級代幣", tokenKey: TOKEN_ADV.key,  list: ADV_LIST },
     { id: "star", title: "星痕代幣", tokenKey: TOKEN_STAR.key, list: STAR_LIST }
   ];
-  var _activeTokenCatId = "adv";
-  var TOKEN_QTYS = [1, 10, 50];
+  let _activeTokenCatId = "adv";
+  const TOKEN_QTYS = [1, 10, 50];
 
   function getTokenQty(tokenKey){ return inv(tokenKey); }
 
   function tokenExchangeOnce(tokenKey, def, units, root){
     if (!HAS_INV) { alert("❌ 缺少背包 API（getItemQuantity/removeItem/addItem）。"); return; }
     units = Math.max(1, Math.floor(units||1));
-    var need = units * def.cost;
-    var have = getTokenQty(tokenKey);
+    const need = units * def.cost;
+    const have = getTokenQty(tokenKey);
     if (have < need) { alert("❌ 代幣不足，需要："+need+"，持有："+have); return; }
-    var before = have;
-    var ok = remove(tokenKey, need);
-    var after = getTokenQty(tokenKey);
+    const before = have;
+    const ok = remove(tokenKey, need);
+    const after = getTokenQty(tokenKey);
     if (ok === false || after > before - need) { alert("❌ 扣除代幣失敗，請稍後再試。"); return; }
     add(def.outItem, def.outQty * units);
     logMsg("🛒 兌換成功：獲得「"+def.name+"」 ×"+(def.outQty*units)+"（花費「"+tokenKey+"」 "+need+"）");
@@ -131,11 +131,11 @@
   }
 
   function renderTokenHeader(root){
-    var cat = TOKEN_CATS.find(function(c){ return c.id===_activeTokenCatId; }) || TOKEN_CATS[0];
-    var head = el("div","display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;");
-    var title = el("div","font-weight:800;font-size:16px;letter-spacing:.5px;");
+    const cat = TOKEN_CATS.find((c) =>{ return c.id===_activeTokenCatId; }) || TOKEN_CATS[0];
+    const head = el("div","display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;");
+    const title = el("div","font-weight:800;font-size:16px;letter-spacing:.5px;");
     title.innerHTML = "🪙 代幣商店（"+catName(cat)+"）";
-    var bal = el("div","background:#0b1220;border:1px solid #334155;padding:6px 10px;border-radius:8px;");
+    const bal = el("div","background:#0b1220;border:1px solid #334155;padding:6px 10px;border-radius:8px;");
     bal.textContent = "持有「"+cat.tokenKey+"」： " + getTokenQty(cat.tokenKey).toLocaleString();
     head.appendChild(title);
     head.appendChild(bal);
@@ -146,30 +146,30 @@
     renderTabsBar(
       root,
       TOKEN_CATS,
-      function(){ return _activeTokenCatId; },
-      function(id){ _activeTokenCatId = id; },
+      () =>{ return _activeTokenCatId; },
+      (id) =>{ _activeTokenCatId = id; },
       rerenderTokenStore
     );
   }
 
 
   function renderTokenRow(root, tokenKey, def){
-    var row = el("div","display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:8px;gap:8px;");
-    var left = el("div","display:flex;flex-direction:column;");
-    var title = el("div","font-weight:700;font-size:14px;letter-spacing:.3px;");
+    const row = el("div","display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:8px;gap:8px;");
+    const left = el("div","display:flex;flex-direction:column;");
+    const title = el("div","font-weight:700;font-size:14px;letter-spacing:.3px;");
     title.textContent = def.name + (def.outQty>1 ? (" ×"+def.outQty) : "");
-    var sub = el("div","opacity:.85;font-size:12px;margin-top:2px;");
+    const sub = el("div","opacity:.85;font-size:12px;margin-top:2px;");
     sub.textContent = "每 1 次需「"+tokenKey+"」 × "+def.cost + (def.outQty>1 ? ("（每次獲得 ×"+def.outQty+"）") : "");
     left.appendChild(title); left.appendChild(sub);
 
-    var right = el("div","display:flex;gap:6px;");
-    var have = getTokenQty(tokenKey);
+    const right = el("div","display:flex;gap:6px;");
+    const have = getTokenQty(tokenKey);
     function make(units){
-      var need = units * def.cost;
-      var can = have >= need;
-      return btn("×"+units+"（需 "+need+"）", function(){ tokenExchangeOnce(tokenKey, def, units, root); }, can);
+      const need = units * def.cost;
+      const can = have >= need;
+      return btn("×"+units+"（需 "+need+"）", () =>{ tokenExchangeOnce(tokenKey, def, units, root); }, can);
     }
-    TOKEN_QTYS.forEach(function(u){ right.appendChild(make(u)); });
+    TOKEN_QTYS.forEach((u) =>{ right.appendChild(make(u)); });
 
     row.appendChild(left); row.appendChild(right);
     root.appendChild(row);
@@ -179,10 +179,10 @@
     rerenderCategorizedShop(
       root,
       TOKEN_CATS,
-      function(){ return _activeTokenCatId; },
+      () =>{ return _activeTokenCatId; },
       renderTokenHeader,
       renderTokenTabs,
-      function(r, cat, def){ renderTokenRow(r, cat.tokenKey, def); },
+      (r, cat, def) =>{ renderTokenRow(r, cat.tokenKey, def); },
       "（沒有商品）"
     );
   }
@@ -190,7 +190,7 @@
 
   function renderTokenStore(root){
     if (!HAS_INV){
-      var warn = el("div","padding:10px;color:#fecaca;background:#7f1d1d;border:1px solid #b91c1c;border-radius:8px;");
+      const warn = el("div","padding:10px;color:#fecaca;background:#7f1d1d;border:1px solid #b91c1c;border-radius:8px;");
       warn.textContent = "❌ 缺少背包 API（getItemQuantity/removeItem/addItem）。無法使用代幣商店。";
       root.appendChild(warn);
       return;
@@ -209,22 +209,22 @@
   // =============== 分頁 B：兌換商品（兌換券） ==================
   // ============================================================
 
-  var COUPON_KEY = "強化道具兌換券";
-  var EQUIP_LIST = [
+  const COUPON_KEY = "強化道具兌換券";
+  const EQUIP_LIST = [
     { name: "裝備解放石",       cost: 30 },
     { name: "裝備階級石",       cost: 30 },
-    
+
     { name: "混沌選擇券",       cost: 200 },
     { name: "星火",       cost: 50 },
     { name: "高級星火",       cost: 130 },
     { name: "永恆星火",       cost: 450 },
 
-    { name: "能力方塊",     cost: 90 },    
+    { name: "能力方塊",     cost: 90 },
     { name: "卷軸上限提升",     cost: 120 },
     { name: "恢復卷軸",         cost: 120 },
     { name: "完美重置卷軸",     cost: 800 }
   ];
-  var GENERAL_LIST = [
+  const GENERAL_LIST = [
     { name: "元素碎片",     cost: 1 },
     { name: "衝星石",       cost: 2 },
     { name: "進階石",       cost: 10 },
@@ -238,8 +238,8 @@
     { name: "核心覺醒石",   cost: 12 },
     { name: "核心星力石",   cost: 7 }
   ];
-  var GENERAL2_LIST = [
-    
+  const GENERAL2_LIST = [
+
     { name: "潛能方塊",         cost: 40 },
     { name: "高級潛能方塊",     cost: 90 },
     { name: "閃炫方塊",     cost: 180 },
@@ -248,27 +248,27 @@
     { name: "高級附加方塊",     cost: 180 },
     { name: "附加閃炫方塊",     cost: 350 },
     { name: "附加結合方塊",     cost: 550 },
-    
-    { name: "能力方塊",     cost: 90 },    
+
+    { name: "能力方塊",     cost: 90 },
   ];
-  var CATS = [
+  const CATS = [
     { id: "general", title: "素材/核心", list: GENERAL_LIST },
     { id: "equip",   title: "裝備相關",   list: EQUIP_LIST },
         { id: "general2", title: "方塊", list: GENERAL2_LIST },
   ];
-  var _activeCatId = "general";
+  let _activeCatId = "general";
 
   function getCouponQty(){ return inv(COUPON_KEY); }
 
   function exchangeOnce(itemName, units, costPerUnit, root){
     if (!HAS_INV) { alert("❌ 缺少背包 API（getItemQuantity/removeItem/addItem）。"); return; }
     units = Math.max(1, Math.floor(units||1));
-    var need = units * costPerUnit;
-    var have = getCouponQty();
+    const need = units * costPerUnit;
+    const have = getCouponQty();
     if (have < need) { alert("❌ 兌換券不足，需要："+need+"，持有："+have); return; }
-    var before = have;
-    var ok = remove(COUPON_KEY, need);
-    var after = getCouponQty();
+    const before = have;
+    const ok = remove(COUPON_KEY, need);
+    const after = getCouponQty();
     if (ok === false || after > before - need) { alert("❌ 扣除兌換券失敗，請稍後再試。"); return; }
     add(itemName, units);
     logMsg("🎁 兌換成功：獲得「"+itemName+"」 ×"+units+"（花費兌換券 "+need+"）");
@@ -281,18 +281,18 @@
   }
 
   function renderCouponRow(root, def){
-    var row = el("div","display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:8px;gap:8px;");
-    var left = el("div","display:flex;flex-direction:column;");
-    var title = el("div","font-weight:700;font-size:14px;letter-spacing:.3px;"); title.textContent = def.name;
-    var sub = el("div","opacity:.85;font-size:12px;margin-top:2px;"); sub.textContent = "每 1 個需「"+COUPON_KEY+"」 × "+def.cost;
+    const row = el("div","display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:8px;gap:8px;");
+    const left = el("div","display:flex;flex-direction:column;");
+    const title = el("div","font-weight:700;font-size:14px;letter-spacing:.3px;"); title.textContent = def.name;
+    const sub = el("div","opacity:.85;font-size:12px;margin-top:2px;"); sub.textContent = "每 1 個需「"+COUPON_KEY+"」 × "+def.cost;
     left.appendChild(title); left.appendChild(sub);
 
-    var right = el("div","display:flex;gap:6px;");
-    var have = getCouponQty();
+    const right = el("div","display:flex;gap:6px;");
+    const have = getCouponQty();
     function make(label, units){
-      var need = units * def.cost;
-      var can = have >= need;
-      return mkQtyBtn(label+"（需 "+need+"）", can, function(){ exchangeOnce(def.name, units, def.cost, root); });
+      const need = units * def.cost;
+      const can = have >= need;
+      return mkQtyBtn(label+"（需 "+need+"）", can, () =>{ exchangeOnce(def.name, units, def.cost, root); });
     }
     right.appendChild(make("×1", 1));
     right.appendChild(make("×10", 10));
@@ -303,9 +303,9 @@ right.appendChild(make("×5000", 5000));
   }
 
   function renderCouponHeader(root){
-    var head = el("div","display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;");
-    var title = el("div","font-weight:800;font-size:16px;letter-spacing:.5px;"); title.innerHTML = "🎟️ 兌換商品（使用「"+COUPON_KEY+"」）";
-    var bal = el("div","background:#0b1220;border:1px solid #334155;padding:6px 10px;border-radius:8px;");
+    const head = el("div","display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;");
+    const title = el("div","font-weight:800;font-size:16px;letter-spacing:.5px;"); title.innerHTML = "🎟️ 兌換商品（使用「"+COUPON_KEY+"」）";
+    const bal = el("div","background:#0b1220;border:1px solid #334155;padding:6px 10px;border-radius:8px;");
     bal.textContent = "持有「"+COUPON_KEY+"」： " + getCouponQty().toLocaleString();
     head.appendChild(title); head.appendChild(bal); root.appendChild(head);
   }
@@ -314,8 +314,8 @@ right.appendChild(make("×5000", 5000));
     renderTabsBar(
       root,
       CATS,
-      function(){ return _activeCatId; },
-      function(id){ _activeCatId = id; },
+      () =>{ return _activeCatId; },
+      (id) =>{ _activeCatId = id; },
       rerenderCoupon
     );
   }
@@ -325,10 +325,10 @@ right.appendChild(make("×5000", 5000));
     rerenderCategorizedShop(
       root,
       CATS,
-      function(){ return _activeCatId; },
+      () =>{ return _activeCatId; },
       renderCouponHeader,
       renderCouponTabs,
-      function(r, cat, def){ renderCouponRow(r, def); },
+      (r, cat, def) =>{ renderCouponRow(r, def); },
       "（沒有商品）"
     );
   }
@@ -336,7 +336,7 @@ right.appendChild(make("×5000", 5000));
 
   function renderCouponTab(root){
     if (!HAS_INV){
-      var warn = el("div","padding:10px;color:#fecaca;background:#7f1d1d;border:1px solid #b91c1c;border-radius:8px;");
+      const warn = el("div","padding:10px;color:#fecaca;background:#7f1d1d;border:1px solid #b91c1c;border-radius:8px;");
       warn.textContent = "❌ 缺少背包 API（getItemQuantity/removeItem/addItem）。無法使用兌換功能。";
       root.appendChild(warn); return;
     }
@@ -354,9 +354,9 @@ right.appendChild(make("×5000", 5000));
   // ============================================================
 
   // 咒文痕跡（卷軸兌換 / 消耗來源）
-var TRACE_KEY = "咒文痕跡";
+const TRACE_KEY = "咒文痕跡";
 
-var TRACE_LIST = [
+const TRACE_LIST = [
 
   // ───────────────
   // 通用裝備（非手套 / 非武器）
@@ -396,15 +396,15 @@ var TRACE_LIST = [
       return;
     }
     units = Math.max(1, Math.floor(units||1));
-    var need = units * costPerUnit;
-    var have = getTraceQty();
+    const need = units * costPerUnit;
+    const have = getTraceQty();
     if (have < need){
       alert("❌ 咒文痕跡不足，需要："+need+"，持有："+have);
       return;
     }
-    var before = have;
-    var ok = remove(TRACE_KEY, need);
-    var after = getTraceQty();
+    const before = have;
+    const ok = remove(TRACE_KEY, need);
+    const after = getTraceQty();
     if (ok === false || after > before - need){
       alert("❌ 扣除咒文痕跡失敗。");
       return;
@@ -416,21 +416,21 @@ var TRACE_LIST = [
   }
 
   function renderTraceRow(root, def){
-    var row = el("div","display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:8px;gap:8px;");
-    var left = el("div","display:flex;flex-direction:column;");
-    var title = el("div","font-weight:700;font-size:14px;letter-spacing:.3px;");
+    const row = el("div","display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;margin-bottom:8px;gap:8px;");
+    const left = el("div","display:flex;flex-direction:column;");
+    const title = el("div","font-weight:700;font-size:14px;letter-spacing:.3px;");
     title.textContent = def.name;
-    var sub = el("div","opacity:.85;font-size:12px;margin-top:2px;");
+    const sub = el("div","opacity:.85;font-size:12px;margin-top:2px;");
     sub.textContent = "每 1 個需「"+TRACE_KEY+"」 × "+def.cost;
     left.appendChild(title);
     left.appendChild(sub);
 
-    var right = el("div","display:flex;gap:6px;");
-    var have = getTraceQty();
+    const right = el("div","display:flex;gap:6px;");
+    const have = getTraceQty();
     function make(label, units){
-      var need = units * def.cost;
-      var can = have >= need;
-      return mkQtyBtn(label+"（需 "+need+"）", can, function(){
+      const need = units * def.cost;
+      const can = have >= need;
+      return mkQtyBtn(label+"（需 "+need+"）", can, () =>{
         exchangeTraceOnce(def.name, units, def.cost, root);
       });
     }
@@ -446,10 +446,10 @@ var TRACE_LIST = [
   }
 
   function renderTraceHeader(root){
-    var head = el("div","display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;");
-    var title = el("div","font-weight:800;font-size:16px;letter-spacing:.5px;");
+    const head = el("div","display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;");
+    const title = el("div","font-weight:800;font-size:16px;letter-spacing:.5px;");
     title.innerHTML = "🔮 咒文痕跡兌換（強化卷軸）";
-    var bal = el("div","background:#0b1220;border:1px solid #334155;padding:6px 10px;border-radius:8px;");
+    const bal = el("div","background:#0b1220;border:1px solid #334155;padding:6px 10px;border-radius:8px;");
     bal.textContent = "持有「"+TRACE_KEY+"」： " + getTraceQty().toLocaleString();
     head.appendChild(title);
     head.appendChild(bal);
@@ -459,13 +459,13 @@ var TRACE_LIST = [
   function rerenderTrace(root){
     root.innerHTML = "";
     renderTraceHeader(root);
-    renderList(root, TRACE_LIST, function(r, def){ renderTraceRow(r, def); }, "（沒有商品）");
+    renderList(root, TRACE_LIST, (r, def) =>{ renderTraceRow(r, def); }, "（沒有商品）");
   }
 
 
   function renderTraceTab(root){
     if (!HAS_INV){
-      var warn = el("div","padding:10px;color:#fecaca;background:#7f1d1d;border:1px solid #b91c1c;border-radius:8px;");
+      const warn = el("div","padding:10px;color:#fecaca;background:#7f1d1d;border:1px solid #b91c1c;border-radius:8px;");
       warn.textContent = "❌ 缺少背包 API，無法使用咒文痕跡兌換。";
       root.appendChild(warn);
       return;
