@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title>RPG 自動戰鬥首頁</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+  
+  </style>
+</head>
+<body>
+  
+  <div id="gameSetupModal" class="setup-modal">
+    <div class="setup-modal-content">
+      <h2>設定角色</h2>
+      <div>
+        <label for="nicknameInput">暱稱：</label>
+        <input type="text" id="nicknameInput" placeholder="輸入你的暱稱">
+      </div>
+<div>
+<select id="jobSelect">
+  <option value="warrior">戰士</option>
+  <option value="mage">法師</option>
+  <option value="archer">弓箭手</option>
+  <option value="thief">盜賊</option>
+</select>
+</div>
+<button onclick="startGame()">開始遊戲</button>
+
+    </div>
+  </div>
+
+
+<header class="resource-topbar">
+  <div class="res gold">
+    <span class="icon">💰</span>
+    <span id="gold">0</span>
+  </div>
+  <div class="res gem">
+    <span class="icon">💎</span>
+    <span id="gem">0</span>
+  </div>
+  <div class="res stone">
+    <span class="icon">🪨</span>
+    <span id="stone">0</span>
+  </div>
+
+<div class="res market-status">
+  <span class="icon">📈</span>
+  <span id="market-status-text">第1天</span>
+</div>
+</header>
+
+<!-- 只貼 <body> 內主要區塊，樣式沿用你現有的；把這段替換你原本的對應區塊即可 -->
+
+<div class="container">
+  <div class="section profile-card">
+  <h2>角色資訊</h2>
+  
+  <div class="profile-row">
+    <span class="label">暱稱：</span>
+    <span id="player-nickname" class="value"></span>
+  </div>
+  
+  <div class="profile-row job-row">
+    <span class="label">職業：</span>
+    <span id="player-job" class="value"></span>
+    <button id="job-change-btn" class="job-btn">轉職</button>
+  </div>
+  
+  <div class="profile-row level-row">
+    <span class="label">等級：</span>
+    <span id="player-level" class="value">1</span>
+  </div>
+  
+  <div class="profile-row exp-row">
+    <span class="label">經驗值：</span>
+    <span id="player-exp" class="value">0 / 100</span>
+  </div>
+  
+  <progress id="exp-bar" value="0" max="100" class="exp-bar"></progress>
+</div>
+
+
+
+    <div class="section" id="side-slot">
+<!-- ▼▼▼【新版：分頁整合後的系統區塊】開始 ▼▼▼ -->
+<section class="sys-tabs" id="main-sys-tabs">
+  <div class="tablist" role="tablist" aria-label="系統分頁">
+    <button class="tab is-active" role="tab" aria-selected="true" aria-controls="panel-res" id="tab-res">資源</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="panel-enh" id="tab-enh">裝備/能力</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="panel-skill" id="tab-skill">技能</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="panel-quest" id="tab-quest">任務 / 副本</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="panel-book" id="tab-book">怪物圖鑑</button>
+    
+  </div>
+  
+  <!-- 🪙 資源類 -->
+  <div id="panel-res" class="tabpanel is-active" role="tabpanel" aria-labelledby="tab-res" tabindex="0">
+    <div class="btn-grid">
+      <button class="sys-btn" onclick="openInventoryModal()">🎒 背包</button>
+      <button class="sys-btn" onclick="ShopHub.open(); ShopHub.switchTo('shop_main')">🛒 商店</button>
+      <button class="sys-btn" onclick="TownHub.open('town')">🏘️ 城鎮</button>
+      <button class="sys-btn" onclick="StockHub.open()">📈 股票中心</button>
+      <button class="sys-btn" onclick="GachaHub.open()">🎰 抽獎中心</button>
+    </div>
+  </div>
+  
+<!-- ⚙️ 強化類 -->
+<div id="panel-enh" class="tabpanel" role="tabpanel" aria-labelledby="tab-enh" tabindex="0">
+  <div class="btn-grid">
+    <button class="sys-btn" onclick="EquipHub.open()">🛠 裝備系統</button>
+    <button class="sys-btn" onclick="GrowthHub.open()">🧬 能力值 / 強化</button>
+    <button class="sys-btn" onclick="openSpModal()">✨ 能力點數</button>
+
+    <!-- ⭐ 新增：潛能洗鍊 -->
+    <button class="sys-btn" onclick="PotentialUIV2.open()">🎲 潛能洗鍊</button>
+  </div>
+</div>
+  
+  <!-- 🌀 技能類 -->
+  <div id="panel-skill" class="tabpanel" role="tabpanel" aria-labelledby="tab-skill" tabindex="0">
+    <div class="btn-grid">
+      <button class="sys-btn" onclick="SkillsHub.open()">🌀 技能</button>
+    </div>
+  </div>
+  
+  <!-- 🗒️ 任務 / 副本類 -->
+  <div id="panel-book" class="tabpanel" role="tabpanel" aria-labelledby="tab-book" tabindex="0">
+    <div class="btn-grid">
+    <button class="sys-btn" onclick="CollectionBook.open()">📘 收藏冊</butto>
+    </div>
+  </div>
+  
+    <div id="panel-quest" class="tabpanel" role="tabpanel" aria-labelledby="tab-quest" tabindex="0">
+    <div class="btn-grid">
+      <button class="sys-btn" onclick="window.QuestCore.open('daily')">🗒️ 任務</button>
+      <button class="sys-btn" onclick="DungeonHub.open()">🏰 副本中心</button>
+    </div>
+  </div>
+  
+
+</section>
+  </div>
+
+
+<div class="section section-stats">
+  <div class="section-header">
+    <h2>屬性點數</h2>
+    <div class="alloc-actions">
+
+
+      <button id="toggleStatAllocBtn" class="mini-toggle" onclick="toggleStatAlloc()">隱藏</button>
+    </div>
+  </div>
+  
+  <!-- 可分配點數 -->
+  <div class="alloc-header">
+    <span class="label">可分配點數</span>
+    <span id="stat-points-display" class="points">0</span>
+  </div>
+  
+  <!-- 分配列 -->
+  <div id="stat-alloc-area" class="alloc-grid">
+    <div class="alloc-row">
+      <div class="attr-name">力量</div>
+      <div class="attr-value"><span id="str-display">0</span></div>
+      <div class="attr-ops">
+        <button class="stat-btn" onclick="allocateStat('str')">＋1</button>
+        <button class="stat-btn ghost" onclick="allocateStat('str','all')">＋全部</button>
+      </div>
+    </div>
+    
+    <div class="alloc-row">
+      <div class="attr-name">敏捷</div>
+      <div class="attr-value"><span id="agi-display">0</span></div>
+      <div class="attr-ops">
+        <button class="stat-btn" onclick="allocateStat('agi')">＋1</button>
+        <button class="stat-btn ghost" onclick="allocateStat('agi','all')">＋全部</button>
+      </div>
+    </div>
+    
+    <div class="alloc-row">
+      <div class="attr-name">智力</div>
+      <div class="attr-value"><span id="int-display">0</span></div>
+      <div class="attr-ops">
+        <button class="stat-btn" onclick="allocateStat('int')">＋1</button>
+        <button class="stat-btn ghost" onclick="allocateStat('int','all')">＋全部</button>
+      </div>
+    </div>
+    
+    <div class="alloc-row">
+      <div class="attr-name">幸運</div>
+      <div class="attr-value"><span id="luk-display">0</span></div>
+      <div class="attr-ops">
+        <button class="stat-btn" onclick="allocateStat('luk')">＋1</button>
+        <button class="stat-btn ghost" onclick="allocateStat('luk','all')">＋全部</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 戰力區 -->
+  <div class="cp-footer">
+    <div class="cp-left">
+      <strong>戰鬥力：</strong>
+      <span id="cp-display" class="cp-value">—</span>
+    </div>
+    <button onclick="resetStatsWithTicket()">使用能力點數重置券</button>
+    <div class="cp-actions">
+      <button class="stat-btn ghost" onclick="showCPSummary()">明細</button>
+      <button class="stat-btn ghost" onclick="openStatModal()">詳細數值</button>
+    </div>
+  </div>
+  
+  <!-- 明細折疊 -->
+  <div id="cp-detail" class="cp-detail" style="display:none;">
+    
+  </div>
+</div>
+
+
+  <div class="row">
+    <!-- 能力值：上半部固定顯示，下半部可收合 -->
+    <div class="section">
+<h2>能力值
+  <button class="mini-toggle" id="toggleExtraStatsBtn" onclick="toggleExtraStats()">隱藏</button>
+</h2>
+
+<!-- 固定顯示（不受收合影響） -->
+<!-- 固定顯示（不受收合影響） -->
+<div class="stat-chips basic-chips">
+  <div class="chip-stat">血量：<strong id="hp">100 / 100</strong></div>
+  <div class="chip-stat">護盾值：<strong id="shield">0</strong></div>
+  <div class="chip-stat">魔力：<strong id="mp">0 / 0</strong></div>
+</div>
+
+<!-- 法師專用：魔力護盾（非法師自動隱藏） -->
+<div id="manaShieldRow" class="stat-chips" style="display:none;">
+  <div class="chip-stat full">
+    魔力護盾：<strong id="manaShieldPct">0%</strong>
+    <button id="manaShieldBtn" class="stat-btn ghost" onclick="toggleMagicShield()">🛡️ 魔力護盾：關</button>
+  </div>
+</div>
+
+<!-- 進階能力（兩排） -->
+<div id="extra-stats" class="stat-chips two-rows" style="margin-top:6px;">
+  <div class="chip-stat">攻擊力：<strong id="atk">10</strong></div>
+  <div class="chip-stat">總傷害：<strong id="totalDamage">10</strong></div>
+  <div class="chip-stat">穿透力：<strong id="ignoreDefPct">10</strong></div>
+  <div class="chip-stat">防禦力：<strong id="def">5</strong></div>
+  <div class="chip-stat">技能傷害：<strong id="skillDamage">0%</strong></div>
+
+
+<div class="chip-stat">對一般怪傷害：<strong id="vsNormalDamage">0%</strong></div>
+<div class="chip-stat">對菁英怪傷害：<strong id="vsEliteDamage">0%</strong></div>
+<div class="chip-stat">對 Boss 傷害：<strong id="vsBossDamage">0%</strong></div>
+  <div class="chip-stat">回復：<strong id="recover">0%</strong></div>
+  <div class="chip-stat">閃避：<strong id="dodge">0%</strong></div>
+  <div class="chip-stat">爆擊率：<strong id="critRate">0%</strong></div>
+  <div class="chip-stat">爆擊傷害：<strong id="critMultiplier">0%</strong></div>
+  <div id="comboRateRow" class="chip-stat" style="display:none;">連擊率：<strong id="comboRate">0%</strong></div>
+  <div id="preemptiveChanceRow" class="chip-stat" style="display:none;">先手再動：<strong id="preemptiveChance">0%</strong></div>
+  <div id="preemptiveMaxRow" class="chip-stat" style="display:none;">再動次數上限：每次最多 <strong id="preemptiveMax">1</strong></div>
+  <div class="chip-stat">減傷率：<strong id="damageReduce">0%</strong></div>
+  <div class="chip-stat">攻擊速度：<strong id="attackSpeed">100%</strong></div>
+  <div class="chip-stat">經驗值：<strong id="expRate">0.0%</strong></div>
+  <div class="chip-stat">掉寶率：<strong id="dropRate">0.0%</strong></div>
+  <div class="chip-stat">金錢掉落率：<strong id="goldRate">0.0%</strong></div>
+</div>
+    </div>
+
+
+</div>
+
+
+
+  
+
+
+<div class="row">
+  <!-- 左：戰鬥設定 -->
+  <div class="section" style="flex:2;min-width:320px;">
+    <h2>戰鬥設定</h2>
+
+    <div class="btn-row">
+      <button id="btnStart" class="btn primary">開始戰鬥</button>
+      <button id="btnStop" class="btn danger">停止戰鬥</button>
+      <button id="btnToggleMode" onclick="toggleBattleMode()">單體模式</button>
+      <button id="btnToggleDrops" class="btn ghost">顯示/隱藏掉落</button>
+      <span id="diffQueuedBadge" class="badge" style="display:none;"></span>
+      
+      <button id="toggleRewardBtn" type="button">
+  📦 戰利品 / 掉落紀錄
+</button>
+    </div>
+
+    <div id="monsters-box"></div>
+
+    <div class="form-row">
+      <label for="mapSelect">選擇地圖：</label>
+      <select id="mapSelect"></select>
+
+      <label for="difficultySelect">難度：</label>
+      <select id="difficultySelect"></select>
+    </div>
+
+    <label for="levelRange" class="form-label-block">選擇怪物等級範圍：</label>
+    <div class="form-row nowrap">
+      <select id="levelRange"></select>
+      <span id="minLevelNotice" class="hint"></span>
+      <button onclick="SpecialBossUI.open()">特殊Boss挑戰</button>
+    </div>
+  </div>
+
+
+  <!-- 技能控制區 -->
+  <div class="section" style="width:100%;">
+    <section class="panel">
+      <header class="panel-header">
+        <span>技能控制區</span>
+        <button class="toggle-btn" onclick="togglePanel('skill-control-body')">▼</button>
+      </header>
+      <div id="skill-control-body" class="panel-body">
+        <div id="skillStatus" class="skill-grid">
+          <!-- 由 JS 渲染技能狀態 -->
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 怪物資訊 -->
+  <div class="section" style="width:100%;">
+    <h2>面板資訊</h2>
+    <div id="monsterInfo">尚未遭遇怪物</div>
+  </div>
+
+<!-- 🧭 戰鬥紀錄區 -->
+<div class="battle-log-wrap battle-log-grid">
+  <!-- 上排：玩家（左） -->
+  <div class="battle-log-col player-log">
+    <div class="battle-log-title">
+      玩家 
+      <div class="aps-bar">
+        <div id="playerApsFill" class="aps-fill" style="width:0%"></div>
+      </div>
+      <span id="hudPlayerAPS" class="aps-value">0/s</span>
+    </div>
+    <div id="playerLog" class="battle-log"></div>
+  </div>
+
+  <!-- 上排：技能詳情（右，群體用） -->
+  <div class="battle-log-col skill-detail-log">
+    <div class="battle-log-title">
+      技能詳情
+      <button type="button" class="skill-detail-clear-btn" onclick="clearSkillDetailLog()">清除</button>
+    </div>
+    <div id="skillDetailLog" class="battle-log"></div>
+  </div>
+
+  <!-- 下排：怪物（整排寬） -->
+  <div class="battle-log-col monster-log">
+    <div class="battle-log-title">
+      怪物 
+      <div class="aps-bar">
+        <div id="monsterApsFill" class="aps-fill" style="width:0%"></div>
+      </div>
+      <span id="hudMonsterAPS" class="aps-value">0/s</span>
+    </div>
+    <div id="monsterLog" class="battle-log"></div>
+  </div>
+</div>
+</div>
+<body>
+
+   <link rel="stylesheet" href="css/http.css">
+        <script src="css/tabs.js"></script>
+        <script src="css/resource_delta.js"defer></script>
+
+
+  <script src="save/save_hub_es5.js"></script>
+
+  <script src="hub/clover/sp_potential.js"></script>
+  <script src="stats_system/jobs.js"></script>
+  <script src="stats_system/utils_jobs.js"></script>
+  <script src="stats_system/player.js"></script>
+  <script src="stats_system/exp.js"></script>
+  <script src="stats_system/player_stats_modal.js"></script>
+  <script src="stats_system/resources.js"></script>
+  <script src="stats_system/potential_engine_es5.js"></script>
+  <script src="save/save_core.js"></script>
+
+
+<script src="item/inventory.js"></script>
+
+<script src="equipment_hub/flame/flame_core_es5.js"></script>
+<script src="equipment_hub/potential/potential_effects_es5.js"></script>
+
+
+    <script src="equipment_hub/starforce/equip_stats_calc_v2.js"></script>
+    <script src="equipment_hub/starforce/scroll_core_v2.js"></script>
+  <script src="equipment_hub/starforce/starforce_core_table_v1.js"></script>
+    <script src="equipment_hub/starforce/potential_core_v1.js"></script>
+      <script src="equipment_hub/equip_insight_v5.js"></script>
+  <script src="stats_system/job_change.js"></script>
+  <script src="hub/growth_hub.js"></script>
+  
+  <script src="map/normal_monster_skills.js"></script>
+  <script src="stats_system/pro_bonus_apply.js"></script>
+  
+  <script src="map/monster_rt_skills.js"></script>
+  <script src="map/map_data.js"></script>
+  <script src="map/monster_data.js?v=20251021-1"></script>
+  <script src="map/elite_monsters.js"></script>
+  <script src="map/difficulty.js"></script>
+  <script src="map/monster_utils.js?v=20251021-1"></script>
+  <script src="map/ui_utils.js"></script>
+  
+<script src="item/shop_hub.js"></script>
+<script src="item/shop_system.js"></script>
+<script src="item/shop_material.js"></script>
+<script src="equipment_hub/equipment_hub.js"></script>
+  
+
+
+
+  
+  <script src="hub/clover/equip_mastery.js"></script>
+  <script src="logic/rpg/log_dual.js"></script>
+  <script src="logic/rpg/rpg.js"></script>
+  <script src="logic/rpg/rpg_1.js"></script>
+  <script src="logic/rpg/rpg_2.js"></script>
+  <script src="logic/rpg/rpgmobskill.js"></script>
+  <script src="logic/rpg/rpgplayerSkills.js"></script>
+  <script src="logic/rpg/battleUtils.js"></script>
+  <script src="logic/rpg/ignore_defense.js"></script>
+  <script src="logic/reward_tracker.js"></script>
+  
+<script src="logic/damage_power_inline.js"></script>
+<script src="logic/ui_skill_detail_log.js"></script>
+
+
+
+<script src="logic/effect_utils.js"></script>
+<script src="logic/status_registry."></script>
+<script src="logic/effect_engine.js"></script>
+
+
+
+    <script src="stats_system/job/skills_hub.js"></script>
+ 
+
+  <script src="hub/clover/clover.js"></script>
+  <script src="hub/clover/sp_system.js"></script>
+  <script src="hub/recovery/recovery_module.js"></script>
+   <script src="hub/recovery/Recovery_Items.js"></script>
+  <script src="modskill/status_manager_player.js"></script>
+  <script src="skill/player_buffs.js"></script>
+  <script src="modskill/monster_skills.js"></script>
+  <script src="modskill/status_display_monster.js"></script>
+  <script src="modskill/monster_buffs.js"></script>
+  <script src="modskill/boss_buffs_core.js"></script>
+
+  <script src="modskill/statusEffects.js"></script>
+  <script src="logic/ui_updates.js"></script> 
+
+  <script src="logic/game_init.js"></script>
+
+
+
+
+  <script src="skill/skills_controller.js"></script>
+  <script src="skill/skills_warrior.js"></script>
+  <script src="skill/skills_mage.js"></script>
+  <script src="skill/skills_archer.js"></script>
+  <script src="skill/skills_thief.js"></script>
+  <script src="skill/skills_common.js"></script>
+  <script src="skill/ui.js"></script>
+  <script src="skill/skill_panel.js"></script>
+
+
+
+
+
+  <script src="quest/quest_core_es5.js"></script>
+  <script src="quest/quest_daily_es5.js"></script>
+
+
+
+  <script src="quest/quest_repeat_es5.js"></script>
+
+
+  <script src="quest/quest_achievements_es5.js"></script>
+  <script src="floating.js"></script>
+  <script src="stats_system/main.js"></script>
+  <script src="gacha/gacha_hub.js"></script>
+  <script src="gacha/gacha_medal.js"></script>
+  <script src="gacha/gacha_diamond.js"></script>
+  
+  <script src="css/log_dual.js"></script>
+  <link rel="stylesheet" href="css/skills_panel.css">
+  <link rel="stylesheet" href="css/battle_log.css">
+  <script src="town/town_hub.js"></script>
+  
+  
+
+
+
+  
+<!-- ===================================================== -->
+<!-- Stock Hub -->
+<!-- ===================================================== -->
+<script src="town/stock_hub.js"></script>
+
+<script src="iwguild/bootstrap/auto_loader.js"></script>
+
+
+
+  <script src="town/town_system.js"></script>
+  <script src="town/explore_system.js"></script>
+  <script src="equipment_hub/equip_system_v1.js"></script>
+ <script src="stats_system/job/register.js"></script>
+
+
+    
+  <script src="stats_system/combat_power.js"></script>
+  <script src="stats_system/cp_ui.js"></script>
+  
+  <script src="town/Advanced/high_explore_data.js"></script>
+
+  <script src="town/Advanced/high_explore_main.js"></script>
+    <script src="town/bank_savings_tab.js"></script>
+  
+<script src="dungeon/common/tickets.js"></script>
+<script src="dungeon/common/tickets_ui.js"></script>
+<script src="dungeon/dungeon_gate.js"></script>     <!-- 可選，但若要用 bindButtons 必須先載入 -->
+
+<script src="dungeon/dungeon_hub.js"></script>
+<script src="dungeon/dungeon_battle_core.js"></script>
+<script src="dungeon/waves_config.js"></script>
+<script src="dungeon/dungeon_tabs_challenge.js"></script> 
+
+<script src="dungeon/dungeon/v13_config.js"></script> 
+<script src="dungeon/dungeon/dungeon_tabs_v13.js"></script>
+    <script src="equipment_hub/accessory/equip_life_set.js"></script>
+    
+ 
+    
+    
+ <script src="equipment_hub/equip_core_tab.js"></script>
+ <script src="hub/shield_system.js"></script>
+ 
+ 
+ <script src="stats_system/job/job_passives_tab.js"></script>
+ <script src="stats_system/job/job_passives_store.js"></script>
+ <script src="stats_system/job/job_passives_aggregate.js"></script>
+  <script src="stats_system/job/second_job_passive.js"></script>
+  <script src="stats_system/job/common_passives.js"></script>
+  <script src="stats_system/job/job_skill_passives.js"></script>
+  <script src="item/shop_exchange_tab.js"></script>
+  
+      <script src="equipment_hub/accessory/equipment_accessory_ring.js"></script>
+  <script src="hub/personal_potential_tab.js"></script>
+  
+  
+  <script src="hub/collection_book.js"></script>
+  <script src="map/boss/special_boss_gate.js"></script>
+  <script src="map/boss/special_boss_index.js"></script>
+  <script src="map/boss/special_boss_ui.js"></script>
+
+  <script src="hub/card/CardSystem_Full_SingleFile.js"></script>
+
+
+  <script src="equipment_hub/potential/potential_core_v1_es5.js"></script>
+  <script src="equipment_hub/potential/potential_ui_v3_es5.js"></script>
+
+
+
+
+
+</body>
+
+
+
+</html>
